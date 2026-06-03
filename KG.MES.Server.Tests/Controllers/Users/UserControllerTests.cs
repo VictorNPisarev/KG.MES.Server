@@ -9,8 +9,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace KG.MES.Server.Tests.Controllers;
+namespace KG.MES.Server.Tests.Controllers.Users;
 
+[Trait("Category", "Users")]
 public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
 	private readonly WebApplicationFactory<Program> _factory;
