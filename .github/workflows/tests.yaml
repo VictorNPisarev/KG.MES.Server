@@ -1,8 +1,8 @@
 name: .NET Tests
 
 on:
-  push:
-    branches: [ develop ]
+  #push:
+  #  branches: [ develop ]
   pull_request:
     branches: [ main ]
 
