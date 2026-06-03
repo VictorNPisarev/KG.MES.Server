@@ -1,18 +1,15 @@
 name: .NET Tests
 
 on:
-  # Запуск при push в develop
   push:
     branches: [ develop ]
-  
-  # Запуск при создании/обновлении PR в main
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  # 1. Сначала собираем проект ОДИН раз
+  build:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -36,12 +33,45 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run tests
-      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+  # 2. Запускаем тесты ПАРАЛЛЕЛЬНО для каждой категории
+  test:
+    needs: build # Ждем, пока job 'build' успешно завершится
+    runs-on: ubuntu-latest
+    
+    # МАТРИЦА: GitHub создаст отдельный job для каждого элемента в этом списке
+    strategy:
+      matrix:
+        test-category: [Users]
+      fail-fast: false # Если тесты Users упали, Orders все равно дойдут до конца, чтобы мы видели всю картину
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run ${{ matrix.test-category }} Tests
+      # Фильтруем тесты по Trait, который мы задали в C# коде!
+      run: dotnet test --no-build --configuration Release --filter "Category=${{ matrix.test-category }}" --verbosity normal
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
-        path: '**/test-results.trx'
+        name: test-results-${{ matrix.test-category }}
+        path: '**/*.trx'
