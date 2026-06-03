@@ -1,15 +1,20 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KG.MES.Shared.Models.Entities;
 
+[Table("workplace_transitions")]
 public class WorkplaceTransition
 {
-	public Guid Id { get; set; }
-	public string? LegacyId { get; set; }
-	public Guid FromWorkplaceId { get; set; }
-	public Guid ToWorkplaceId { get; set; }
-	public string TransitionType { get; set; } = "sequential";
-	public DateTime CreatedAt { get; set; }
+	[Column("id")] public Guid Id { get; set; }
+	[Column("legacy_id")] public string? LegacyId { get; set; }
+	[Column("from_workplace_id")] public Guid FromWorkplaceId { get; set; }
+	[Column("to_workplace_id")] public Guid ToWorkplaceId { get; set; }
+	[Column("transition_type")] public string TransitionType { get; set; } = "sequential";
+	[Column("created_at")] public DateTime CreatedAt { get; set; }
 
-	// Navigation properties
+	[ForeignKey("FromWorkplaceId")]
 	public Workplace? FromWorkplace { get; set; }
+
+	[ForeignKey("ToWorkplaceId")]
 	public Workplace? ToWorkplace { get; set; }
 }

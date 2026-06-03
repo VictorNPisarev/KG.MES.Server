@@ -1,15 +1,17 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KG.MES.Shared.Models.Entities;
 
+[Table("supply_types")]
 public class SupplyType
 {
-	public Guid Id { get; set; }
-	public string Name { get; set; } = string.Empty;
-	public string DisplayName { get; set; } = string.Empty;
-	public string? Unit { get; set; }
-	public int SortOrder { get; set; }
-	public bool IsActive { get; set; } = true;
-	public DateTime CreatedAt { get; set; }
+	[Column("id")] public Guid Id { get; set; }
+	[Column("name")] public string Name { get; set; } = string.Empty;
+	[Column("display_name")] public string DisplayName { get; set; } = string.Empty;
+	[Column("unit")] public string? Unit { get; set; }
+	[Column("sort_order")] public int SortOrder { get; set; }
+	[Column("is_active")] public bool IsActive { get; set; } = true;
+	[Column("created_at")] public DateTime CreatedAt { get; set; }
 
-	// Navigation properties
 	public ICollection<SupplyItem>? SupplyItems { get; set; }
 }

@@ -1,14 +1,20 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KG.MES.Shared.Models.Entities;
 
+[Table("order_supply")]
 public class OrderSupply
 {
-	public Guid Id { get; set; }
-	public Guid OrderId { get; set; }
-	public DateTime CreatedAt { get; set; }
-	public DateTime UpdatedAt { get; set; }
+	[Column("id")] public Guid Id { get; set; }
+	[Column("order_id")] public Guid OrderId { get; set; }
+	[Column("created_at")] public DateTime CreatedAt { get; set; }
+	[Column("updated_at")] public DateTime UpdatedAt { get; set; }
 
-	// Navigation properties
+	[Column("comment_ids", TypeName = "uuid[]")]
+	public List<Guid>? CommentIds { get; set; }
+
+	[ForeignKey("OrderId")]
 	public Order? Order { get; set; }
-	public ICollection<Guid>? CommentIds { get; set; }
+
 	public ICollection<SupplyItem>? SupplyItems { get; set; }
 }

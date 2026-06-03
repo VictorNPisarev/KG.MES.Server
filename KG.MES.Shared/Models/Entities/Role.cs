@@ -1,15 +1,17 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KG.MES.Shared.Models.Entities;
 
+[Table("roles")]
 public class Role
 {
-	public Guid Id { get; set; }
-	public string? LegacyId { get; set; }
-	public string Name { get; set; } = string.Empty;
-	public string? Description { get; set; }
-	public int Level { get; set; }
-	public DateTime CreatedAt { get; set; }
-	public DateTime UpdatedAt { get; set; }
+	[Column("id")] public Guid Id { get; set; }
+	[Column("legacy_id")] public string? LegacyId { get; set; }
+	[Column("name")] public string Name { get; set; } = string.Empty;
+	[Column("description")] public string? Description { get; set; }
+	[Column("level")] public int Level { get; set; }
+	[Column("created_at")] public DateTime CreatedAt { get; set; }
+	[Column("updated_at")] public DateTime UpdatedAt { get; set; }
 
-	// Navigation properties
 	public ICollection<User>? Users { get; set; }
 }

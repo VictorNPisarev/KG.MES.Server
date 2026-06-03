@@ -1,12 +1,14 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace KG.MES.Shared.Models.Entities;
 
+[Table("supply_conditions")]
 public class SupplyCondition
 {
-	public Guid Id { get; set; }
-	public string ConditionCode { get; set; } = string.Empty;
-	public string DisplayName { get; set; } = string.Empty;
-	public int SortOrder { get; set; }
+	[Column("id")] public Guid Id { get; set; }
+	[Column("condition_code")] public string ConditionCode { get; set; } = string.Empty;
+	[Column("display_name")] public string DisplayName { get; set; } = string.Empty;
+	[Column("sort_order")] public int SortOrder { get; set; }
 
-	// Navigation properties
 	public ICollection<SupplyItem>? SupplyItems { get; set; }
 }
