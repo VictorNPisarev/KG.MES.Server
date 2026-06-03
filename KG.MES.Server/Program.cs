@@ -10,9 +10,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Регистрируем DbContext
-var connectionString = GetConnectionString(builder);
-builder.Services.AddDbContext<AppDbContext>(options =>
-	options.UseNpgsql(connectionString));
+ConfigureDatabase(builder.Services, builder.Configuration);
 
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();
@@ -70,42 +68,23 @@ app.MapControllers();
 
 app.Run();
 
-partial class Program
+static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration)
 {
-	[GeneratedRegex(@"\${(\w+)}")]
-	private static partial Regex ConnectionStringRegex();
-
-	private static string? GetConnectionString(WebApplicationBuilder builder)
-	{
-		// Загружаем .env файл
-		var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
-		var envVars = new Dictionary<string, string>();
-
-		if (File.Exists(envFile))
-		{
-			foreach (var line in File.ReadAllLines(envFile))
-			{
-				if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
-					continue;
-
-				var parts = line.Split('=', 2);
-				if (parts.Length == 2)
-				{
-					envVars[parts[0].Trim()] = parts[1].Trim();
-				}
-			}
-		}
-
-		// Собираем строку подключения напрямую
-		var host = envVars.GetValueOrDefault("DB_HOST", "localhost");
-		var port = envVars.GetValueOrDefault("DB_PORT", "5432");
-		var database = envVars.GetValueOrDefault("DB_NAME", "KgMes");
-		var username = envVars.GetValueOrDefault("DB_USER", "postgres");
-		var password = envVars.GetValueOrDefault("DB_PASSWORD", "");
-
-		var connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
-
-		Console.WriteLine($"connectionString: {connectionString}");
-		return connectionString;
-	}
+	var connectionString = GetConnectionString();
+	services.AddDbContext<AppDbContext>(options =>
+		options.UseNpgsql(connectionString));
 }
+
+static string GetConnectionString()
+{
+	// Чтение из .env или переменных окружения
+	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "WorkshopMES";
+	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
+	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
+
+	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+}
+
+public partial class Program { }

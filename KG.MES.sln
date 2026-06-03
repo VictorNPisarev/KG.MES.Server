@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Shared", "KG.MES.Sha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Migrator", "KG.MES.Migrator\KG.MES.Migrator.csproj", "{61D0AAAB-8363-4D8B-9A08-92F5377C0A61}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Server.Tests", "KG.MES.Server.Tests\KG.MES.Server.Tests.csproj", "{79D74370-A2A2-4208-9E10-5680F8C80E70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{61D0AAAB-8363-4D8B-9A08-92F5377C0A61}.Release|x64.Build.0 = Release|Any CPU
 		{61D0AAAB-8363-4D8B-9A08-92F5377C0A61}.Release|x86.ActiveCfg = Release|Any CPU
 		{61D0AAAB-8363-4D8B-9A08-92F5377C0A61}.Release|x86.Build.0 = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|x64.Build.0 = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Debug|x86.Build.0 = Debug|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|x64.ActiveCfg = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|x64.Build.0 = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|x86.ActiveCfg = Release|Any CPU
+		{79D74370-A2A2-4208-9E10-5680F8C80E70}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
