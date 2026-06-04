@@ -162,7 +162,6 @@ public partial class OrderService
 			await NotificationHelper.NotifyOrderStatusChanged(
 				productionOrderId,
 				workplaceId,
-				null,
 				OrderStatus.WorkplaceStatus.Active,
 				userId,
 				notes);
@@ -210,7 +209,6 @@ public partial class OrderService
 			await NotificationHelper.NotifyOrderStatusChanged(
 				productionOrderId,
 				workplaceId,
-				OrderStatus.WorkplaceStatus.Active,
 				OrderStatus.WorkplaceStatus.Completed,
 				userId,
 				notes);

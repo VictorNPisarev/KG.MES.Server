@@ -45,10 +45,21 @@ public class SupplyController : ControllerBase
 		Guid orderId,
 		[FromBody] List<UpdateSupplyItemRequest> updates)
 	{
+		if (updates == null || updates.Count == 0)
+			return BadRequest(new { error = "supplies array is required" });
+
+		// Проверяем, что у каждого элемента есть SupplyTypeId
+		if (updates.Any(u => u.SupplyTypeId == Guid.Empty))
+			return BadRequest(new { error = "supplyTypeId is required for each item" });
+
 		var result = await _supplyService.UpdateAllSupplyItemsAsync(orderId, updates);
+
+		if (!result.Success)
+			return BadRequest(result);
+
 		return Ok(result);
 	}
-
+	
 	// GET: api/supplies/conditions
 	[HttpGet("supplies/conditions")]
 	public async Task<IActionResult> GetSupplyConditions()

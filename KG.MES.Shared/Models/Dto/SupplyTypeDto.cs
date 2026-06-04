@@ -11,7 +11,7 @@ public class SupplyTypeDto
 	public string Name { get; set; } = string.Empty;
 
 	[JsonPropertyName("display_name")]
-	public string DisplayName { get; set; } = string.Empty;
+	public string? DisplayName { get; set; }
 
 	[JsonPropertyName("unit")]
 	public string? Unit { get; set; }

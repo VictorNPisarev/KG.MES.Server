@@ -80,9 +80,9 @@ static string GetConnectionString()
 	// Чтение из .env или переменных окружения
 	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
 	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "WorkshopMES";
+	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
 	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "";
+	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "x126ko33";
 
 	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 }

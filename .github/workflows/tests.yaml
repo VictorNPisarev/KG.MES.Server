@@ -41,7 +41,7 @@ jobs:
     # МАТРИЦА: GitHub создаст отдельный job для каждого элемента в этом списке
     strategy:
       matrix:
-        test-category: [Users]
+        test-category: [Users, Orders]
       fail-fast: false # Если тесты Users упали, Orders все равно дойдут до конца, чтобы мы видели всю картину
 
     steps:

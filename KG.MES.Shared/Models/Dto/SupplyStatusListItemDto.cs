@@ -4,8 +4,8 @@ namespace KG.MES.Shared.Models.Dto;
 
 public class SupplyStatusListItemDto
 {
-	[JsonPropertyName("order_id")]
-	public Guid OrderId { get; set; }
+	[JsonPropertyName("id")]
+	public Guid Id { get; set; }
 
 	[JsonPropertyName("order_number")]
 	public string OrderNumber { get; set; } = string.Empty;
@@ -25,6 +25,21 @@ public class SupplyStatusListItemDto
 	[JsonPropertyName("furniture")]
 	public string? Furniture { get; set; }
 
-	[JsonPropertyName("alum_water_shield")]
+	[JsonPropertyName("alumWaterShield")]
 	public string? AlumWaterShield { get; set; }
+
+	[JsonPropertyName("lumber_comment")]
+	public string? LumberComment { get; set; }
+
+	[JsonPropertyName("paint_comment")]
+	public string? PaintComment { get; set; }
+
+	[JsonPropertyName("glass_comment")]
+	public string? GlassComment { get; set; }
+
+	[JsonPropertyName("furniture_comment")]
+	public string? FurnitureComment { get; set; }
+
+	[JsonPropertyName("alumWaterShield_comment")]
+	public string? AlumWaterShieldComment { get; set; }
 }

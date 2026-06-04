@@ -10,31 +10,29 @@ public partial class OrderService
 {
 	public async Task<List<OrderCommentDto>> GetOrderCommentsAsync(Guid orderId)
 	{
-		var commentIds = await _context.Orders
-			.Where(o => o.Id == orderId)
-			.Select(o => o.CommentIds ?? new List<Guid>())
-			.FirstOrDefaultAsync() ?? new List<Guid>();
-
-		if (commentIds.Count == 0)
-			return new List<OrderCommentDto>();
-
+		// Ищем комментарии напрямую через OrderId (надежнее, чем через массив CommentIds)
+		// Используем LEFT JOIN для Users, чтобы не терять комментарии без UserId
 		var comments = await _context.Comments
-			.Where(c => commentIds.Contains(c.Id))
-			.Join(_context.Users, c => c.UserId, u => u.Id, (c, u) => new OrderCommentDto
-			{
-				Id = c.Id,
-				Content = c.Content,
-				CreatedAt = c.CreatedAt,
-				UpdatedAt = c.UpdatedAt,
-				UserId = c.UserId,
-				UserName = u.Name
-			})
+			.Where(c => c.OrderId == orderId)
+			.GroupJoin(_context.Users,
+				c => c.UserId,
+				u => u.Id,
+				(c, users) => new { Comment = c, Users = users })
+			.SelectMany(
+				x => x.Users.DefaultIfEmpty(),
+				(x, u) => new OrderCommentDto
+				{
+					Id = x.Comment.Id,
+					Content = x.Comment.Content,
+					CreatedAt = x.Comment.CreatedAt,
+					UpdatedAt = x.Comment.UpdatedAt,
+					UserName = u != null ? u.Name : null
+				})
 			.OrderByDescending(c => c.CreatedAt)
 			.ToListAsync();
 
 		return comments;
 	}
-
 	public async Task<OrderCommentDto> AddOrderCommentAsync(Guid orderId, Guid? userId, string content)
 	{
 		using var transaction = await _context.Database.BeginTransactionAsync();
@@ -57,22 +55,28 @@ public partial class OrderService
 			var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
 			if (order != null)
 			{
-				order.CommentIds = (order.CommentIds ?? new List<Guid>()).Append(comment.Id).ToList();
+				order.CommentIds = [.. order.CommentIds ?? [], comment.Id];
 				order.UpdatedAt = DateTime.UtcNow;
 				await _context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
 
-			await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
-
+			try
+			{
+				await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to send notification for comment");
+			}
+			
 			return new OrderCommentDto
 			{
 				Id = comment.Id,
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt,
 				UpdatedAt = comment.UpdatedAt,
-				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -106,7 +110,7 @@ public partial class OrderService
 			var productionOrder = await _context.ProductionOrders.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 			if (productionOrder != null)
 			{
-				productionOrder.CommentIds = (productionOrder.CommentIds ?? new List<Guid>()).Append(comment.Id).ToList();
+				productionOrder.CommentIds = [.. productionOrder.CommentIds ?? [], comment.Id];
 				productionOrder.UpdatedAt = DateTime.UtcNow;
 				await _context.SaveChangesAsync();
 			}
@@ -119,7 +123,6 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt,
 				UpdatedAt = comment.UpdatedAt,
-				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -174,7 +177,6 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt,
 				UpdatedAt = comment.UpdatedAt,
-				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -204,7 +206,6 @@ public partial class OrderService
 			Content = comment.Content,
 			CreatedAt = comment.CreatedAt,
 			UpdatedAt = comment.UpdatedAt,
-			UserId = comment.UserId,
 			UserName = await _context.Users.Where(u => u.Id == comment.UserId).Select(u => u.Name).FirstOrDefaultAsync()
 		};
 	}

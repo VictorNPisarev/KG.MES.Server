@@ -18,7 +18,11 @@ public class OrdersController : ControllerBase
 		_logger = logger;
 	}
 
-	// GET: api/Orders
+	// ==========================================
+	// 1. СНАЧАЛА ВСЕ СТАТИЧЕСКИЕ МАРШРУТЫ
+	// ==========================================
+
+	// GET: api/orders
 	[HttpGet("orders")]
 	public async Task<IActionResult> GetOrders(
 		[FromQuery] int page = 1,
@@ -32,137 +36,97 @@ public class OrdersController : ControllerBase
 		return Ok(result);
 	}
 
-	// GET: api/Orders/{identifier}
-	[HttpGet("orders/{identifier}")]
-	public async Task<IActionResult> GetOrderByIdentifier(string identifier)
+	// GET: api/orders/pending?workplaceId=...
+	[HttpGet("orders/pending")]
+	public async Task<IActionResult> GetPendingOrdersCompatible([FromQuery] Guid workplaceId)
 	{
-		var isUuid = Guid.TryParse(identifier, out var orderId);
+		if (workplaceId == Guid.Empty)
+			return BadRequest(new { error = "workplaceId is required" });
 
-		var order = isUuid
-			? await _orderService.GetOrderByIdAsync(orderId)
-			: await _orderService.GetOrderByNumberAsync(identifier);
-
-		if (order == null)
-			return NotFound(new { error = "Order not found" });
-
-		return Ok(order);
+		return await GetPendingOrders(workplaceId);
 	}
 
-	// GET: api/Orders/trace/{orderNumber}
-	[HttpGet("trace/{orderNumber}")]
-	public async Task<IActionResult> GetOrderTrace(string orderNumber)
+	// GET: api/orders/active?workplaceId=...
+	[HttpGet("orders/active")]
+	public async Task<IActionResult> GetActiveOrdersCompatible([FromQuery] Guid workplaceId)
 	{
-		var traces = await _orderService.GetOrderTraceByNumberAsync(orderNumber);
+		if (workplaceId == Guid.Empty)
+			return BadRequest(new { error = "workplaceId is required" });
 
-		if (traces == null || traces.Count == 0)
-			return NotFound(new { error = "Order not found" });
-
-		return Ok(new { orders = traces });
+		return await GetActiveOrders(workplaceId);
 	}
 
-	// GET: api/Orders/workplaces/{workplaceId}/pending
-	[HttpGet("workplaces/{workplaceId}/pending")]
+	// GET: api/orders/in-work?workplaceId=...
+	[HttpGet("orders/in-work")]
+	public async Task<IActionResult> GetActiveAndPendingOrdersCompatible([FromQuery] Guid workplaceId)
+	{
+		if (workplaceId == Guid.Empty)
+			return BadRequest(new { error = "workplaceId is required" });
+
+		return await GetActiveAndPendingOrders(workplaceId);
+	}
+
+	// GET: api/orders/workplaces/{workplaceId}/pending
+	[HttpGet("orders/workplaces/{workplaceId}/pending")]
 	public async Task<IActionResult> GetPendingOrders(Guid workplaceId)
 	{
 		var orders = await _orderService.GetPendingOrdersForWorkplaceAsync(workplaceId);
-
-		var enhancedOrders = orders.Select(order => new
-		{
-			order.ProductionOrderId,
-			order.WorkplaceId,
-			order.Status,
-			order.OrderId,
-			order.OrderNumber,
-			order.WindowCount,
-			order.WindowArea,
-			order.PlateCount,
-			order.PlateArea,
-			order.ReadyDate,
-			order.IsEconom,
-			order.IsClaim,
-			order.IsOnlyPaid,
-			FromJoinery = order.Status == "joinery"
-		});
-
-		return Ok(enhancedOrders);
+		return Ok(orders);
 	}
 
-	// GET: api/Orders/workplaces/{workplaceId}/active
-	[HttpGet("workplaces/{workplaceId}/active")]
+	// GET: api/orders/workplaces/{workplaceId}/active
+	[HttpGet("orders/workplaces/{workplaceId}/active")]
 	public async Task<IActionResult> GetActiveOrders(Guid workplaceId)
 	{
 		var orders = await _orderService.GetActiveOrdersForWorkplaceAsync(workplaceId);
 		return Ok(orders);
 	}
 
-	// GET: api/Orders/workplaces/{workplaceId}/all
-	[HttpGet("workplaces/{workplaceId}/all")]
+	// GET: api/orders/workplaces/{workplaceId}/in-work
+	[HttpGet("orders/workplaces/{workplaceId}/in-work")]
 	public async Task<IActionResult> GetActiveAndPendingOrders(Guid workplaceId)
 	{
+		if (workplaceId == Guid.Empty)
+			return BadRequest(new { error = "workplaceId is required" });
+
 		var orders = await _orderService.GetActiveAndPendingOrdersForWorkplaceAsync(workplaceId);
-
-		var enhancedOrders = orders.Select(order => new
-		{
-			order.ProductionOrderId,
-			order.WorkplaceId,
-			order.Status,
-			order.OrderId,
-			order.OrderNumber,
-			order.WindowCount,
-			order.WindowArea,
-			order.PlateCount,
-			order.PlateArea,
-			order.ReadyDate,
-			order.IsEconom,
-			order.IsClaim,
-			order.IsOnlyPaid,
-			WorkplaceOrderStatus = order.Status,
-			FromJoinery = order.Status == "joinery",
-			Name = order.Status == "joinery" ? $"🪚 {order.OrderNumber}" : order.OrderNumber
-		});
-
-		return Ok(enhancedOrders);
+		return Ok(orders);
 	}
 
-	// POST: api/Orders
-	[HttpPost]
+	// POST: api/orders
+	[HttpPost("orders")]
 	public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDto request)
 	{
 		if (string.IsNullOrEmpty(request.OrderNumber))
 			return BadRequest(new { error = "orderNumber is required" });
-
 		var result = await _orderService.CreateOrderAsync(request);
 		return Ok(result);
 	}
 
-	// POST: api/Orders/operations/start
-	[HttpPost("operations/start")]
+	// POST: api/orders/operations/start
+	[HttpPost("orders/operations/start")]
 	public async Task<IActionResult> BeginOrderWorkplace([FromBody] BeginWorkplaceRequestDto request)
 	{
 		if (request.ProductionOrderId == Guid.Empty || request.WorkplaceId == Guid.Empty || request.UserId == Guid.Empty)
 			return BadRequest(new { error = "productionOrderId, workplaceId, and userId are required" });
-
 		var result = await _orderService.BeginOrderWorkplaceAsync(
-			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? "", request.Source ?? "API");
-
+			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? " ", request.Source ?? "API");
 		return Ok(result);
 	}
 
-	// POST: api/Orders/operations/complete
-	[HttpPost("operations/complete")]
+	// POST: api/orders/operations/complete
+	[HttpPost("orders/operations/complete")]
 	public async Task<IActionResult> CompleteOrderWorkplace([FromBody] CompleteWorkplaceRequestDto request)
 	{
 		if (request.ProductionOrderId == Guid.Empty || request.WorkplaceId == Guid.Empty || request.UserId == Guid.Empty)
 			return BadRequest(new { error = "productionOrderId, workplaceId, and userId are required" });
-
 		var result = await _orderService.CompleteOrderWorkplaceAsync(
-			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? "", request.Source ?? "API");
-
+			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? " ", request.Source ?? "API");
 		return Ok(result);
 	}
 
-	// PUT: api/Orders/footprint/{productionOrderId}/workplace/{workplaceId}
-	[HttpPut("footprint/{productionOrderId}/workplace/{workplaceId}")]
+	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}
+	[HttpPut("orders/footprint/{productionOrderId}/workplace/{workplaceId}")]
 	public async Task<IActionResult> SetOrderFootprintStatus(
 		Guid productionOrderId,
 		Guid workplaceId,
@@ -170,24 +134,104 @@ public class OrdersController : ControllerBase
 	{
 		if (string.IsNullOrEmpty(request.Status))
 			return BadRequest(new { error = "status is required" });
-
 		var result = await _orderService.SetOrderFootprintStatusAsync(
-			productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? "");
-
+			productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
 		return Ok(result);
 	}
 
-	// PUT: api/Orders/footprint/{productionOrderId}/batch
-	[HttpPut("footprint/{productionOrderId}/batch")]
+	// PUT: api/orders/footprint/{productionOrderId}/batch
+	[HttpPut("orders/footprint/{productionOrderId}/batch")]
 	public async Task<IActionResult> UpdateOrderFootprintBatch(
 		Guid productionOrderId,
 		[FromBody] UpdateFootprintBatchRequest request)
 	{
 		if (request.Footprints == null || request.Footprints.Count == 0)
 			return BadRequest(new { error = "footprints array is required" });
-
 		var result = await _orderService.UpdateOrderFootprintBatchAsync(
-			productionOrderId, request.Footprints, request.UserId, request.Notes ?? "");
+			productionOrderId, request.Footprints, request.UserId, request.Notes ?? " ");
+		return Ok(result);
+	}
+
+	// PUT: api/orders/{orderId}/comments/{commentId}
+	[HttpPut("orders/{orderId}/comments/{commentId}")]
+	public async Task<IActionResult> UpdateOrderComment(Guid orderId, Guid commentId, [FromBody] UpdateCommentRequestDto request)
+	{
+		if (string.IsNullOrEmpty(request.Content))
+			return BadRequest(new { error = "content is required" });
+
+		var result = await _orderService.UpdateOrderCommentAsync(orderId, commentId, request.Content);
+		return Ok(result);
+	}
+
+
+	// ==========================================
+	// 2. В САМОМ КОНЦЕ — МАРШРУТЫ С ПАРАМЕТРАМИ
+	// ==========================================
+
+	// GET: api/orders/{identifier}/trace   ← ТОЖЕ СТАТИЧЕСКИЙ СУФФИКС, НО ВАЖЕН ПОРЯДОК
+	[HttpGet("orders/{identifier}/trace")]
+	public async Task<IActionResult> GetOrderTrace(string identifier)
+	{
+		var traces = await _orderService.GetOrderTraceByNumberAsync(identifier);
+		if (traces == null || traces.Count == 0)
+			return NotFound(new { error = "Order not found" });
+		return Ok(new { orders = traces });
+	}
+
+	// GET: api/orders/{orderId}/comments
+	[HttpGet("orders/{orderId}/comments")]
+	public async Task<IActionResult> GetOrderComments(Guid orderId)
+	{
+		var comments = await _orderService.GetOrderCommentsAsync(orderId);
+		return Ok(comments);
+	}
+	// POST: api/orders/{orderId}/comments
+	[HttpPost("orders/{orderId}/comments")]
+	public async Task<IActionResult> AddOrderComment(Guid orderId, [FromBody] AddCommentRequestDto request)
+	{
+		if (string.IsNullOrEmpty(request.Content))
+			return BadRequest(new { error = "content is required" });
+
+		var result = await _orderService.AddOrderCommentAsync(orderId, request.UserId, request.Content);
+		return Ok(result);
+	}
+
+	// GET: api/orders/{identifier}   ← САМЫЙ ОБЩИЙ МАРШРУТ — В САМОМ КОНЦЕ!
+	[HttpGet("orders/{identifier}")]
+	public async Task<IActionResult> GetOrderByIdentifier(string identifier)
+	{
+		var isUuid = Guid.TryParse(identifier, out var orderId);
+		var order = isUuid
+			? await _orderService.GetOrderByIdAsync(orderId)
+			: await _orderService.GetOrderByNumberAsync(identifier);
+
+		if (order == null)
+			return NotFound(new { error = "Order not found" });
+		return Ok(order);
+	}
+
+	// POST: api/orders/{orderId}/productionOrderComments
+	[HttpPost("orders/{orderId}/productionOrderComments")]
+	public async Task<IActionResult> AddProductionOrderComment( Guid orderId, [FromBody] AddProductionOrderCommentRequestDto request)
+	{
+		if (string.IsNullOrEmpty(request.Content))
+			return BadRequest(new { error = "content is required" });
+
+		var result = await _orderService.AddProductionOrderCommentAsync(
+			orderId, request.ProductionOrderId, request.UserId, request.Content);
+
+		return Ok(result);
+	}
+
+	// POST: api/orders/{orderId}/OrderSupplyComments
+	[HttpPost("orders/{orderId}/OrderSupplyComments")]
+	public async Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request)
+	{
+		if (string.IsNullOrEmpty(request.Content))
+			return BadRequest(new { error = "content is required" });
+
+		var result = await _orderService.AddSupplyCommentAsync(
+			orderId, request.SupplyTypeId, request.UserId, request.Content);
 
 		return Ok(result);
 	}
