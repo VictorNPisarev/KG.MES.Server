@@ -12,6 +12,8 @@ public class Workplace
 	[Column("is_workplace")] public bool IsWorkplace { get; set; }
 	[Column("created_at")] public DateTime CreatedAt { get; set; }
 	[Column("updated_at")] public DateTime UpdatedAt { get; set; }
+	[Column("level")] public int Level { get; set; }
+
 
 	// Навигационные свойства
 	[ForeignKey("PreviousWorkplaceId")]

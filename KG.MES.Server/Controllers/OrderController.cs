@@ -55,6 +55,7 @@ public partial class OrderController : ControllerBase
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}
 	[HttpPut("orders/footprint/{productionOrderId}/workplace/{workplaceId}")]
+	[HttpPut("traces/{productionOrderId}/workplace/{workplaceId}")]
 	public Task<IActionResult> SetOrderFootprintStatus(Guid productionOrderId, Guid workplaceId, [FromBody] SetFootprintStatusRequestDto request)
 		=> SetOrderFootprintStatusHandler(productionOrderId, workplaceId, request);
 
@@ -68,7 +69,7 @@ public partial class OrderController : ControllerBase
 	public Task<IActionResult> UpdateOrderComment(Guid orderId, Guid commentId, [FromBody] UpdateCommentRequestDto request)
 		=> UpdateOrderCommentHandler(orderId, commentId, request);
 
-	// GET: api/orders/{identifier}/trace   ← ТОЖЕ СТАТИЧЕСКИЙ СУФФИКС, НО ВАЖЕН ПОРЯДОК
+	// GET: api/orders/{identifier}/trace  
 	[HttpGet("orders/{identifier}/trace")]
 	public Task<IActionResult> GetOrderTrace(string identifier) => GetOrderTraceHandler(identifier);
 

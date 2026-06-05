@@ -16,9 +16,6 @@ public class SupplyTypeDto
 	[JsonPropertyName("unit")]
 	public string? Unit { get; set; }
 
-	[JsonPropertyName("sort_order")]
-	public int SortOrder { get; set; }
-
 	[JsonPropertyName("is_active")]
 	public bool IsActive { get; set; }
 }

@@ -23,14 +23,12 @@ public class SupplyService : ISupplyService
 	{
 		return await _context.SupplyTypes
 			.Where(st => st.IsActive)
-			.OrderBy(st => st.SortOrder)
 			.Select(st => new SupplyTypeDto
 			{
 				Id = st.Id,
 				Name = st.Name,
 				DisplayName = st.DisplayName,
 				Unit = st.Unit,
-				SortOrder = st.SortOrder,
 				IsActive = st.IsActive
 			})
 			.ToListAsync();

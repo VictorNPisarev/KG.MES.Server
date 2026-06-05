@@ -1,5 +1,6 @@
 // KG.MES.Server/Controllers/WorkplaceController.cs
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -59,5 +60,34 @@ public class WorkplaceController : ControllerBase
 	{
 		var blocks = await _workplaceService.GetWorkplaceBlocksAsync(workplaceId);
 		return Ok(blocks);
+	}
+
+	// GET: api/workplaces/{id}
+	[HttpGet("workplaces/{id}")]
+	public async Task<IActionResult> GetWorkplaceById(Guid id)
+	{
+		// ✅ Правильно: вызываем метод сервиса
+		var workplace = await _workplaceService.GetWorkplaceByIdAsync(id);
+
+		if (workplace == null)
+			return NotFound(new { error = "Workplace not found" });
+
+		return Ok(workplace);
+	}
+
+	// GET: api/workplaces?type=active|all
+	[HttpGet("workplaces")]
+	public async Task<IActionResult> GetWorkplaces([FromQuery] string? type = "all")
+	{
+		if (type?.ToLower() == "active")
+		{
+			// ✅ Вызываем метод сервиса напрямую, а не другой метод контроллера
+			var activeWorkplaces = await _workplaceService.GetActiveWorkplacesAsync();
+			return Ok(activeWorkplaces);
+		}
+
+		// ✅ По умолчанию возвращаем все
+		var allWorkplaces = await _workplaceService.GetAllWorkplacesAsync();
+		return Ok(allWorkplaces);
 	}
 }
