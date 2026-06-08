@@ -126,7 +126,7 @@ public static class NotificationHelper
 
 	// === Комбинированные методы для удобства ===
 
-	public static async Task NotifyOrderStatusChanged(Guid orderId, Guid workplaceId, string oldStatus, string newStatus, Guid? userId, string notes = "")
+	public static async Task NotifyOrderStatusChanged(Guid orderId, Guid workplaceId, string newStatus, Guid? userId, string notes = "")
 	{
 		await OrderUpdated(orderId, workplaceId, newStatus, userId, notes);
 		await WorkplaceOrderUpdated(workplaceId, orderId, newStatus);

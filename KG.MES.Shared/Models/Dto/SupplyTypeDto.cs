@@ -11,13 +11,10 @@ public class SupplyTypeDto
 	public string Name { get; set; } = string.Empty;
 
 	[JsonPropertyName("display_name")]
-	public string DisplayName { get; set; } = string.Empty;
+	public string? DisplayName { get; set; }
 
 	[JsonPropertyName("unit")]
 	public string? Unit { get; set; }
-
-	[JsonPropertyName("sort_order")]
-	public int SortOrder { get; set; }
 
 	[JsonPropertyName("is_active")]
 	public bool IsActive { get; set; }

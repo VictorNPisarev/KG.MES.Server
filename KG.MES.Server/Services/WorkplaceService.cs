@@ -22,12 +22,13 @@ public class WorkplaceService : IWorkplaceService
 	{
 		return await _context.Workplaces
 			.Where(w => w.IsWorkplace)
-			.OrderBy(w => w.Name)
+			.OrderBy(w => w.Level)
 			.Select(w => new WorkplaceDto
 			{
 				Id = w.Id,
 				Name = w.Name,
-				IsWorkplace = w.IsWorkplace
+				IsWorkplace = w.IsWorkplace,
+				Level = w.Level
 			})
 			.ToListAsync();
 	}
@@ -35,12 +36,13 @@ public class WorkplaceService : IWorkplaceService
 	public async Task<List<WorkplaceDto>> GetAllWorkplacesAsync()
 	{
 		return await _context.Workplaces
-			.OrderBy(w => w.Name)
+			.OrderBy(w => w.Level)
 			.Select(w => new WorkplaceDto
 			{
 				Id = w.Id,
 				Name = w.Name,
-				IsWorkplace = w.IsWorkplace
+				IsWorkplace = w.IsWorkplace,
+				Level = w.Level
 			})
 			.ToListAsync();
 	}
@@ -143,5 +145,19 @@ public class WorkplaceService : IWorkplaceService
 			})
 			.OrderByDescending(b => b.BlockedAt)
 			.ToListAsync();
+	}
+
+	public async Task<WorkplaceDto?> GetWorkplaceByIdAsync(Guid id)
+	{
+		return await _context.Workplaces
+			.Where(w => w.Id == id)
+			.OrderBy(w => w.Level)
+			.Select(w => new WorkplaceDto
+			{
+				Id = w.Id,
+				Name = w.Name,
+				IsWorkplace = w.IsWorkplace,
+			})
+			.FirstOrDefaultAsync();
 	}
 }

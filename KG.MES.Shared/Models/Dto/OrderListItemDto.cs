@@ -17,13 +17,13 @@ public class OrderListItemDto
 	public int WindowCount { get; set; }
 
 	[JsonPropertyName("window_area")]
-	public decimal WindowArea { get; set; }
+	public decimal? WindowArea { get; set; }
 
 	[JsonPropertyName("plate_count")]
 	public int PlateCount { get; set; }
 
 	[JsonPropertyName("plate_area")]
-	public decimal PlateArea { get; set; }
+	public decimal? PlateArea { get; set; }
 
 	[JsonPropertyName("is_econom")]
 	public bool IsEconom { get; set; }

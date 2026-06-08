@@ -1,3 +1,4 @@
+using System.Globalization;
 using KG.MES.Server.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -44,10 +45,12 @@ public partial class OrderService
 			.FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
 	}
 
-	public async Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string orderNumber)
+	public async Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string identifier)
 	{
+		var isUuid = Guid.TryParse(identifier, out var orderId);
+
 		var orders = await _context.Orders
-			.Where(o => o.OrderNumber == orderNumber)
+			.Where(o => isUuid ? o.Id == orderId : o.OrderNumber == identifier)
 			.ToListAsync();
 
 		var traces = new List<OrderTraceDto>();
@@ -64,7 +67,6 @@ public partial class OrderService
 					OrderId = order.Id,
 					OrderNumber = order.OrderNumber,
 					ReadyDate = order.ReadyDate,
-					Status = "not_started",
 					Workplaces = new List<WorkplaceTraceDto>()
 				});
 				continue;
@@ -72,11 +74,13 @@ public partial class OrderService
 
 			var footprints = await _context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == productionOrder.Id)
-				.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new WorkplaceTraceDto
+				.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new {fp, w})
+				.OrderBy(x => x.w.Level)
+				.Select(x => new WorkplaceTraceDto
 				{
-					WorkplaceId = fp.WorkplaceId,
-					WorkplaceName = w.Name,
-					Status = fp.Status
+					WorkplaceId = x.fp.WorkplaceId,
+					WorkplaceName = x.w.Name,
+					Status = x.fp.Status
 				})
 				.ToListAsync();
 
@@ -86,69 +90,10 @@ public partial class OrderService
 				ProductionOrderId = productionOrder.Id,
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
-				Status = "in_progress",
 				Workplaces = footprints
 			});
 		}
 
 		return traces;
-	}
-
-
-	public async Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId)
-	{
-		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
-
-		if (isStart)
-		{
-			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
-
-			var newOrders = await _context.ProductionOrders
-				.Where(po => po.CurrentWorkplaceId == noneId)
-				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new OrderWorkplaceDto
-				{
-					ProductionOrderId = po.Id,
-					WorkplaceId = workplaceId,
-					Status = OrderStatus.WorkplaceStatus.Pending,
-					OrderId = o.Id,
-					OrderNumber = o.OrderNumber,
-					WindowCount = o.WindowCount,
-					WindowArea = o.WindowArea,
-					PlateCount = o.PlateCount,
-					PlateArea = o.PlateArea,
-					ReadyDate = o.ReadyDate,
-					IsEconom = o.IsEconom,
-					IsClaim = o.IsClaim,
-					IsOnlyPaid = o.IsOnlyPaid
-				})
-				.ToListAsync();
-
-			return newOrders;
-		}
-
-		var pendingOrders = await _context.OrderFootprints
-			.Where(fp => fp.WorkplaceId == workplaceId &&
-						(fp.Status == OrderStatus.WorkplaceStatus.Pending ||
-						 fp.Status == OrderStatus.WorkplaceStatus.Joinery))
-			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
-			{
-				ProductionOrderId = x.fp.ProductionOrderId,
-				WorkplaceId = x.fp.WorkplaceId,
-				Status = x.fp.Status,
-				OrderId = o.Id,
-				OrderNumber = o.OrderNumber,
-				WindowCount = o.WindowCount,
-				WindowArea = o.WindowArea,
-				PlateCount = o.PlateCount,
-				PlateArea = o.PlateArea,
-				ReadyDate = o.ReadyDate,
-				IsEconom = o.IsEconom,
-				IsClaim = o.IsClaim,
-				IsOnlyPaid = o.IsOnlyPaid
-			})
-			.ToListAsync();
-
-		return pendingOrders;
 	}
 }

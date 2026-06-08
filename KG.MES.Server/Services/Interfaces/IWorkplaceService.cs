@@ -10,4 +10,5 @@ public interface IWorkplaceService
 	Task<WorkplaceStatsDto> GetWorkplaceStatsAsync(Guid workplaceId);
 	Task<List<WorkplaceHistoryDto>> GetWorkplaceHistoryAsync(Guid workplaceId, DateTime? from, DateTime? to, int limit = 50);
 	Task<List<WorkplaceBlockDto>> GetWorkplaceBlocksAsync(Guid workplaceId);
+	Task<WorkplaceDto?> GetWorkplaceByIdAsync(Guid id);
 }

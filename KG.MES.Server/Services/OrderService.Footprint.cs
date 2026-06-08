@@ -14,7 +14,7 @@ public partial class OrderService
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
 			{
-				ProductionOrderId = x.fp.ProductionOrderId,
+				Id = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
 				Status = x.fp.Status,
 				OrderId = o.Id,
@@ -26,12 +26,79 @@ public partial class OrderService
 				ReadyDate = o.ReadyDate,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
-				IsOnlyPaid = o.IsOnlyPaid
+				IsOnlyPaid = o.IsOnlyPaid,
+				WorkplaceOrderStatus = x.fp.Status,
+				FromJoinery = x.fp.Status == "joinery",
+				Name = o.OrderNumber
 			})
 			.ToListAsync();
 
 		return activeOrders;
 	}
+
+	public async Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId)
+	{
+		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
+
+		if (isStart)
+		{
+			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
+
+			var newOrders = await _context.ProductionOrders
+				.Where(po => po.CurrentWorkplaceId == noneId)
+				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new OrderWorkplaceDto
+				{
+					Id = po.Id,
+					WorkplaceId = workplaceId,
+					Status = OrderStatus.WorkplaceStatus.Pending,
+					OrderId = o.Id,
+					OrderNumber = o.OrderNumber,
+					WindowCount = o.WindowCount,
+					WindowArea = o.WindowArea,
+					PlateCount = o.PlateCount,
+					PlateArea = o.PlateArea,
+					ReadyDate = o.ReadyDate,
+					IsEconom = o.IsEconom,
+					IsClaim = o.IsClaim,
+					IsOnlyPaid = o.IsOnlyPaid,
+					WorkplaceOrderStatus = OrderStatus.WorkplaceStatus.Pending,
+					FromJoinery = false,
+					Name = o.OrderNumber
+				})
+				.ToListAsync();
+
+			return newOrders;
+		}
+
+		var pendingOrders = await _context.OrderFootprints
+			.Where(fp => fp.WorkplaceId == workplaceId &&
+						(fp.Status == OrderStatus.WorkplaceStatus.Pending ||
+						 fp.Status == OrderStatus.WorkplaceStatus.Joinery))
+			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
+			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
+			{
+				Id = x.fp.ProductionOrderId,
+				WorkplaceId = x.fp.WorkplaceId,
+				Status = x.fp.Status,
+				OrderId = o.Id,
+				OrderNumber = o.OrderNumber,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
+				ReadyDate = o.ReadyDate,
+				IsEconom = o.IsEconom,
+				IsClaim = o.IsClaim,
+				IsOnlyPaid = o.IsOnlyPaid,
+				WorkplaceOrderStatus = x.fp.Status,
+				FromJoinery = x.fp.Status == "joinery",
+				Name = x.fp.Status == "joinery" ? $"🪚 {o.OrderNumber}" : o.OrderNumber
+			})
+			.ToListAsync();
+
+		return pendingOrders;
+	}
+
 
 	public async Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
@@ -46,7 +113,7 @@ public partial class OrderService
 				.Where(po => po.CurrentWorkplaceId == noneId)
 				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new OrderWorkplaceDto
 				{
-					ProductionOrderId = po.Id,
+					Id = po.Id,
 					WorkplaceId = workplaceId,
 					Status = OrderStatus.WorkplaceStatus.Pending,
 					OrderId = o.Id,
@@ -58,7 +125,10 @@ public partial class OrderService
 					ReadyDate = o.ReadyDate,
 					IsEconom = o.IsEconom,
 					IsClaim = o.IsClaim,
-					IsOnlyPaid = o.IsOnlyPaid
+					IsOnlyPaid = o.IsOnlyPaid,
+					WorkplaceOrderStatus = OrderStatus.WorkplaceStatus.Pending,
+					FromJoinery = false,
+					Name = o.OrderNumber
 				})
 				.ToListAsync();
 
@@ -73,7 +143,7 @@ public partial class OrderService
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
 			{
-				ProductionOrderId = x.fp.ProductionOrderId,
+				Id = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
 				Status = x.fp.Status,
 				OrderId = o.Id,
@@ -85,7 +155,10 @@ public partial class OrderService
 				ReadyDate = o.ReadyDate,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
-				IsOnlyPaid = o.IsOnlyPaid
+				IsOnlyPaid = o.IsOnlyPaid,
+				WorkplaceOrderStatus = x.fp.Status,
+				FromJoinery = x.fp.Status == "joinery",
+				Name = x.fp.Status == "joinery" ? $"🪚 {o.OrderNumber}" : o.OrderNumber
 			})
 			.ToListAsync();
 

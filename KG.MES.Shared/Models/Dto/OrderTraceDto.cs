@@ -6,7 +6,6 @@ public class OrderTraceDto
 	public Guid? ProductionOrderId { get; set; }
 	public string OrderNumber { get; set; } = string.Empty;
 	public DateTime? ReadyDate { get; set; }
-	public string Status { get; set; } = string.Empty;
 	public List<WorkplaceTraceDto> Workplaces { get; set; } = new();
 }
 
