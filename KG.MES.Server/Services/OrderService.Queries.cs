@@ -74,11 +74,13 @@ public partial class OrderService
 
 			var footprints = await _context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == productionOrder.Id)
-				.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new WorkplaceTraceDto
+				.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new {fp, w})
+				.OrderBy(x => x.w.Level)
+				.Select(x => new WorkplaceTraceDto
 				{
-					WorkplaceId = fp.WorkplaceId,
-					WorkplaceName = w.Name,
-					Status = fp.Status
+					WorkplaceId = x.fp.WorkplaceId,
+					WorkplaceName = x.w.Name,
+					Status = x.fp.Status
 				})
 				.ToListAsync();
 
