@@ -5,6 +5,7 @@ using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Server.Hubs;
 using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Models.Entities;
 
 namespace KG.MES.Server.Services;
 
@@ -96,15 +97,14 @@ public class SupplyService : ISupplyService
 		await _context.SaveChangesAsync();
 
 		// Оборачиваем уведомления в try-catch, чтобы тесты с InMemory не падали
-		try
-		{
-			await NotificationHelper.SupplyStatusChanged(orderId, supplyTypeId, request.SupplyConditionId);
-			await NotificationHelper.SupplyUpdated(orderId, supplyTypeId, request.SupplyConditionId);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogWarning(ex, "Failed to send supply notification (likely running in tests)");
-		}
+		//try
+		//{
+		//	await NotificationHelper.SupplyUpdated(orderId, supplyTypeId, supplyItem.ConditionId);
+		//}
+		//catch (Exception ex)
+		//{
+		//	_logger.LogWarning(ex, "Failed to send supply notification (likely running in tests)");
+		//}
 
 		return new OperationResultDto { Success = true, Message = "Supply item updated" };
 	}
@@ -126,10 +126,43 @@ public class SupplyService : ISupplyService
 
 			if (supplyItem != null)
 			{
+				// Если есть комментарий и он изменился
+				if (!string.IsNullOrEmpty(update.Comment))
+				{
+					if (supplyItem.CommentId.HasValue)
+					{
+						// Обновляем существующий комментарий
+						var existingComment = await _context.Comments
+							.FirstOrDefaultAsync(c => c.Id == supplyItem.CommentId.Value);
+						if (existingComment != null)
+						{
+							existingComment.Content = update.Comment;
+							existingComment.UpdatedAt = DateTime.UtcNow;
+						}
+					}
+					else
+					{
+						// Создаём новый комментарий
+						var newComment = new Comment
+						{
+							Id = Guid.NewGuid(),
+							OrderId = orderId,
+							UserId = update.UserId,
+							Content = update.Comment,
+							CreatedAt = DateTime.UtcNow,
+							UpdatedAt = DateTime.UtcNow
+						};
+						_context.Comments.Add(newComment);
+						await _context.SaveChangesAsync();
+
+						supplyItem.CommentId = newComment.Id;
+					}
+				}
+
+				// Обновляем остальные поля
 				supplyItem.ConditionId = update.SupplyConditionId;
 				supplyItem.ExpectedDate = update.ExpectedDate;
 				supplyItem.Quantity = update.Quantity;
-				supplyItem.Comment = update.Comment;
 				supplyItem.UpdatedAt = DateTime.UtcNow;
 			}
 		}
@@ -142,7 +175,7 @@ public class SupplyService : ISupplyService
 			Message = $"{updates.Count} supply items updated"
 		};
 	}
-
+	
 	public async Task<PaginatedResponse<SupplyStatusListItemDto>> GetAllSupplyItemsAsync(
 		int page, int limit, string? orderNumber)
 	{
@@ -153,6 +186,7 @@ public class SupplyService : ISupplyService
 			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate })
 			.Select(g => new SupplyStatusListItemDto
 			{
+				Id = g.Key.Id,
 				OrderNumber = g.Key.OrderNumber,
 				ReadyDate = g.Key.ReadyDate,
 				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :

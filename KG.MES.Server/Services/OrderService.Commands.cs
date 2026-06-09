@@ -159,12 +159,8 @@ public partial class OrderService
 
 			await transaction.CommitAsync();
 
-			await NotificationHelper.NotifyOrderStatusChanged(
-				productionOrderId,
-				workplaceId,
-				OrderStatus.WorkplaceStatus.Active,
-				userId,
-				notes);
+			//await NotificationHelper.OrderUpdated(productionOrderId, workplaceId, OrderStatus.WorkplaceStatus.Active, userId);
+			//await NotificationHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, OrderStatus.WorkplaceStatus.Active);
 
 			return new OperationResultDto
 			{
@@ -206,12 +202,8 @@ public partial class OrderService
 			await _context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
-			await NotificationHelper.NotifyOrderStatusChanged(
-				productionOrderId,
-				workplaceId,
-				OrderStatus.WorkplaceStatus.Completed,
-				userId,
-				notes);
+			//await NotificationHelper.OrderUpdated(productionOrderId, workplaceId, OrderStatus.WorkplaceStatus.Completed, userId);
+			//await NotificationHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, OrderStatus.WorkplaceStatus.Completed);
 
 			return new OperationResultDto
 			{

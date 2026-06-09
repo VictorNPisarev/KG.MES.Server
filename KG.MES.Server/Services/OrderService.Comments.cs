@@ -62,14 +62,14 @@ public partial class OrderService
 
 			await transaction.CommitAsync();
 
-			try
-			{
-				await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogWarning(ex, "Failed to send notification for comment");
-			}
+			//try
+			//{
+			//	await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
+			//}
+			//catch (Exception ex)
+			//{
+			//	_logger.LogWarning(ex, "Failed to send notification for comment");
+			//}
 			
 			return new OrderCommentDto
 			{
@@ -116,6 +116,16 @@ public partial class OrderService
 			}
 
 			await transaction.CommitAsync();
+
+			//try
+			//{
+			//	await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
+			//}
+			//catch (Exception ex)
+			//{
+			//	_logger.LogWarning(ex, "Failed to send notification for comment");
+			//}
+
 
 			return new OrderCommentDto
 			{
@@ -171,6 +181,16 @@ public partial class OrderService
 
 			await transaction.CommitAsync();
 
+			//try
+			//{
+			//	await NotificationHelper.OrderCommentAdded(orderId, comment.Id, content, userId);
+			//}
+			//catch (Exception ex)
+			//{
+			//	_logger.LogWarning(ex, "Failed to send notification for comment");
+			//}
+
+
 			return new OrderCommentDto
 			{
 				Id = comment.Id,
@@ -199,6 +219,16 @@ public partial class OrderService
 		comment.Content = content;
 		comment.UpdatedAt = DateTime.UtcNow;
 		await _context.SaveChangesAsync();
+
+		//try
+		//{
+		//	await NotificationHelper.OrderCommentAdded(orderId, commentId, content, null);
+		//}
+		//catch (Exception ex)
+		//{
+		//	_logger.LogWarning(ex, "Failed to send notification for comment");
+		//}
+
 
 		return new OrderCommentDto
 		{
