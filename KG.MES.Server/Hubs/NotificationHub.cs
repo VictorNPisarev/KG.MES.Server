@@ -30,25 +30,11 @@ public class NotificationHub : Hub
 		_logger.LogInformation("Client {ConnectionId} subscribed to order {OrderId}", Context.ConnectionId, orderId);
 	}
 
-	// Отписка от обновлений заказа
-	public async Task UnsubscribeFromOrder(string orderId)
-	{
-		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"order_{orderId}");
-		_logger.LogInformation("Client {ConnectionId} unsubscribed from order {OrderId}", Context.ConnectionId, orderId);
-	}
-
 	// Подписка на обновления участка
 	public async Task SubscribeToWorkplace(string workplaceId)
 	{
 		await Groups.AddToGroupAsync(Context.ConnectionId, $"workplace_{workplaceId}");
 		_logger.LogInformation("Client {ConnectionId} subscribed to workplace {WorkplaceId}", Context.ConnectionId, workplaceId);
-	}
-
-	// Отписка от обновлений участка
-	public async Task UnsubscribeFromWorkplace(string workplaceId)
-	{
-		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"workplace_{workplaceId}");
-		_logger.LogInformation("Client {ConnectionId} unsubscribed from workplace {WorkplaceId}", Context.ConnectionId, workplaceId);
 	}
 
 	// Подписка на обновления снабжения
@@ -58,10 +44,19 @@ public class NotificationHub : Hub
 		_logger.LogInformation("Client {ConnectionId} subscribed to supply updates", Context.ConnectionId);
 	}
 
-	// Отписка от обновлений снабжения
+	// Отписка
+	public async Task UnsubscribeFromOrder(string orderId)
+	{
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"order_{orderId}");
+	}
+
+	public async Task UnsubscribeFromWorkplace(string workplaceId)
+	{
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"workplace_{workplaceId}");
+	}
+
 	public async Task UnsubscribeFromSupply()
 	{
 		await Groups.RemoveFromGroupAsync(Context.ConnectionId, "supply");
-		_logger.LogInformation("Client {ConnectionId} unsubscribed from supply updates", Context.ConnectionId);
 	}
 }

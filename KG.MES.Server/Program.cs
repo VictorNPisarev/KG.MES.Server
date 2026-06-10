@@ -29,7 +29,7 @@ builder.Services.AddControllers()
 	});
 
 // Добавляем SignalR
-builder.Services.AddSignalR();
+//builder.Services.AddSignalR();
 
 // Добавляем Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -58,15 +58,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 
+// Инициализация NotificationHelper (после app.Build())
+//var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
+//NotificationHelper.Initialize(hubContext);
+
 app.UseCors("AllowAll");
 
-app.MapHub<NotificationHub>("/notificationHub");
-
-// Инициализация NotificationHelper (после app.Build())
-var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
-NotificationHelper.Initialize(hubContext);
-
 app.MapControllers();
+
+//app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 

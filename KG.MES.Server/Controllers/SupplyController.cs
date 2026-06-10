@@ -1,6 +1,6 @@
 // KG.MES.Server/Controllers/SupplyController.cs
+using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
-using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -43,16 +43,14 @@ public class SupplyController : ControllerBase
 	[HttpPut("orders/{orderId}/supplies")]
 	public async Task<IActionResult> UpdateAllSupplyStatuses(
 		Guid orderId,
-		[FromBody] List<UpdateSupplyItemRequest> updates)
+		[FromBody] UpdateOrderSupplyItemsRequestDto request)
 	{
-		if (updates == null || updates.Count == 0)
+		if (request?.Supplies == null || request.Supplies.Count == 0)
+		{
 			return BadRequest(new { error = "supplies array is required" });
+		}
 
-		// Проверяем, что у каждого элемента есть SupplyTypeId
-		if (updates.Any(u => u.SupplyTypeId == Guid.Empty))
-			return BadRequest(new { error = "supplyTypeId is required for each item" });
-
-		var result = await _supplyService.UpdateAllSupplyItemsAsync(orderId, updates);
+		var result = await _supplyService.UpdateAllSupplyItemsAsync(orderId, request.Supplies);
 
 		if (!result.Success)
 			return BadRequest(result);
