@@ -80,11 +80,11 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
 static string GetConnectionString()
 {
 	// Чтение из .env или переменных окружения
-	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "192.168.0.254";
 	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
 	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
 	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "x126ko33";
+	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "WGbbYT8t!q";
 
 	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 }
