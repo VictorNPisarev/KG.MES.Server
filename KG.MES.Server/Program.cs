@@ -29,7 +29,7 @@ builder.Services.AddControllers()
 	});
 
 // Добавляем SignalR
-//builder.Services.AddSignalR();
+builder.Services.AddSignalR();
 
 // Добавляем Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -40,9 +40,10 @@ builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAll", policy =>
 	{
-		policy.AllowAnyOrigin()
+		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
 			  .AllowAnyMethod()
 			  .AllowAnyHeader();
+			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
 	});
 });
 
@@ -55,18 +56,24 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-
-// Инициализация NotificationHelper (после app.Build())
-//var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
-//NotificationHelper.Initialize(hubContext);
+app.UseRouting();
 
 app.UseCors("AllowAll");
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+	app.UseHttpsRedirection();
+}
+
+// Инициализация NotificationHelper (после app.Build())
+var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
+NotificationHelper.Initialize(hubContext);
+
 
 app.MapControllers();
 
-//app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 
@@ -80,11 +87,11 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
 static string GetConnectionString()
 {
 	// Чтение из .env или переменных окружения
-	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost"; //"192.168.0.254";
 	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
 	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
 	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "x126ko33";
+	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "WGbbYT8t!q";
 
 	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 }

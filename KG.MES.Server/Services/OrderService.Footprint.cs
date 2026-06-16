@@ -1,4 +1,5 @@
 using KG.MES.Server.Constants;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -315,5 +316,27 @@ public partial class OrderService
 			footprint.UpdatedAt = DateTime.UtcNow;
 			await _context.SaveChangesAsync();
 		}
+
+		// Публикую события в SignalR
+		try
+		{
+			if (productionOrderId != Guid.Empty)
+			{
+				// 1. Оповещение для карточки заказа (обновятся открытые карточки)
+				await NotificationHelper.OrderUpdated(productionOrderId, workplaceId, newStatus);
+
+				// 2. Оповещение для рабочего места (обновятся списки в приложениях)
+				await NotificationHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, newStatus);
+
+				_logger.LogInformation(
+					"SignalR: order {OrderId}, workplace {WorkplaceId}, status → {NewStatus}",
+					productionOrderId, workplaceId, newStatus);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to send SignalR notification for status change");
+		}
+
 	}
 }
