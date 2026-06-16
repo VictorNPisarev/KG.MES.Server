@@ -87,7 +87,7 @@ static void ConfigureDatabase(IServiceCollection services, IConfiguration config
 static string GetConnectionString()
 {
 	// Чтение из .env или переменных окружения
-	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "192.168.0.254";
+	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost"; //"192.168.0.254";
 	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
 	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
 	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
