@@ -13,29 +13,27 @@ public static class NotificationHelper
 	}
 
 	// order:updated (как в Socket.IO)
-	public static async Task OrderUpdated(Guid orderId, Guid workplaceId, string newStatus, Guid? userId, string notes = "")
+	public static async Task OrderUpdated(Guid productionOrderId, Guid workplaceId, string newStatus)
 	{
 		if (_hubContext == null) return;
 
-		await _hubContext.Clients.Group($"order_{orderId}").SendAsync("order:updated", new
+		await _hubContext.Clients.Group($"order_{productionOrderId}").SendAsync("order:updated", new
 		{
-			ProductionOrderId = orderId,
+			ProductionOrderId = productionOrderId,
 			WorkplaceId = workplaceId,
 			Status = newStatus,
-			UserId = userId,
-			Notes = notes,
 			Timestamp = DateTime.UtcNow
 		});
 	}
 
 	// workplace:order:updated
-	public static async Task WorkplaceOrderUpdated(Guid workplaceId, Guid orderId, string newStatus)
+	public static async Task WorkplaceOrderUpdated(Guid workplaceId, Guid productionOrderId, string newStatus)
 	{
 		if (_hubContext == null) return;
 
 		await _hubContext.Clients.Group($"workplace_{workplaceId}").SendAsync("workplace:order:updated", new
 		{
-			ProductionOrderId = orderId,
+			ProductionOrderId = productionOrderId,
 			WorkplaceId = workplaceId,
 			Status = newStatus,
 			Action = "status_changed",

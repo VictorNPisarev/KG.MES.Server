@@ -29,7 +29,7 @@ builder.Services.AddControllers()
 	});
 
 // Добавляем SignalR
-//builder.Services.AddSignalR();
+builder.Services.AddSignalR();
 
 // Добавляем Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -40,9 +40,10 @@ builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAll", policy =>
 	{
-		policy.AllowAnyOrigin()
+		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
 			  .AllowAnyMethod()
 			  .AllowAnyHeader();
+			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
 	});
 });
 
@@ -55,18 +56,24 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-
-// Инициализация NotificationHelper (после app.Build())
-//var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
-//NotificationHelper.Initialize(hubContext);
+app.UseRouting();
 
 app.UseCors("AllowAll");
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+	app.UseHttpsRedirection();
+}
+
+// Инициализация NotificationHelper (после app.Build())
+var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
+NotificationHelper.Initialize(hubContext);
+
 
 app.MapControllers();
 
-//app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 
