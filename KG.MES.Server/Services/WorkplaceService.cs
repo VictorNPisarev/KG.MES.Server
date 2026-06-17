@@ -36,6 +36,7 @@ public class WorkplaceService : IWorkplaceService
 	public async Task<List<WorkplaceDto>> GetAllWorkplacesAsync()
 	{
 		return await _context.Workplaces
+			.Where(w => w.Level >= 0)
 			.OrderBy(w => w.Level)
 			.Select(w => new WorkplaceDto
 			{
