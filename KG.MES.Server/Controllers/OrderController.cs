@@ -81,7 +81,7 @@ public partial class OrderController : ControllerBase
 	[HttpPost("orders/{orderId}/comments")]
 	public Task<IActionResult> AddOrderComment(Guid orderId, [FromBody] AddCommentRequestDto request) => AddOrderCommentHandler(orderId, request);
 
-	// GET: api/orders/{identifier}   ← САМЫЙ ОБЩИЙ МАРШРУТ — В САМОМ КОНЦЕ!
+	// GET: api/orders/{identifier}
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 

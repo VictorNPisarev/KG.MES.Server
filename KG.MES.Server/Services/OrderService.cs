@@ -10,11 +10,13 @@ public partial class OrderService : IOrderService
 {
 	private readonly AppDbContext _context;
 	private readonly ILogger<OrderService> _logger;
+	private readonly OrderAttributeService _orderAttributeService;
 
-	public OrderService(AppDbContext context, ILogger<OrderService> logger)
+	public OrderService(AppDbContext context, ILogger<OrderService> logger, OrderAttributeService orderAttributeService)
 	{
 		_context = context;
 		_logger = logger;
+		_orderAttributeService = orderAttributeService;
 	}
 
 	// Вспомогательные методы для сортировки
@@ -69,7 +71,8 @@ public partial class OrderService : IOrderService
 				Comment = x.po.Comment,
 				Lumber = x.po.Lumber,
 				GlazingBead = x.po.GlazingBead,
-				IsTwoSidePaint = x.po.IsTwoSidePaint
+				IsTwoSidePaint = x.po.IsTwoSidePaint,
+				Machine = x.po.Machine
 			});
 	}
 
@@ -94,7 +97,8 @@ public partial class OrderService : IOrderService
 				CreatedAt = x.o.CreatedAt,
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
-				CurrentStatus = w.Name
+				CurrentStatus = w.Name,
+				Machine = x.po.Machine
 			});
 
 		if (workplaceId.HasValue)

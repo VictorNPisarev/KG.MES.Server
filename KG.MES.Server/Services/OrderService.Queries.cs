@@ -32,7 +32,8 @@ public partial class OrderService
 				Comment = x.po.Comment,
 				Lumber = x.po.Lumber,
 				GlazingBead = x.po.GlazingBead,
-				IsTwoSidePaint = x.po.IsTwoSidePaint
+				IsTwoSidePaint = x.po.IsTwoSidePaint,
+				Machine = x.po.Machine
 			})
 			.FirstOrDefaultAsync();
 
