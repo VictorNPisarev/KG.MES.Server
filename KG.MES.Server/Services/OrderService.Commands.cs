@@ -16,6 +16,7 @@ public partial class OrderService
 
 		try
 		{
+			// 1. Создаем заказ (без CommentIds)
 			var order = new Order
 			{
 				Id = Guid.NewGuid(),
@@ -30,12 +31,35 @@ public partial class OrderService
 				IsOnlyPaid = request.IsOnlyPaid,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				CommentIds = new List<Guid>()
+				CommentIds = []
 			};
 
 			_context.Orders.Add(order);
-			await _context.SaveChangesAsync();
+			await _context.SaveChangesAsync(); // Сохраняем, чтобы получить order.Id
 
+			// 2. Создаем комментарий (если есть)
+			Guid? commentId = null;
+			if (!string.IsNullOrEmpty(request.Comment))
+			{
+				var comment = new Comment
+				{
+					Id = Guid.NewGuid(),
+					OrderId = order.Id,
+					UserId = null,
+					Content = request.Comment,
+					CreatedAt = DateTime.UtcNow,
+					UpdatedAt = DateTime.UtcNow
+				};
+
+				_context.Comments.Add(comment);
+				await _context.SaveChangesAsync(); // Сохраняем комментарий
+
+				// Добавляем ID комментария в заказ
+				order.CommentIds.Add(comment.Id);
+				commentId = comment.Id;
+			}
+
+			// 3. Создаем производственный заказ
 			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
 
 			var productionOrder = new ProductionOrder
@@ -49,24 +73,26 @@ public partial class OrderService
 				IsTwoSidePaint = request.IsTwoSidePaint,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				CommentIds = new List<Guid>()
+				CommentIds = []
 			};
 
 			_context.ProductionOrders.Add(productionOrder);
 			await _context.SaveChangesAsync();
 
+			// 4. Создаем снабжение
 			var orderSupply = new OrderSupply
 			{
 				Id = Guid.NewGuid(),
 				OrderId = order.Id,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				CommentIds = new List<Guid>()
+				CommentIds = []
 			};
 
 			_context.OrderSupplies.Add(orderSupply);
 			await _context.SaveChangesAsync();
 
+			// 5. Создаем позиции снабжения
 			var supplyTypes = await _context.SupplyTypes
 				.Where(st => st.IsActive)
 				.ToListAsync();
@@ -91,6 +117,27 @@ public partial class OrderService
 
 			await _context.SaveChangesAsync();
 			await transaction.CommitAsync();
+
+			// ✅ 6. Уведомляем через SignalR о создании заказа
+			try
+			{
+				// Уведомление для списка заказов
+				//await NotificationHelper.OrderCreated(order.Id, order.OrderNumber);
+
+				// Если есть комментарий, уведомляем о нем
+				if (commentId.HasValue)
+				{
+					await NotificationHelper.OrderCommentAdded(
+						order.Id,
+						commentId.Value,
+						request.Comment!,
+						null);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to send SignalR notification for order creation");
+			}
 
 			return new CreateOrderResultDto
 			{

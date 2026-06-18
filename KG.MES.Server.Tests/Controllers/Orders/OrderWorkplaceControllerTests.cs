@@ -43,6 +43,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 				w.Id = workplaceId;
 				w.Name = "Сборка";
 				w.IsWorkplace = true;
+				w.Level = 30;
 			})
 			.WithOrder(o =>
 			{
@@ -232,7 +233,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		var productionOrderId = Guid.NewGuid();
 
 		new TestDataBuilder()
-			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Столярка"; w.IsWorkplace = true; })
+			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Столярка"; w.IsWorkplace = true; w.Level = 15; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "3001"; })
 			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; po.CurrentWorkplaceId = workplaceId; })
 			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "joinery"; })

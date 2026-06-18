@@ -15,7 +15,7 @@ public static class OrderServiceHelper
 	public static async Task<Guid?> GetNoneWorkplaceIdAsync(AppDbContext context)
 	{
 		var workplace = await context.Workplaces
-			.FirstOrDefaultAsync(w => w.Name == "none");
+			.FirstOrDefaultAsync(w => w.Name == "Не определен" || w.Level == 0);
 		return workplace?.Id;
 	}
 

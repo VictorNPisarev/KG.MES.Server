@@ -144,7 +144,7 @@ public class TestDataBuilder
 		var profilingId = Guid.NewGuid();
 		var assemblyId = Guid.NewGuid();
 
-		WithWorkplace(w => { w.Id = noneId; w.Name = "none"; w.IsWorkplace = false; });
+		WithWorkplace(w => { w.Id = noneId; w.Name = "Не определен"; w.IsWorkplace = false; w.Level = 0; });
 		WithWorkplace(w => { w.Id = cutoffId; w.Name = "Торцовка"; w.IsWorkplace = true; });
 		WithWorkplace(w => { w.Id = profilingId; w.Name = "Профилирование"; w.IsWorkplace = true; });
 		WithWorkplace(w => { w.Id = assemblyId; w.Name = "Сборка"; w.IsWorkplace = true; });

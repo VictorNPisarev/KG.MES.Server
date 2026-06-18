@@ -9,16 +9,17 @@ class Program
 {
 	private const string GasUrl = "https://script.google.com/macros/s/AKfycbzoDyvGU4ZHKg4oy1rGmxvxLTfnMATV21eYUzTFsj4pTxz3ii3sqw-i6fk5vElvrqBR-w/exec";
 
-	private static readonly Dictionary<string, string> WorkplaceMap = new();
-	private static readonly Dictionary<string, string> RoleMap = new();
-	private static readonly Dictionary<string, string> UserMap = new();
-	private static readonly Dictionary<string, string> OrderMap = new();
-	private static readonly Dictionary<string, string> ProductionOrderMap = new();
+	private static readonly Dictionary<string, string> WorkplaceMap = [];
+	private static readonly Dictionary<string, string> RoleMap = [];
+	private static readonly Dictionary<string, string> UserMap = [];
+	private static readonly Dictionary<string, string> OrderMap = [];
+	private static readonly Dictionary<string, string> ProductionOrderMap = [];
 
 	static async Task Main(string[] args)
 	{
 		var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ??
-							"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
+							//"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
+							"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
 
 		await using var conn = new NpgsqlConnection(connectionString);
 		await conn.OpenAsync();
@@ -55,7 +56,7 @@ class Program
 			await CreateOrderSupplyForAllOrders(conn);
 			// 2. Потом обновляем статусы из BomFlags
 			await MigrateBomFlags(conn, bomFlags);
-			
+
 			Console.WriteLine("\n🎉 Миграция завершена!");
 		}
 		catch (Exception ex)
@@ -87,7 +88,7 @@ class Program
 		if (string.IsNullOrEmpty(gasTableName))
 		{
 			Console.WriteLine($"⚠️ Неизвестная таблица: {tableName}");
-			return new List<Dictionary<string, object>>();
+			return [];
 		}
 
 		Console.WriteLine($"📥 Загрузка {tableName} (GAS: {gasTableName})...");
@@ -99,7 +100,7 @@ class Program
 		var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(response);
 
 		Console.WriteLine($"✅ Загружено {data?.Count} записей");
-		return data ?? new List<Dictionary<string, object>>();
+		return data ?? [];
 	}
 	static async Task TruncateTables(NpgsqlConnection conn)
 	{
@@ -159,17 +160,19 @@ class Program
 			var isWorkplaceStr = wp.GetValueOrDefault("Участок производства")?.ToString();
 			var isWorkplace = isWorkplaceStr == "true" || isWorkplaceStr == "Y" || isWorkplaceStr == "True";
 			var name = wp.GetValueOrDefault("Статус")?.ToString() ?? "";
+			var level = int.Parse(wp.GetValueOrDefault("level")?.ToString() ?? "0");
 
 			var sql = @"
-				INSERT INTO workplaces (id, legacy_id, name, previous_workplace_id, is_workplace, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+				INSERT INTO workplaces (id, legacy_id, name, previous_workplace_id, is_workplace, created_at, updated_at, level)
+				VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $6)";
 
 			await using var cmd = new NpgsqlCommand(sql, conn);
 			cmd.Parameters.AddWithValue(newId);
 			cmd.Parameters.AddWithValue(oldId);
-			cmd.Parameters.AddWithValue(name);
+			cmd.Parameters.AddWithValue(name == "none" ? "Не определен" : name);
 			cmd.Parameters.AddWithValue(newPrevId ?? (object)DBNull.Value);
 			cmd.Parameters.AddWithValue(isWorkplace);
+			cmd.Parameters.AddWithValue(level);
 			await cmd.ExecuteNonQueryAsync();
 		}
 
@@ -440,6 +443,29 @@ class Program
 			cmd.Parameters.AddWithValue(glazingBead);
 			cmd.Parameters.AddWithValue(isTwoSidePaint);
 			await cmd.ExecuteNonQueryAsync();
+
+			// ✅ Создаём комментарий для производственного заказа (если есть)
+			if (!string.IsNullOrWhiteSpace(comment))
+			{
+				var commentId = Guid.NewGuid();
+				var commentSql = @"
+				INSERT INTO comments (id, order_id, user_id, content, created_at, updated_at)
+				VALUES ($1, $2, NULL, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+
+				await using var commentCmd = new NpgsqlCommand(commentSql, conn);
+				commentCmd.Parameters.AddWithValue(commentId);
+				commentCmd.Parameters.AddWithValue(orderId.Value); // Привязываем к заказу
+				commentCmd.Parameters.AddWithValue(comment);
+				await commentCmd.ExecuteNonQueryAsync();
+
+				// Обновляем массив comment_ids в производственном заказе
+				await conn.ExecuteAsync(@"
+				UPDATE production_orders 
+				SET comment_ids = array_append(comment_ids, @commentId::uuid),
+					updated_at = CURRENT_TIMESTAMP
+				WHERE id = @prodOrderId",
+					new { prodOrderId = newId, commentId });
+			}
 		}
 
 		Console.WriteLine($"✅ Добавлено {data.Count} производственных заказов");
@@ -581,7 +607,17 @@ class Program
 			statusMap[status.condition_code] = status.id;
 		}
 
+		// ✅ Получаем ID типов снабжения (lumber, furniture, glass, paint, alumWaterShield)
+		var typeMap = new Dictionary<string, Guid>();
+		var typeResult = await conn.QueryAsync<(Guid id, string name)>(
+			"SELECT id, name FROM supply_types");
+		foreach (var t in typeResult)
+		{
+			typeMap[t.name] = t.id;
+		}
+
 		var count = 0;
+		var commentCount = 0;
 
 		foreach (var bom in data)
 		{
@@ -659,13 +695,65 @@ class Program
 					new { orderSupplyId, conditionId = statusMap["in_stock"] });
 			}
 
+			// ✅ Миграция комментария из BomFlags
+			var commentText = bom.GetValueOrDefault("Примечание")?.ToString()
+						   ?? bom.GetValueOrDefault("Comment")?.ToString();
+
+			if (!string.IsNullOrWhiteSpace(commentText))
+			{
+				var commentId = Guid.NewGuid();
+
+				// Создаём комментарий (привязан к заказу)
+				await conn.ExecuteAsync(@"
+				INSERT INTO comments (id, order_id, user_id, content, created_at, updated_at)
+				VALUES (@id, @orderId, NULL, @content, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+					new { id = commentId, orderId, content = commentText });
+
+				// Добавляем комментарий в массив comment_ids у order_supply
+				await conn.ExecuteAsync(@"
+				UPDATE order_supply 
+				SET comment_ids = CASE 
+					WHEN comment_ids IS NULL THEN ARRAY[@commentId::uuid]
+					ELSE array_append(comment_ids, @commentId::uuid)
+				END,
+				updated_at = CURRENT_TIMESTAMP
+				WHERE id = @orderSupplyId",
+					new { orderSupplyId, commentId });
+
+				commentCount++;
+			}
+
+			// ✅ Миграция комментария из поля "Брус" (привязка к supply_item типа lumber)
+			var lumberComment = bom.GetValueOrDefault("Брус")?.ToString();
+
+			if (!string.IsNullOrWhiteSpace(lumberComment) && typeMap.ContainsKey("lumber"))
+			{
+				var lumberTypeId = typeMap["lumber"];
+				var commentId = Guid.NewGuid();
+
+				// Создаём комментарий
+				await conn.ExecuteAsync(@"
+				INSERT INTO comments (id, order_id, user_id, content, created_at, updated_at)
+				VALUES (@id, @orderId, NULL, @content, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+					new { id = commentId, orderId, content = lumberComment });
+
+				// Привязываем комментарий к конкретному supply_item (lumber)
+				await conn.ExecuteAsync(@"
+				UPDATE supply_items 
+				SET comment_id = @commentId, updated_at = CURRENT_TIMESTAMP
+				WHERE order_supply_id = @orderSupplyId AND supply_type_id = @supplyTypeId",
+					new { commentId, orderSupplyId, supplyTypeId = lumberTypeId });
+
+				commentCount++;
+			}
+
 			count++;
 			if (count % 100 == 0) Console.WriteLine($"   Обработано {count} заказов...");
 		}
 
 		Console.WriteLine($"✅ Обновлено {count} заказов из BomFlags");
 	}
-	
+
 	static async Task ProcessMaterial(
 		NpgsqlConnection conn,
 		Dictionary<string, Guid> typeMap,
