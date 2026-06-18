@@ -19,6 +19,8 @@ public class ProductionOrder
 	[Column("comment_ids", TypeName = "uuid[]")]
 	public List<Guid>? CommentIds { get; set; }
 
+	[Column("machine")] public string? Machine { get; set; }
+
 	[ForeignKey("OrderId")]
 	public Order? Order { get; set; }
 

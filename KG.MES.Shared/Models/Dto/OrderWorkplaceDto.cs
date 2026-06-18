@@ -5,7 +5,7 @@ namespace KG.MES.Shared.Models.Dto;
 public class OrderWorkplaceDto
 {
 	[JsonPropertyName("id")]
-	public Guid Id { get; set; } // Это будет productionOrderId
+	public Guid ProductionOrderId { get; set; } // Это будет productionOrderId
 
 	[JsonPropertyName("workplace_id")]
 	public Guid WorkplaceId { get; set; }
@@ -49,6 +49,16 @@ public class OrderWorkplaceDto
 	[JsonPropertyName("fromJoinery")]
 	public bool FromJoinery { get; set; }
 
-	[JsonPropertyName("Name")] // Заглавная N, как в Node.js
+	[JsonPropertyName("Name")]
 	public string Name { get; set; } = string.Empty;
+
+	[JsonPropertyName("isBlocked")]
+	public bool IsBlocked { get; set; }
+
+	[JsonPropertyName("blocks")]
+	public List<OrderBlockDto> Blocks { get; set; } = new();
+
+	[JsonPropertyName("attributes")]
+	public List<OrderAttributeDto> Attributes { get; set; } = new();
+
 }

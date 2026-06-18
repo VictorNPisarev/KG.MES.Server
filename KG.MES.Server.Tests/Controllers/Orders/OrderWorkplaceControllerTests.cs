@@ -91,7 +91,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		var order = result[0];
 
 		// Проверяем snake_case имена полей
-		order.Id.Should().Be(productionOrderId);
+		order.ProductionOrderId.Should().Be(productionOrderId);
 		order.WorkplaceId.Should().Be(workplaceId);
 		order.OrderId.Should().Be(orderId);
 		order.OrderNumber.Should().Be("4080");
