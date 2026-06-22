@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace KG.MES.Shared.Models.Entities;
 
@@ -27,4 +29,7 @@ public class SupplyItem
 
 	[ForeignKey("CommentId")]
 	public Comment? CommentEntity { get; set; }
+
+	[NotMapped]
+	public Guid? OrderId { get; set; }
 }

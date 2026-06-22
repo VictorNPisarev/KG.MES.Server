@@ -25,4 +25,6 @@ public interface IOrderService
 	Task<OrderCommentDto> AddProductionOrderCommentAsync(Guid orderId, Guid productionOrderId, Guid? userId, string content);
 	Task<OrderCommentDto> AddSupplyCommentAsync(Guid orderId, Guid supplyTypeId, Guid? userId, string content);
 	Task<OrderCommentDto> UpdateOrderCommentAsync(Guid orderId, Guid commentId, string content);
+	Task<SetOrderStatusResultDto> SetOrderCompleteAsync(Guid orderId, Guid? userId, string? content);
+	Task<SetOrderStatusResultDto> SetOrderDepartureAsync(Guid orderId, Guid? userId, string? content);
 }

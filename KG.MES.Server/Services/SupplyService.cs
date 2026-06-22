@@ -182,13 +182,15 @@ public class SupplyService : ISupplyService
 		var query = _context.SupplyItems
 			.Join(_context.OrderSupplies, si => si.OrderSupplyId, os => os.Id, (si, os) => new { si, os })
 			.Join(_context.Orders, x => x.os.OrderId, o => o.Id, (x, o) => new { x.si, x.os, o })
-			.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, st })
-			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate })
+			.Join(_context.ProductionOrders, x => x.o.Id, po => po.OrderId, (x, po) => new { x.si, x.os, x.o, po })
+			.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, st })
+			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.po.Machine })
 			.Select(g => new SupplyStatusListItemDto
 			{
 				Id = g.Key.Id,
 				OrderNumber = g.Key.OrderNumber,
 				ReadyDate = g.Key.ReadyDate,
+				Machine = g.Key.Machine,
 				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "lumber").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				Paint = g.FirstOrDefault(x => x.st.Name == "paint")!.si.ConditionId == null ? null :
@@ -215,7 +217,6 @@ public class SupplyService : ISupplyService
 				AlumWaterShieldComment = g.Where(x => x.st.Name == "alumWaterShield")
 										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
 										  .FirstOrDefault()
-
 			});
 
 		if (!string.IsNullOrEmpty(orderNumber))
@@ -224,6 +225,7 @@ public class SupplyService : ISupplyService
 		var total = await query.CountAsync();
 
 		var items = await query
+			.OrderBy(o => o.ReadyDate)
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();

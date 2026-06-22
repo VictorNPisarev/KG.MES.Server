@@ -174,4 +174,18 @@ public partial class OrderController
 
 		return Ok(result);
 	}
+
+		public async Task<IActionResult> SetOrderCompleteHandler(Guid orderId)
+	{
+		var result = await _orderService.SetOrderCompleteAsync(orderId, null, null);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> SetOrderDepartureHandler(Guid orderId)
+	{
+		var result = await _orderService.SetOrderDepartureAsync(orderId, null, null);
+		return Ok(result);
+	}
+
+
 }

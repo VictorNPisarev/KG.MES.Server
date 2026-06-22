@@ -42,4 +42,7 @@ public class SupplyStatusListItemDto
 
 	[JsonPropertyName("alumWaterShield_comment")]
 	public string? AlumWaterShieldComment { get; set; }
+
+	[JsonPropertyName("machine")]
+	public string? Machine { get; set; }
 }

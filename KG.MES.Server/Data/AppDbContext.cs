@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
 	public DbSet<Role> Roles { get; set; }
 	public DbSet<UserWorkplace> UserWorkplaces { get; set; }
 
+	public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
+
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		// ========== Индексы ==========

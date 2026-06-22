@@ -19,8 +19,8 @@ class Program
 	static async Task Main(string[] args)
 	{
 		var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ??
-							//"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
-							"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
+							"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
+							//"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
 
 		await using var conn = new NpgsqlConnection(connectionString);
 		await conn.OpenAsync();

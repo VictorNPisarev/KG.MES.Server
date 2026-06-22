@@ -151,4 +151,123 @@ public partial class OrderService : IOrderService
 			}
 		};
 	}
+
+	public async Task<SetOrderStatusResultDto> SetOrderStatusAsync(
+		Guid productionOrderId, string targetStatusName, Guid? userId, string? notes)
+	{
+		using var transaction = await _context.Database.BeginTransactionAsync();
+
+		try
+		{
+			var status = await _context.Workplaces
+				.FirstOrDefaultAsync(w => w.Name == targetStatusName);
+
+			if (status == null)
+			{
+				return new SetOrderStatusResultDto
+				{
+					Success = false,
+					Message = "Статус 'Отгружен' не найден в справочнике"
+				};
+			}
+
+
+			var productionOrder = await _context.ProductionOrders
+				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+			if (productionOrder != null)
+			{
+				productionOrder.CurrentWorkplaceId = status.Id;
+				productionOrder.UpdatedAt = DateTime.UtcNow;
+			}
+
+			await _context.SaveChangesAsync();
+
+			await transaction.CommitAsync();
+
+			return new SetOrderStatusResultDto
+			{
+				Success = true,
+				Message = $"Status updated to '{status.Name}'"
+			};
+		}
+		catch (Exception ex)
+		{
+			await transaction.RollbackAsync();
+			_logger.LogError(ex, "Error in SetOrderFootprintStatus");
+			throw;
+		}
+	}
+
+	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
+		Guid OrderId, Guid? userId, string? notes)
+	{
+		try
+		{
+			return await SetOrderStatusAsync(OrderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error in SetOrderCompleteAsync");
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = ex.Message
+			};
+		}
+	}
+
+	public async Task<SetOrderStatusResultDto> SetOrderDepartureAsync(
+		Guid OrderId, Guid? userId, string? notes)
+	{
+		using var transaction = await _context.Database.BeginTransactionAsync();
+
+		try
+		{
+			var result = await SetOrderStatusAsync(OrderId, Constants.OrderStatus.CommonStatus.Departure, userId, notes);
+
+			if (!result.Success)
+			{
+				await transaction.RollbackAsync();
+				return result;
+			}
+			// Удаляем следы заказа (footprint)
+
+			var productionOrder = await _context.ProductionOrders
+				.FirstOrDefaultAsync(po => po.OrderId == OrderId);
+
+			var Order = await _context.Orders
+				.Include(o => o.ProductionOrder)
+				.FirstOrDefaultAsync(o => o.Id == OrderId);
+
+
+			var footprints = await _context.OrderFootprints
+				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
+				.ToListAsync();
+
+			if (footprints.Any())
+			{
+				_context.OrderFootprints.RemoveRange(footprints);
+				await _context.SaveChangesAsync();
+			}
+
+			await transaction.CommitAsync();
+
+			return new SetOrderStatusResultDto
+			{
+				Success = true,
+				Message = "Заказ отгружен, следы удалены"
+			};
+		}
+		catch (Exception ex)
+		{
+			await transaction.RollbackAsync();
+			_logger.LogError(ex, "Error in SetOrderDepartureAsync");
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = ex.Message
+			};
+		}
+	}
 }

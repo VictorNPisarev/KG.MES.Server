@@ -46,6 +46,16 @@ dotnet ef database update --project KG.MES.Server --startup-project KG.MES.Serve
 dotnet run --project KG.MES.Server
 ```
 
+## Release
+```bash
+dotnet publish -c Release -o \\server\inetpub\wwwroot\Kg.Mes.Server
+```
+
+## Development
+```bash
+dotnet publish -o C:\DEVelop\KG.MES.DeployTest\api
+```
+
 ## Endpoints
 
 Swagger UI: http://localhost:5000/swagger

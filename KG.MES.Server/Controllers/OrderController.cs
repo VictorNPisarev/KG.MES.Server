@@ -93,4 +93,13 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
+
+	// POST: api/orders/{orderId}/complete
+	[HttpPost("orders/{orderId}/complete")]
+	public Task<IActionResult> OrderComplete(Guid orderId) => SetOrderCompleteHandler(orderId);
+
+	// POST: api/orders/{orderId}/departure
+	[HttpPost("orders/{orderId}/departure")]
+	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
+
 }
