@@ -36,7 +36,7 @@ public class LeadTimeCalculationService
 		var maxDate = currentDate.AddYears(2);
 
 		var calendarDays = await _dbContext.ProductionCalendarDays
-			.Where(d => d.CalendarDate >= currentDate && d.CalendarDate <= maxDate)
+			.Where(d => d.CalendarDate > currentDate && d.CalendarDate <= maxDate)
 			.OrderBy(d => d.CalendarDate)
 			.ToListAsync(cancellationToken);
 
