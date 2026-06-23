@@ -13,6 +13,12 @@ public class SupplyStatusListItemDto
 	[JsonPropertyName("ready_date")]
 	public DateTime? ReadyDate { get; set; }
 
+	[JsonPropertyName("production_order_id")]
+	public Guid ProductionOrderId { get; set; }
+
+	[JsonPropertyName("current_workplace_id")]
+	public Guid? CurrentWorkplaceId { get; set; }
+
 	[JsonPropertyName("lumber")]
 	public string? Lumber { get; set; }
 
