@@ -7,81 +7,33 @@ namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public class SupplyController : ControllerBase
+public partial class SupplyController : ControllerBase
 {
-	private readonly ISupplyService _supplyService;
-	private readonly ILogger<SupplyController> _logger;
-
-	public SupplyController(ISupplyService supplyService, ILogger<SupplyController> logger)
-	{
-		_supplyService = supplyService;
-		_logger = logger;
-	}
-
 	// GET: api/orders/{orderId}/supplies
 	[HttpGet("orders/{orderId}/supplies")]
-	public async Task<IActionResult> GetOrderSupplyStatuses(Guid orderId)
-	{
-		var items = await _supplyService.GetOrderSupplyItemsAsync(orderId);
-		return Ok(items);
-	}
+	public Task<IActionResult> GetOrderSupplyStatuses(Guid orderId) => GetOrderSupplyStatusesHandler(orderId);
 
 	// PUT: api/orders/{orderId}/supply/{supplyTypeId}
 	[HttpPut("orders/{orderId}/supply/{supplyTypeId}")]
-	public async Task<IActionResult> UpdateSupplyStatus(
-		Guid orderId,
-		Guid supplyTypeId,
-		[FromBody] UpdateSupplyItemRequest request)
-	{
-		var result = await _supplyService.UpdateSupplyItemAsync(orderId, supplyTypeId, request);
-		if (!result.Success)
-			return BadRequest(result);
-		return Ok(result);
-	}
+	public Task<IActionResult> UpdateSupplyStatus(Guid orderId, Guid supplyTypeId, [FromBody] UpdateSupplyItemRequest request)
+		=> UpdateSupplyStatusHandler(orderId, supplyTypeId, request);
 
 	// PUT: api/orders/{orderId}/supplies
 	[HttpPut("orders/{orderId}/supplies")]
-	public async Task<IActionResult> UpdateAllSupplyStatuses(
-		Guid orderId,
-		[FromBody] UpdateOrderSupplyItemsRequestDto request)
-	{
-		if (request?.Supplies == null || request.Supplies.Count == 0)
-		{
-			return BadRequest(new { error = "supplies array is required" });
-		}
-
-		var result = await _supplyService.UpdateAllSupplyItemsAsync(orderId, request.Supplies);
-
-		if (!result.Success)
-			return BadRequest(result);
-
-		return Ok(result);
-	}
+	public Task<IActionResult> UpdateAllSupplyStatuses(Guid orderId, [FromBody] UpdateOrderSupplyItemsRequestDto request)
+		=> UpdateAllSupplyStatusesHandler(orderId, request);
 	
 	// GET: api/supplies/conditions
 	[HttpGet("supplies/conditions")]
-	public async Task<IActionResult> GetSupplyConditions()
-	{
-		var conditions = await _supplyService.GetSupplyConditionsAsync();
-		return Ok(conditions);
-	}
+	public Task<IActionResult> GetSupplyConditions() => GetSupplyConditionsHandler();
 
 	// GET: api/supplies/types
 	[HttpGet("supplies/types")]
-	public async Task<IActionResult> GetSupplyTypes()
-	{
-		var types = await _supplyService.GetSupplyTypesAsync();
-		return Ok(types);
-	}
+	public Task<IActionResult> GetSupplyTypes() => GetSupplyTypesHandler();
 
 	// GET: api/supplies
 	[HttpGet("supplies")]
-	public async Task<IActionResult> GetAllSupplyStatuses(
-		[FromQuery] int page = 1,
-		[FromQuery] int limit = 100,
-		[FromQuery] string? orderNumber = null)
-	{
-		var result = await _supplyService.GetAllSupplyItemsAsync(page, limit, orderNumber);
-		return Ok(result);
-	}
+	public Task<IActionResult> GetAllSupplyStatuses([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
+			[FromQuery] string? sortOrder = "asc", [FromQuery] Guid? workplaceId = null, [FromQuery] string? orderNumber = null)
+		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, workplaceId, orderNumber);
 }
