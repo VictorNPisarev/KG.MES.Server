@@ -50,6 +50,11 @@ public class WorkplaceController : ControllerBase
 		[FromQuery] DateTime? to,
 		[FromQuery] int limit = 50)
 	{
+		if (to.HasValue)
+		{
+			to = to.Value.Date.AddDays(1).AddTicks(-1);
+		}
+
 		var history = await _workplaceService.GetWorkplaceHistoryAsync(workplaceId, from, to, limit);
 		return Ok(history);
 	}

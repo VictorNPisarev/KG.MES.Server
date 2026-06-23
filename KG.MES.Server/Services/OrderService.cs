@@ -2,6 +2,7 @@ using System.Globalization;
 using KG.MES.Server.Data;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace KG.MES.Server.Services;
@@ -153,58 +154,105 @@ public partial class OrderService : IOrderService
 	}
 
 	public async Task<SetOrderStatusResultDto> SetOrderStatusAsync(
-		Guid productionOrderId, string targetStatusName, Guid? userId, string? notes)
+		Guid orderId, string targetStatusName, Guid? userId, string? notes)
 	{
+		var status = await _context.Workplaces
+			.FirstOrDefaultAsync(w => w.Name == targetStatusName);
+
+		if (status == null)
+		{
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Статус '{targetStatusName}' не найден в справочнике"
+			};
+		}
+
+		var productionOrder = await _context.ProductionOrders
+			.FirstOrDefaultAsync(po => po.OrderId == orderId);
+
+		if (productionOrder != null)
+		{
+			productionOrder.CurrentWorkplaceId = status.Id;
+			productionOrder.UpdatedAt = DateTime.UtcNow;
+			await _context.SaveChangesAsync();
+		}
+
+		return new SetOrderStatusResultDto
+		{
+			Success = true,
+			Message = $"Status updated to '{status.Name}'"
+		};
+	}
+
+	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
+		Guid orderId, Guid? userId, string? notes)
+	{
+		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		if (!orderExists)
+		{
+			_logger.LogWarning($"Order {orderId} not found");
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Заказ {orderId} не найден"
+			};
+		}
+
 		using var transaction = await _context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var status = await _context.Workplaces
-				.FirstOrDefaultAsync(w => w.Name == targetStatusName);
-
-			if (status == null)
+			var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
+			
+			if (!result.Success)
 			{
-				return new SetOrderStatusResultDto
+				await transaction.RollbackAsync();
+				return result;
+			}
+			// Меняю все следы заказа (footprint) на completed
+
+			var Order = await _context.Orders
+				.Include(o => o.ProductionOrder)
+				.FirstOrDefaultAsync(o => o.Id == orderId);
+
+
+			var footprints = await _context.OrderFootprints
+				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
+				.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
+				.ToListAsync();
+
+			if (footprints.Any())
+			{
+				foreach (var footprint in footprints)
 				{
-					Success = false,
-					Message = "Статус 'Отгружен' не найден в справочнике"
-				};
+					footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
+
+					_context.OperationLogs.Add(
+						new OperationLog
+						{
+							Id = Guid.NewGuid(),
+							ProductionOrderId = footprint.ProductionOrderId,
+							WorkplaceId = footprint.WorkplaceId,
+							UserId = userId, //TODO
+							OperationType = "COMPLETE", //TODO
+							OperationTime = DateTime.UtcNow,
+							CreatedAt = DateTime.UtcNow,
+							Notes = "Статус заказа ГОТОВО",
+							Source = "Handle change by Order COMPLETE"
+						}
+					);
+					await _context.SaveChangesAsync();
+				}
 			}
-
-
-			var productionOrder = await _context.ProductionOrders
-				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
-
-			if (productionOrder != null)
-			{
-				productionOrder.CurrentWorkplaceId = status.Id;
-				productionOrder.UpdatedAt = DateTime.UtcNow;
-			}
-
-			await _context.SaveChangesAsync();
 
 			await transaction.CommitAsync();
 
 			return new SetOrderStatusResultDto
 			{
 				Success = true,
-				Message = $"Status updated to '{status.Name}'"
+				Message = "Заказ отгружен, следы завершены"
 			};
-		}
-		catch (Exception ex)
-		{
-			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in SetOrderFootprintStatus");
-			throw;
-		}
-	}
-
-	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
-		Guid OrderId, Guid? userId, string? notes)
-	{
-		try
-		{
-			return await SetOrderStatusAsync(OrderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
 		}
 		catch (Exception ex)
 		{
@@ -218,27 +266,39 @@ public partial class OrderService : IOrderService
 	}
 
 	public async Task<SetOrderStatusResultDto> SetOrderDepartureAsync(
-		Guid OrderId, Guid? userId, string? notes)
+		Guid orderId, Guid? userId, string? notes)
 	{
+
+		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		if (!orderExists)
+		{
+			_logger.LogWarning($"Order {orderId} not found");
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Заказ {orderId} не найден"
+			};
+		}
+
 		using var transaction = await _context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var result = await SetOrderStatusAsync(OrderId, Constants.OrderStatus.CommonStatus.Departure, userId, notes);
+			var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Departure, userId, notes);
 
 			if (!result.Success)
 			{
 				await transaction.RollbackAsync();
 				return result;
 			}
-			// Удаляем следы заказа (footprint)
+			// Удаляю следы заказа (footprint)
 
 			var productionOrder = await _context.ProductionOrders
-				.FirstOrDefaultAsync(po => po.OrderId == OrderId);
+				.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
 			var Order = await _context.Orders
 				.Include(o => o.ProductionOrder)
-				.FirstOrDefaultAsync(o => o.Id == OrderId);
+				.FirstOrDefaultAsync(o => o.Id == orderId);
 
 
 			var footprints = await _context.OrderFootprints
