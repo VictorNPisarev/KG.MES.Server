@@ -7,92 +7,35 @@ namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public class WorkplaceController : ControllerBase
+public partial class WorkplaceController : ControllerBase
 {
-	private readonly IWorkplaceService _workplaceService;
-	private readonly ILogger<WorkplaceController> _logger;
-
-	public WorkplaceController(IWorkplaceService workplaceService, ILogger<WorkplaceController> logger)
-	{
-		_workplaceService = workplaceService;
-		_logger = logger;
-	}
-
 	// GET: api/workplaces/active
 	[HttpGet("workplaces/active")]
-	public async Task<IActionResult> GetActiveWorkplaces()
-	{
-		var workplaces = await _workplaceService.GetActiveWorkplacesAsync();
-		return Ok(workplaces);
-	}
+	public Task<IActionResult> GetActiveWorkplaces() => GetActiveWorkplacesHandler();
 
 	// GET: api/workplaces/all
 	[HttpGet("workplaces/all")]
-	public async Task<IActionResult> GetAllWorkplaces()
-	{
-		var workplaces = await _workplaceService.GetAllWorkplacesAsync();
-		return Ok(workplaces);
-	}
+	public Task<IActionResult> GetAllWorkplaces() => GetAllWorkplacesHandler();
 
 	// GET: api/workplaces/{workplaceId}/stats
 	[HttpGet("workplaces/{workplaceId}/stats")]
-	public async Task<IActionResult> GetWorkplaceStats(Guid workplaceId)
-	{
-		var stats = await _workplaceService.GetWorkplaceStatsAsync(workplaceId);
-		return Ok(stats);
-	}
+	public Task<IActionResult> GetWorkplaceStats(Guid workplaceId) => GetWorkplaceStatsHandler(workplaceId);
 
 	// GET: api/workplaces/{workplaceId}/history
 	[HttpGet("workplaces/{workplaceId}/history")]
-	public async Task<IActionResult> GetWorkplaceHistory(
-		Guid workplaceId,
-		[FromQuery] DateTime? from,
-		[FromQuery] DateTime? to,
-		[FromQuery] int limit = 50)
-	{
-		if (to.HasValue)
-		{
-			to = to.Value.Date.AddDays(1).AddTicks(-1);
-		}
-
-		var history = await _workplaceService.GetWorkplaceHistoryAsync(workplaceId, from, to, limit);
-		return Ok(history);
-	}
+	public Task<IActionResult> GetWorkplaceHistory(
+		Guid workplaceId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int limit = 50)
+	=> GetWorkplaceHistoryHandler(workplaceId, from, to, limit);
 
 	// GET: api/workplaces/{workplaceId}/blocks
 	[HttpGet("workplaces/{workplaceId}/blocks")]
-	public async Task<IActionResult> GetWorkplaceBlocks(Guid workplaceId)
-	{
-		var blocks = await _workplaceService.GetWorkplaceBlocksAsync(workplaceId);
-		return Ok(blocks);
-	}
+	public Task<IActionResult> GetWorkplaceBlocks(Guid workplaceId) => GetWorkplaceBlocksHandler(workplaceId);
 
 	// GET: api/workplaces/{id}
 	[HttpGet("workplaces/{id}")]
-	public async Task<IActionResult> GetWorkplaceById(Guid id)
-	{
-		// ✅ Правильно: вызываем метод сервиса
-		var workplace = await _workplaceService.GetWorkplaceByIdAsync(id);
-
-		if (workplace == null)
-			return NotFound(new { error = "Workplace not found" });
-
-		return Ok(workplace);
-	}
+	public Task<IActionResult> GetWorkplaceById(Guid id) => GetWorkplaceByIdHandler(id);
 
 	// GET: api/workplaces?type=active|all
 	[HttpGet("workplaces")]
-	public async Task<IActionResult> GetWorkplaces([FromQuery] string? type = "all")
-	{
-		if (type?.ToLower() == "active")
-		{
-			// ✅ Вызываем метод сервиса напрямую, а не другой метод контроллера
-			var activeWorkplaces = await _workplaceService.GetActiveWorkplacesAsync();
-			return Ok(activeWorkplaces);
-		}
-
-		// ✅ По умолчанию возвращаем все
-		var allWorkplaces = await _workplaceService.GetAllWorkplacesAsync();
-		return Ok(allWorkplaces);
-	}
+	public Task<IActionResult> GetWorkplaces([FromQuery] string? type = "all") => GetWorkplacesHandler(type);
 }

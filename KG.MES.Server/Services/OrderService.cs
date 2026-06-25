@@ -238,7 +238,7 @@ public partial class OrderService : IOrderService
 							OperationType = "COMPLETE", //TODO
 							OperationTime = DateTime.UtcNow,
 							CreatedAt = DateTime.UtcNow,
-							Notes = "Статус заказа ГОТОВО",
+							Notes = "Цикл производства завершен",
 							Source = "Handle change by Order COMPLETE"
 						}
 					);

@@ -76,6 +76,9 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 
 		var response = await client.GetAsync(url);
 
+		///var errorContent = await response.Content.ReadAsStringAsync();
+		//Console.WriteLine($"Error: {errorContent}");
+
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 

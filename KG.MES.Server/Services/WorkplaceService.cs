@@ -35,7 +35,7 @@ public class WorkplaceService : IWorkplaceService
 
 	public async Task<List<WorkplaceDto>> GetAllWorkplacesAsync()
 	{
-		return await _context.Workplaces
+		var workplaces = await _context.Workplaces
 			.Where(w => w.Level >= 0)
 			.OrderBy(w => w.Level)
 			.Select(w => new WorkplaceDto
@@ -46,6 +46,41 @@ public class WorkplaceService : IWorkplaceService
 				Level = w.Level
 			})
 			.ToListAsync();
+
+		var stats = await _context.ProductionOrders
+			.Where(po => po.CurrentWorkplaceId != null)
+			.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new { po, o })
+			.GroupBy(x => x.po.CurrentWorkplaceId!.Value)
+			.Select(g => new
+			{
+				WorkplaceId = g.Key,
+				WindowCountSum = g.Sum(x => x.o.WindowCount),
+				WindowAreaSum = g.Sum(x => x.o.WindowArea),
+				PlateCountSum = g.Sum(x => x.o.PlateCount),
+				PlateAreaSum = g.Sum(x => x.o.PlateArea)
+			})
+			.ToDictionaryAsync(x => x.WorkplaceId, x => x);
+		
+		// Добавляю агрегированные данные
+		foreach (var workplace in workplaces)
+		{
+			if (stats.TryGetValue(workplace.Id, out var stat))
+			{
+				workplace.WindowCount = stat.WindowCountSum;
+				workplace.WindowArea = stat.WindowAreaSum;
+				workplace.PlateCount = stat.PlateCountSum;
+				workplace.PlateArea = stat.PlateAreaSum;
+			}
+			else
+			{
+				workplace.WindowCount = 0;
+				workplace.WindowArea = 0;
+				workplace.PlateCount = 0;
+				workplace.PlateArea = 0;
+			}
+		}
+
+		return workplaces;
 	}
 
 	public async Task<WorkplaceStatsDto> GetWorkplaceStatsAsync(Guid workplaceId)

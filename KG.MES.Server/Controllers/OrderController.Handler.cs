@@ -50,6 +50,7 @@ public partial class OrderController
 
 	public async Task<IActionResult> GetActiveAndPendingOrdersHandler(Guid workplaceId)
 	{
+		Console.WriteLine($"workplaceId: {workplaceId}");
 		if (workplaceId == Guid.Empty)
 			return BadRequest(new { error = "workplaceId is required" });
 
