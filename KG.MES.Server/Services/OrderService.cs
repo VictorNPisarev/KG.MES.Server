@@ -79,7 +79,7 @@ public partial class OrderService : IOrderService
 
 	// Основной метод GetOrdersAsync
 	public async Task<PaginatedResponse<OrderListItemDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, Guid? workplaceId, string? orderNumber)
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
 		var query = _context.Orders
 			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
@@ -102,8 +102,10 @@ public partial class OrderService : IOrderService
 				Machine = x.po.Machine
 			});
 
-		if (workplaceId.HasValue)
-			query = query.Where(o => o.CurrentWorkplaceId == workplaceId.Value);
+		if (workplaceIds != null && workplaceIds.Any())
+		{
+			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+		}
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
