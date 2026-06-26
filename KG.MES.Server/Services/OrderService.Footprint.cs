@@ -15,7 +15,7 @@ public partial class OrderService
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
 			{
-				Id = x.fp.ProductionOrderId,
+				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
 				Status = x.fp.Status,
 				OrderId = o.Id,
@@ -49,7 +49,7 @@ public partial class OrderService
 				.Where(po => po.CurrentWorkplaceId == noneId)
 				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new OrderWorkplaceDto
 				{
-					Id = po.Id,
+					ProductionOrderId = po.Id,
 					WorkplaceId = workplaceId,
 					Status = OrderStatus.WorkplaceStatus.Pending,
 					OrderId = o.Id,
@@ -78,7 +78,7 @@ public partial class OrderService
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
 			{
-				Id = x.fp.ProductionOrderId,
+				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
 				Status = x.fp.Status,
 				OrderId = o.Id,
@@ -114,7 +114,7 @@ public partial class OrderService
 				.Where(po => po.CurrentWorkplaceId == noneId)
 				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new OrderWorkplaceDto
 				{
-					Id = po.Id,
+					ProductionOrderId = po.Id,
 					WorkplaceId = workplaceId,
 					Status = OrderStatus.WorkplaceStatus.Pending,
 					OrderId = o.Id,
@@ -144,7 +144,7 @@ public partial class OrderService
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
 			{
-				Id = x.fp.ProductionOrderId,
+				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
 				Status = x.fp.Status,
 				OrderId = o.Id,
@@ -164,6 +164,38 @@ public partial class OrderService
 			.ToListAsync();
 
 		result.AddRange(allOrders);
+
+		// Получаем блокировки для этого участка
+		var blocks = await _context.OrderBlocks
+			.Where(b => b.WorkplaceId == workplaceId && b.ResolvedAt == null)
+			.ToListAsync();
+
+		// Получаем атрибуты
+		var attributesMap = await _orderAttributeService.GetAttributesForWorkplace(workplaceId, result);
+
+		// Обогащаем каждый заказ
+		foreach (var order in result)
+		{
+			var orderBlocks = blocks.Where(b => b.ProductionOrderId == order.ProductionOrderId).ToList();
+			order.IsBlocked = orderBlocks.Count > 0;
+			order.Blocks = orderBlocks.Select(b => new OrderBlockDto
+			{
+				Id = b.Id,
+				Reason = b.Reason,
+				BlockedAt = b.BlockedAt,
+				UserId = b.UserId
+			}).ToList();
+
+			if (attributesMap.TryGetValue(order.ProductionOrderId, out var attrs))
+			{
+				order.Attributes = attrs;
+			}
+			else
+			{
+				order.Attributes = new List<OrderAttributeDto>();
+			}
+		}
+
 		return result;
 	}
 

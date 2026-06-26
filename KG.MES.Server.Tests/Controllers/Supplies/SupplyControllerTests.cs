@@ -164,6 +164,8 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 
 		var orderId1 = Guid.NewGuid(); // Заказ с complete статусами
 		var orderId2 = Guid.NewGuid(); // Заказ с pending статусами
+		var porductionOrderId1 = Guid.NewGuid(); // Заказ с complete статусами
+		var porductionOrderId2 = Guid.NewGuid(); // Заказ с pending статусами
 		var orderSupplyId1 = Guid.NewGuid();
 		var orderSupplyId2 = Guid.NewGuid();
 		var lumberTypeId = Guid.NewGuid();
@@ -174,6 +176,8 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		new TestDataBuilder()
 			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "1001"; o.ReadyDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); })
 			.WithOrder(o => { o.Id = orderId2; o.OrderNumber = "1002"; o.ReadyDate = DateTime.Parse("2026-06-02T10:00:00.000Z"); })
+			.WithProductionOrder(po => { po.Id = porductionOrderId1; po.OrderId = orderId1; })
+			.WithProductionOrder(po => { po.Id = porductionOrderId2; po.OrderId = orderId2; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId1; os.OrderId = orderId1; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId2; os.OrderId = orderId2; })
 			.WithSupplyType(st => { st.Id = lumberTypeId; st.Name = "lumber"; st.IsActive = true; })

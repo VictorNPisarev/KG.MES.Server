@@ -11,8 +11,9 @@ public partial class OrderController : ControllerBase
 	// GET: api/orders
 	[HttpGet("orders")]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
-			[FromQuery] string? sortOrder = "asc", [FromQuery] Guid? workplaceId = null, [FromQuery] string? orderNumber = null)
-		=> GetOrdersHandler(page, limit, sortBy, sortOrder, workplaceId, orderNumber);
+			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
+			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
+		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
 
 	// GET: api/orders/pending?workplaceId=...
 	[HttpGet("orders/pending")]
@@ -81,7 +82,7 @@ public partial class OrderController : ControllerBase
 	[HttpPost("orders/{orderId}/comments")]
 	public Task<IActionResult> AddOrderComment(Guid orderId, [FromBody] AddCommentRequestDto request) => AddOrderCommentHandler(orderId, request);
 
-	// GET: api/orders/{identifier}   ← САМЫЙ ОБЩИЙ МАРШРУТ — В САМОМ КОНЦЕ!
+	// GET: api/orders/{identifier}
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 
@@ -93,4 +94,13 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
+
+	// POST: api/orders/{orderId}/complete
+	[HttpPost("orders/{orderId}/complete")]
+	public Task<IActionResult> OrderComplete(Guid orderId) => SetOrderCompleteHandler(orderId);
+
+	// POST: api/orders/{orderId}/departure
+	[HttpPost("orders/{orderId}/departure")]
+	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
+
 }

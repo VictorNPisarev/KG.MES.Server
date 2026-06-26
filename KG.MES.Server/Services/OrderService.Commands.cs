@@ -31,6 +31,10 @@ public partial class OrderService
 				IsOnlyPaid = request.IsOnlyPaid,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
+				StartDate = request.StartDate,
+				So8Date = request.So8Date,
+				ApprovedLeadDays = request.ApprovedLeadDays,
+				UnapprovedLeadDays = request.UnapprovedLeadDays,
 				CommentIds = []
 			};
 
@@ -73,6 +77,7 @@ public partial class OrderService
 				IsTwoSidePaint = request.IsTwoSidePaint,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
+				Machine = request.Machine,
 				CommentIds = []
 			};
 

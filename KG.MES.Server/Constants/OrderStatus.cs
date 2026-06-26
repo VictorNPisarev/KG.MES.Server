@@ -28,4 +28,13 @@ public static class OrderStatus
 			return Level[to] > Level[from];
 		}
 	}
+
+	public static class CommonStatus
+	{
+		public const string Complete = "ГОТОВО";
+		public const string Departure = "Отгружен";
+		public const string InWork = "В работе";
+		public const string None = "none";
+
+	}
 }

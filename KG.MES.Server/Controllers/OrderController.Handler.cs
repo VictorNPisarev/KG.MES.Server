@@ -21,9 +21,15 @@ public partial class OrderController
 
 
 	public async Task<IActionResult> GetOrdersHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
-		string? sortOrder = "asc", Guid? workplaceId = null, string? orderNumber = null)
+		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid> ? workplaceIds = null)
 	{
-		var result = await _orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceId, orderNumber);
+		if (workplaceId.HasValue)
+		{
+			workplaceIds ??= [];
+			workplaceIds.Add(workplaceId.Value);
+		}
+
+		var result = await _orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
 
 		return Ok(result);
 	}
@@ -50,6 +56,7 @@ public partial class OrderController
 
 	public async Task<IActionResult> GetActiveAndPendingOrdersHandler(Guid workplaceId)
 	{
+		Console.WriteLine($"workplaceId: {workplaceId}");
 		if (workplaceId == Guid.Empty)
 			return BadRequest(new { error = "workplaceId is required" });
 
@@ -174,4 +181,18 @@ public partial class OrderController
 
 		return Ok(result);
 	}
+
+		public async Task<IActionResult> SetOrderCompleteHandler(Guid orderId)
+	{
+		var result = await _orderService.SetOrderCompleteAsync(orderId, null, null);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> SetOrderDepartureHandler(Guid orderId)
+	{
+		var result = await _orderService.SetOrderDepartureAsync(orderId, null, null);
+		return Ok(result);
+	}
+
+
 }

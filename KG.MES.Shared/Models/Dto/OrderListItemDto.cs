@@ -45,4 +45,7 @@ public class OrderListItemDto
 
 	[JsonPropertyName("current_status")]
 	public string? CurrentStatus { get; set; }
+
+	[JsonPropertyName("machine")]
+	public string? Machine { get; set; }
 }

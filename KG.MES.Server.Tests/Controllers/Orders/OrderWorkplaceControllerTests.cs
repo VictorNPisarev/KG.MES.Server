@@ -30,7 +30,8 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetActiveAndPendingOrders_ShouldReturnCorrectFormat(string endpointTemplate)
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_InWork");
+		var dbName = $"TestDb_InWork_{Guid.NewGuid():N}";
+		var customFactory = SetupTestFactory(dbName); 
 		var client = customFactory.CreateClient();
 
 		var workplaceId = Guid.NewGuid();
@@ -74,7 +75,16 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 			? string.Format(endpointTemplate, workplaceId)
 			: $"{endpointTemplate}?workplaceId={workplaceId}";
 
+		Console.WriteLine();
+		Console.WriteLine();
+		Console.WriteLine(url);
+		Console.WriteLine();
+		Console.WriteLine();
+
 		var response = await client.GetAsync(url);
+
+		///var errorContent = await response.Content.ReadAsStringAsync();
+		//Console.WriteLine($"Error: {errorContent}");
 
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -91,7 +101,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		var order = result[0];
 
 		// Проверяем snake_case имена полей
-		order.Id.Should().Be(productionOrderId);
+		order.ProductionOrderId.Should().Be(productionOrderId);
 		order.WorkplaceId.Should().Be(workplaceId);
 		order.OrderId.Should().Be(orderId);
 		order.OrderNumber.Should().Be("4080");
@@ -111,7 +121,8 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetActiveOrders_ShouldReturnOnlyActiveOrders(string endpointTemplate)
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Active");
+		var dbName = $"TestDb_Active_{Guid.NewGuid():N}";
+		var customFactory = SetupTestFactory(dbName);
 		var client = customFactory.CreateClient();
 
 		var workplaceId = Guid.NewGuid();
@@ -159,7 +170,8 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetPendingOrders_ShouldReturnOnlyPendingOrders(string endpointTemplate)
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Pending");
+		var dbName = $"TestDb_Pending_{Guid.NewGuid():N}";
+		var customFactory = SetupTestFactory(dbName);
 		var client = customFactory.CreateClient();
 
 		var noneId = Guid.NewGuid();

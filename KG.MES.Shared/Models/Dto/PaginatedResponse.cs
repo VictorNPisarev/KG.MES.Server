@@ -2,7 +2,7 @@ namespace KG.MES.Shared.Models.Dto;
 
 public class PaginatedResponse<T>
 {
-	public List<T> Data { get; set; } = new();
+	public List<T> Data { get; set; } = [];
 	public PaginationInfo Pagination { get; set; } = new();
 	public SortInfo Sort { get; set; } = new();
 	public FilterInfo Filters { get; set; } = new();

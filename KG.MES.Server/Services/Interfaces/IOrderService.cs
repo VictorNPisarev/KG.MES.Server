@@ -7,7 +7,7 @@ namespace KG.MES.Server.Services.Interfaces;
 public interface IOrderService
 {
 	Task<PaginatedResponse<OrderListItemDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, Guid? workplaceId, string? orderNumber);
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
 
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
@@ -25,4 +25,6 @@ public interface IOrderService
 	Task<OrderCommentDto> AddProductionOrderCommentAsync(Guid orderId, Guid productionOrderId, Guid? userId, string content);
 	Task<OrderCommentDto> AddSupplyCommentAsync(Guid orderId, Guid supplyTypeId, Guid? userId, string content);
 	Task<OrderCommentDto> UpdateOrderCommentAsync(Guid orderId, Guid commentId, string content);
+	Task<SetOrderStatusResultDto> SetOrderCompleteAsync(Guid orderId, Guid? userId, string? content);
+	Task<SetOrderStatusResultDto> SetOrderDepartureAsync(Guid orderId, Guid? userId, string? content);
 }

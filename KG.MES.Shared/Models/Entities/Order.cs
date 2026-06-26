@@ -9,6 +9,10 @@ public class Order
 	[Column("legacy_id")] public string? LegacyId { get; set; }
 	[Column("order_number")] public string OrderNumber { get; set; } = string.Empty;
 	[Column("ready_date")] public DateTime? ReadyDate { get; set; }
+	[Column("start_date")] public DateTime? StartDate { get; set; }
+	[Column("so8_date")] public DateTime? So8Date { get; set; }
+	[Column("approved_lead_days")] public int? ApprovedLeadDays { get; set; }
+	[Column("unapproved_lead_days")] public int? UnapprovedLeadDays { get; set; }
 	[Column("window_count")] public int WindowCount { get; set; }
 	[Column("window_area")] public decimal WindowArea { get; set; }
 	[Column("plate_count")] public int PlateCount { get; set; }

@@ -57,4 +57,7 @@ public class OrderDetailDto
 
 	[JsonPropertyName("is_two_side_paint")]
 	public bool IsTwoSidePaint { get; set; }
+
+	[JsonPropertyName("machine")]
+	public string? Machine { get; set; }
 }

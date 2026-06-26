@@ -12,14 +12,15 @@ class Program
 	private static readonly Dictionary<string, string> WorkplaceMap = [];
 	private static readonly Dictionary<string, string> RoleMap = [];
 	private static readonly Dictionary<string, string> UserMap = [];
-	private static readonly Dictionary<string, string> OrderMap = [];
+	//private static readonly Dictionary<string, string> OrderMap = [];
+	private static readonly Dictionary<string, (Guid NewId, string? Machine)> OrderMap = [];
 	private static readonly Dictionary<string, string> ProductionOrderMap = [];
 
 	static async Task Main(string[] args)
 	{
 		var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ??
-							//"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
-							"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
+							"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
+							//"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
 
 		await using var conn = new NpgsqlConnection(connectionString);
 		await conn.OpenAsync();
@@ -114,7 +115,9 @@ class Program
 		);";
 
 		await using var checkCmd = new NpgsqlCommand(checkTableSql, conn);
+#pragma warning disable CS8605 // Unboxing a possibly null value.
 		var tableExists = (bool)await checkCmd.ExecuteScalarAsync();
+#pragma warning restore CS8605 // Unboxing a possibly null value.
 
 		//if (!tableExists)
 		//{
@@ -144,16 +147,16 @@ class Program
 	{
 		Console.WriteLine("🏭 Миграция рабочих мест...");
 
-		foreach (var wp in data)
+		foreach (var wp in data) //Необходимо сначала заполнить словать, т.к. рабочие места ссылаются друг на друга
 		{
-			var oldId = wp["Row ID"].ToString();
+			var oldId = wp["Row ID"].ToString()!;
 			var newId = Guid.NewGuid();
 			WorkplaceMap[oldId] = newId.ToString();
 		}
 
 		foreach (var wp in data)
 		{
-			var oldId = wp["Row ID"].ToString();
+			var oldId = wp["Row ID"].ToString()!;
 			var newId = Guid.Parse(WorkplaceMap[oldId]);
 			var oldPrevId = wp.GetValueOrDefault("Предыдущий участок")?.ToString();
 			var newPrevId = !string.IsNullOrEmpty(oldPrevId) && WorkplaceMap.ContainsKey(oldPrevId) ? Guid.Parse(WorkplaceMap[oldPrevId]) : (Guid?)null;
@@ -185,14 +188,14 @@ class Program
 
 		foreach (var role in data)
 		{
-			var oldId = role["Row ID"].ToString();
+			var oldId = role["Row ID"].ToString()!;
 			var newId = Guid.NewGuid();
 			RoleMap[oldId] = newId.ToString();
 		}
 
 		foreach (var role in data)
 		{
-			var oldId = role["Row ID"].ToString();
+			var oldId = role["Row ID"].ToString()!;
 			var newId = Guid.Parse(RoleMap[oldId]);
 
 			var name = role.GetValueOrDefault("Роль")?.ToString() ?? "";
@@ -227,14 +230,14 @@ class Program
 
 		foreach (var user in data)
 		{
-			var oldId = user["Row ID"].ToString();
+			var oldId = user["Row ID"].ToString()!;
 			var newId = Guid.NewGuid();
 			UserMap[oldId] = newId.ToString();
 		}
 
 		foreach (var user in data)
 		{
-			var oldId = user["Row ID"].ToString();
+			var oldId = user["Row ID"].ToString()!;
 			var newId = Guid.Parse(UserMap[oldId]);
 
 			var email = user.GetValueOrDefault("Email")?.ToString() ?? "";
@@ -281,7 +284,7 @@ class Program
 
 				await using var cmd = new NpgsqlCommand(sql, conn);
 				cmd.Parameters.AddWithValue(newId);
-				cmd.Parameters.AddWithValue(uw["Row ID"].ToString());
+				cmd.Parameters.AddWithValue(uw["Row ID"].ToString()!);
 				cmd.Parameters.AddWithValue(userId.Value);
 				cmd.Parameters.AddWithValue(workplaceId.Value);
 				await cmd.ExecuteNonQueryAsync();
@@ -353,20 +356,23 @@ class Program
 	{
 		Console.WriteLine("📦 Миграция заказов...");
 
-		foreach (var order in data)
-		{
-			var oldId = order["Row ID"].ToString();
-			var newId = Guid.NewGuid();
-			OrderMap[oldId] = newId.ToString();
-		}
+		//foreach (var order in data)
+		//{
+		//	var oldId = order["Row ID"].ToString()!;
+		//	var newId = Guid.NewGuid();
+		//	var machine = order.GetValueOrDefault("Machine")?.ToString();
+		//	OrderMap[oldId] = (newId, machine);
+		//}
 
 		foreach (var order in data)
 		{
-			var oldId = order["Row ID"].ToString();
-			var newId = Guid.Parse(OrderMap[oldId]);
+			var oldId = order["Row ID"].ToString()!;
+			var newId = Guid.NewGuid();
+			var machine = order.GetValueOrDefault("Machine")?.ToString();
+			OrderMap[oldId] = (newId, machine);
 
 			var orderNumber = order.GetValueOrDefault("Номер заказа")?.ToString() ?? "";
-			var readyDate = order.GetValueOrDefault("Готовность") != null ? DateTime.Parse(order["Готовность"].ToString()) : (DateTime?)null;
+			var readyDate = order.GetValueOrDefault("Готовность") != null ? DateTime.Parse(order["Готовность"].ToString()!) : (DateTime?)null;
 
 			var windowCount = int.Parse(order.GetValueOrDefault("Окна, шт")?.ToString() ?? "0");
 			var windowArea = ParseDecimal(order.GetValueOrDefault("Окна, м2")?.ToString());
@@ -405,66 +411,71 @@ class Program
 	{
 		Console.WriteLine("🏭 Миграция производственных заказов...");
 
+		//foreach (var po in data)
+		//{
+		//	var oldId = po["Row ID"].ToString();
+		//	var newId = Guid.NewGuid();
+		//	ProductionOrderMap[oldId] = newId.ToString();
+		//}
+
 		foreach (var po in data)
 		{
-			var oldId = po["Row ID"].ToString();
+			var oldId = po["Row ID"].ToString()!;
 			var newId = Guid.NewGuid();
 			ProductionOrderMap[oldId] = newId.ToString();
-		}
-
-		foreach (var po in data)
-		{
-			var oldId = po["Row ID"].ToString();
-			var newId = Guid.Parse(ProductionOrderMap[oldId]);
 
 			var orderIdOld = po.GetValueOrDefault("ID заказа")?.ToString();
-			var orderId = !string.IsNullOrEmpty(orderIdOld) && OrderMap.ContainsKey(orderIdOld) ? Guid.Parse(OrderMap[orderIdOld]) : (Guid?)null;
-			if (orderId == null) continue;
 
-			var workplaceIdOld = po.GetValueOrDefault("ID статуса")?.ToString();
-			var workplaceId = !string.IsNullOrEmpty(workplaceIdOld) && WorkplaceMap.ContainsKey(workplaceIdOld) ? Guid.Parse(WorkplaceMap[workplaceIdOld]) : (Guid?)null;
-			var comment = po.GetValueOrDefault("Примечания")?.ToString() ?? "";
-			var lumber = po.GetValueOrDefault("Брус")?.ToString() ?? "";
-			var glazingBead = po.GetValueOrDefault("Штапик")?.ToString() ?? "";
-			var isTwoSidePaint = po.GetValueOrDefault("Двухсторонняя покраска")?.ToString() == "true";
-
-			var sql = @"
-				INSERT INTO production_orders (id, legacy_id, order_id, current_workplace_id, 
-					comment, lumber, glazing_bead, is_two_side_paint, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-
-			await using var cmd = new NpgsqlCommand(sql, conn);
-			cmd.Parameters.AddWithValue(newId);
-			cmd.Parameters.AddWithValue(oldId);
-			cmd.Parameters.AddWithValue(orderId.Value);
-			cmd.Parameters.AddWithValue(workplaceId ?? (object)DBNull.Value);
-			cmd.Parameters.AddWithValue(comment);
-			cmd.Parameters.AddWithValue(lumber);
-			cmd.Parameters.AddWithValue(glazingBead);
-			cmd.Parameters.AddWithValue(isTwoSidePaint);
-			await cmd.ExecuteNonQueryAsync();
-
-			// ✅ Создаём комментарий для производственного заказа (если есть)
-			if (!string.IsNullOrWhiteSpace(comment))
+			if (!string.IsNullOrEmpty(orderIdOld) && OrderMap.TryGetValue(orderIdOld, out var orderData))
 			{
-				var commentId = Guid.NewGuid();
-				var commentSql = @"
-				INSERT INTO comments (id, order_id, user_id, content, created_at, updated_at)
-				VALUES ($1, $2, NULL, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+				var orderId = orderData.NewId;
+				var machine = orderData.Machine;
+				var workplaceIdOld = po.GetValueOrDefault("ID статуса")?.ToString();
+				var workplaceId = !string.IsNullOrEmpty(workplaceIdOld) && WorkplaceMap.ContainsKey(workplaceIdOld) ? Guid.Parse(WorkplaceMap[workplaceIdOld]) : (Guid?)null;
+				var comment = po.GetValueOrDefault("Примечания")?.ToString() ?? "";
+				var lumber = po.GetValueOrDefault("Брус")?.ToString() ?? "";
+				var glazingBead = po.GetValueOrDefault("Штапик")?.ToString() ?? "";
+				var isTwoSidePaint = po.GetValueOrDefault("Двухсторонняя покраска")?.ToString() == "true";
 
-				await using var commentCmd = new NpgsqlCommand(commentSql, conn);
-				commentCmd.Parameters.AddWithValue(commentId);
-				commentCmd.Parameters.AddWithValue(orderId.Value); // Привязываем к заказу
-				commentCmd.Parameters.AddWithValue(comment);
-				await commentCmd.ExecuteNonQueryAsync();
+				var sql = @"
+					INSERT INTO production_orders (id, legacy_id, order_id, current_workplace_id, 
+						comment, lumber, glazing_bead, is_two_side_paint, created_at, updated_at, machine)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $9)";
 
-				// Обновляем массив comment_ids в производственном заказе
-				await conn.ExecuteAsync(@"
-				UPDATE production_orders 
-				SET comment_ids = array_append(comment_ids, @commentId::uuid),
-					updated_at = CURRENT_TIMESTAMP
-				WHERE id = @prodOrderId",
-					new { prodOrderId = newId, commentId });
+				await using var cmd = new NpgsqlCommand(sql, conn);
+				cmd.Parameters.AddWithValue(newId);
+				cmd.Parameters.AddWithValue(oldId);
+				cmd.Parameters.AddWithValue(orderId);
+				cmd.Parameters.AddWithValue(workplaceId ?? (object)DBNull.Value);
+				cmd.Parameters.AddWithValue(comment);
+				cmd.Parameters.AddWithValue(lumber);
+				cmd.Parameters.AddWithValue(glazingBead);
+				cmd.Parameters.AddWithValue(isTwoSidePaint);
+				cmd.Parameters.AddWithValue(machine ?? (object)DBNull.Value);
+				await cmd.ExecuteNonQueryAsync();
+
+				// ✅ Создаём комментарий для производственного заказа (если есть)
+				if (!string.IsNullOrWhiteSpace(comment))
+				{
+					var commentId = Guid.NewGuid();
+					var commentSql = @"
+					INSERT INTO comments (id, order_id, user_id, content, created_at, updated_at)
+					VALUES ($1, $2, NULL, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+
+					await using var commentCmd = new NpgsqlCommand(commentSql, conn);
+					commentCmd.Parameters.AddWithValue(commentId);
+					commentCmd.Parameters.AddWithValue(orderId); // Привязываем к заказу
+					commentCmd.Parameters.AddWithValue(comment);
+					await commentCmd.ExecuteNonQueryAsync();
+
+					// Обновляем массив comment_ids в производственном заказе
+					await conn.ExecuteAsync(@"
+					UPDATE production_orders 
+					SET comment_ids = array_append(comment_ids, @commentId::uuid),
+						updated_at = CURRENT_TIMESTAMP
+					WHERE id = @prodOrderId",
+						new { prodOrderId = newId, commentId });
+				}
 			}
 		}
 
@@ -494,7 +505,7 @@ class Program
 
 				await using var cmd = new NpgsqlCommand(sql, conn);
 				cmd.Parameters.AddWithValue(newId);
-				cmd.Parameters.AddWithValue(fp["Row ID"].ToString());
+				cmd.Parameters.AddWithValue(fp["Row ID"].ToString()!);
 				cmd.Parameters.AddWithValue(prodOrderId.Value);
 				cmd.Parameters.AddWithValue(workplaceId.Value);
 				cmd.Parameters.AddWithValue(fp.GetValueOrDefault("Status")?.ToString() ?? "planned");
@@ -532,7 +543,7 @@ class Program
 
 				await using var cmd = new NpgsqlCommand(sql, conn);
 				cmd.Parameters.AddWithValue(newId);
-				cmd.Parameters.AddWithValue(log["Row ID"].ToString());
+				cmd.Parameters.AddWithValue(log["Row ID"].ToString()!);
 				cmd.Parameters.AddWithValue(prodOrderId.Value);
 				cmd.Parameters.AddWithValue(workplaceId.Value);
 				cmd.Parameters.AddWithValue(userId ?? (object)DBNull.Value);
@@ -627,7 +638,7 @@ class Program
 				continue;
 			}
 
-			var orderId = Guid.Parse(OrderMap[orderIdOld]);
+			var orderId = OrderMap[orderIdOld].NewId;
 
 			// Получаем order_supply_id
 			var orderSupplyId = await conn.ExecuteScalarAsync<Guid>(
