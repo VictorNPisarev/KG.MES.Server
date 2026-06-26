@@ -62,9 +62,9 @@ public partial class SupplyController
 	}
 
 	public async Task<IActionResult> GetAllSupplyStatusesHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
-		string? sortOrder = "asc", Guid? workplaceId = null, string? orderNumber = null)
+		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid>? workplaceIds = null)
 	{
-		var result = await _supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceId, orderNumber);
+		var result = await _supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
 		return Ok(result);
 	}
 }

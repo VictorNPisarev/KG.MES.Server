@@ -34,6 +34,7 @@ public partial class SupplyController : ControllerBase
 	// GET: api/supplies
 	[HttpGet("supplies")]
 	public Task<IActionResult> GetAllSupplyStatuses([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
-			[FromQuery] string? sortOrder = "asc", [FromQuery] Guid? workplaceId = null, [FromQuery] string? orderNumber = null)
-		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, workplaceId, orderNumber);
+			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
+			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
+		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
 }

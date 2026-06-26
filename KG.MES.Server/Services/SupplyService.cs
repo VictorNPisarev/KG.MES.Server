@@ -177,7 +177,7 @@ public class SupplyService : ISupplyService
 	}
 	
 	public async Task<PaginatedResponse<SupplyStatusListItemDto>> GetAllSupplyItemsAsync(
-		int page, int limit, string? sortBy, string? sortOrder, Guid? workplaceId, string? orderNumber)
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
 		var query = _context.SupplyItems
 			.Join(_context.OrderSupplies, si => si.OrderSupplyId, os => os.Id, (si, os) => new { si, os })
@@ -221,8 +221,10 @@ public class SupplyService : ISupplyService
 										  .FirstOrDefault()
 			});
 
-		if (workplaceId.HasValue)
-			query = query.Where(o => o.CurrentWorkplaceId == workplaceId.Value);
+		if (workplaceIds != null && workplaceIds.Any())
+		{
+			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+		}
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			query = query.Where(s => EF.Functions.ILike(s.OrderNumber, $"%{orderNumber}%"));
