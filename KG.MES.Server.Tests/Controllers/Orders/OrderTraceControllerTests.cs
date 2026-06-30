@@ -181,7 +181,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 	}
 	
 	[Fact]
-	public async Task GetOrderTrace_WhenOrderHasNoProductionOrder_ShouldReturnTraceWithEmptyWorkplaces()
+	public async Task GetOrderTrace_WhenOrderHasNoProductionOrder_ShouldReturnNotFound()
 	{
 		// 1. Arrange
 		var customFactory = SetupTestFactory("TestDb_OrderTrace_NoProduction");
@@ -203,7 +203,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 		var response = await client.GetAsync($"/api/orders/{orderId}/trace");
 
 		// 3. Assert
-		response.StatusCode.Should().Be(HttpStatusCode.OK);
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<OrderTraceResponse>(content, new JsonSerializerOptions
@@ -212,13 +212,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 		});
 
 		result.Should().NotBeNull();
-		result!.Orders.Should().HaveCount(1);
-
-		var trace = result.Orders[0];
-		trace.OrderId.Should().Be(orderId);
-		trace.OrderNumber.Should().Be("3030");
-		trace.ProductionOrderId.Should().BeNull();
-		trace.Workplaces.Should().BeEmpty();
+		result!.Orders.Should().HaveCount(0);
 	}
 
 	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")

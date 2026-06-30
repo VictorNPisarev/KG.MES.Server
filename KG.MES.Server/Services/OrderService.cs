@@ -1,4 +1,5 @@
 using System.Globalization;
+using KG.MES.Server.Constants;
 using KG.MES.Server.Data;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
@@ -331,5 +332,42 @@ public partial class OrderService : IOrderService
 				Message = ex.Message
 			};
 		}
+	}
+
+	// <summary>
+	/// Обновляет CurrentWorkplaceId в production_orders на основе актуальных следов
+	/// </summary>
+	private async Task SetProductionOrderCurrentWorkplaceAsync(Guid productionOrderId, Guid workplaceId)
+	{
+		// Находим наиболее поздний участок со статусом active или completed
+		// Берём последний по дате обновления или по уровню (если уровень есть)
+		var latestFootprint = await _context.OrderFootprints
+			.Where(fp => fp.ProductionOrderId == productionOrderId)
+			.Where(fp => fp.Status == OrderStatus.WorkplaceStatus.Active ||
+						 fp.Status == OrderStatus.WorkplaceStatus.Completed)
+			.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new { fp, w })
+			.OrderByDescending(x => x.w.Level)  // ← по уровню
+			.Select(x => x.fp)
+			.FirstOrDefaultAsync();
+
+		var productionOrder = await _context.ProductionOrders
+			.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+		if (productionOrder == null)
+			return;
+
+		// Если есть активный/завершённый след — обновляем
+		if (latestFootprint != null)
+		{
+			productionOrder.CurrentWorkplaceId = latestFootprint.WorkplaceId;
+			productionOrder.UpdatedAt = DateTime.UtcNow;
+		}
+		else
+		{
+			productionOrder.CurrentWorkplaceId = workplaceId;
+			productionOrder.UpdatedAt = DateTime.UtcNow;
+		}
+
+		await _context.SaveChangesAsync();
 	}
 }
