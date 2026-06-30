@@ -1,6 +1,7 @@
 using KG.MES.Server.Controllers;
 using KG.MES.Server.Models.Dto;
 using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Models.Entities;
 
 namespace KG.MES.Server.Services.Interfaces;
 
@@ -12,7 +13,6 @@ public interface IOrderService
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
 	Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string orderNumber);
-	Task<List<OrderTraceDto>> CreateVirtualTraces(string orderNumber);
 	Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId);

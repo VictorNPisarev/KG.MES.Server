@@ -130,8 +130,7 @@ public partial class OrderController
 		var traces = await _orderService.GetOrderTraceByNumberAsync(identifier);
 		
 		if (traces == null || traces.Count == 0)
-			//return NotFound(new { error = "Order not found" });
-			traces = await _orderService.CreateVirtualTraces(identifier);
+			return NotFound(new { error = "Order not found" });
 
 		return Ok(new { orders = traces });
 	}

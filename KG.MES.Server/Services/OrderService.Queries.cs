@@ -63,13 +63,6 @@ public partial class OrderService
 
 			if (productionOrder == null)
 			{
-				traces.Add(new OrderTraceDto
-				{
-					OrderId = order.Id,
-					OrderNumber = order.OrderNumber,
-					ReadyDate = order.ReadyDate,
-					Workplaces = new List<WorkplaceTraceDto>()
-				});
 				continue;
 			}
 
@@ -85,14 +78,21 @@ public partial class OrderService
 				})
 				.ToListAsync();
 
-			traces.Add(new OrderTraceDto
+			if (footprints != null && footprints.Any())
 			{
-				OrderId = order.Id,
-				ProductionOrderId = productionOrder.Id,
-				OrderNumber = order.OrderNumber,
-				ReadyDate = order.ReadyDate,
-				Workplaces = footprints
-			});
+				traces.Add(new OrderTraceDto
+				{
+					OrderId = order.Id,
+					ProductionOrderId = productionOrder.Id,
+					OrderNumber = order.OrderNumber,
+					ReadyDate = order.ReadyDate,
+					Workplaces = footprints
+				});
+			}
+			else
+			{
+				traces.Add(await CreateVirtualTraces(order, productionOrder));
+			}
 		}
 
 		return traces;
@@ -101,18 +101,9 @@ public partial class OrderService
 	/// <summary>
 	/// Виртуальный след для заказа, который ещё не в производстве
 	/// </summary>
-	public async Task<List<OrderTraceDto>> CreateVirtualTraces(string identifier)
+	private async Task<OrderTraceDto> CreateVirtualTraces(Order order, ProductionOrder productionOrder)
 	{
-		var isUuid = Guid.TryParse(identifier, out var orderId);
 
-		var orders = await _context.Orders
-			.Where(o => isUuid ? o.Id == orderId : o.OrderNumber == identifier)
-			.ToListAsync();
-
-		var traces = new List<OrderTraceDto>();
-
-		foreach (var order in orders)
-		{
 			var fromWorkplaces = _context.WorkplaceTransitions
 			 .Select(wt => wt.FromWorkplaceId)
 			 .Distinct()
@@ -147,16 +138,13 @@ public partial class OrderService
 				})
 				.ToList();
 
-			traces.Add(new OrderTraceDto
+			return new OrderTraceDto
 			{
 				OrderId = order.Id,
-				ProductionOrderId = null,
+				ProductionOrderId = productionOrder.Id,
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
 				Workplaces = workplaces
-			});
-		}
-		
-		return traces;
+			};
 	}
 }
