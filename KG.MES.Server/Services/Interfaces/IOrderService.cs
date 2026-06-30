@@ -12,6 +12,7 @@ public interface IOrderService
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
 	Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string orderNumber);
+	Task<List<OrderTraceDto>> CreateVirtualTraces(string orderNumber);
 	Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId);

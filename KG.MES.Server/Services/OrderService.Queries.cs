@@ -97,4 +97,66 @@ public partial class OrderService
 
 		return traces;
 	}
+
+	/// <summary>
+	/// Виртуальный след для заказа, который ещё не в производстве
+	/// </summary>
+	public async Task<List<OrderTraceDto>> CreateVirtualTraces(string identifier)
+	{
+		var isUuid = Guid.TryParse(identifier, out var orderId);
+
+		var orders = await _context.Orders
+			.Where(o => isUuid ? o.Id == orderId : o.OrderNumber == identifier)
+			.ToListAsync();
+
+		var traces = new List<OrderTraceDto>();
+
+		foreach (var order in orders)
+		{
+			var fromWorkplaces = _context.WorkplaceTransitions
+			 .Select(wt => wt.FromWorkplaceId)
+			 .Distinct()
+			 .ToList();
+
+			var toWorkplaces = _context.WorkplaceTransitions
+				.Select(wt => wt.ToWorkplaceId)
+				.Distinct()
+				.ToList();
+
+			var allWorkplaceIds = fromWorkplaces
+				.Union(toWorkplaces)
+				.ToList();
+
+			// Если граф пустой — берём все рабочие места
+			if (!allWorkplaceIds.Any())
+			{
+				allWorkplaceIds = _context.Workplaces
+					.Where(w => w.IsWorkplace)
+					.Select(w => w.Id)
+					.ToList();
+			}
+
+			var workplaces = _context.Workplaces
+				.Where(w => allWorkplaceIds.Contains(w.Id) && w.IsWorkplace)
+				.OrderBy(w => w.Level)
+				.Select(w => new WorkplaceTraceDto
+				{
+					WorkplaceId = w.Id,
+					WorkplaceName = w.Name,
+					Status = "planned"
+				})
+				.ToList();
+
+			traces.Add(new OrderTraceDto
+			{
+				OrderId = order.Id,
+				ProductionOrderId = null,
+				OrderNumber = order.OrderNumber,
+				ReadyDate = order.ReadyDate,
+				Workplaces = workplaces
+			});
+		}
+		
+		return traces;
+	}
 }
