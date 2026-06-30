@@ -195,14 +195,16 @@ public partial class OrderService
 
 			_context.OperationLogs.Add(operationLog);
 
-			var productionOrder = await _context.ProductionOrders
-				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+			await SetProductionOrderCurrentWorkplaceAsync(productionOrderId, workplaceId);
 
-			if (productionOrder != null)
-			{
-				productionOrder.CurrentWorkplaceId = workplaceId;
-				productionOrder.UpdatedAt = DateTime.UtcNow;
-			}
+			//var productionOrder = await _context.ProductionOrders
+			//	.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+			//if (productionOrder != null)
+			//{
+			//	productionOrder.CurrentWorkplaceId = workplaceId;
+			//	productionOrder.UpdatedAt = DateTime.UtcNow;
+			//}
 
 			await _context.SaveChangesAsync();
 

@@ -63,13 +63,6 @@ public partial class OrderService
 
 			if (productionOrder == null)
 			{
-				traces.Add(new OrderTraceDto
-				{
-					OrderId = order.Id,
-					OrderNumber = order.OrderNumber,
-					ReadyDate = order.ReadyDate,
-					Workplaces = new List<WorkplaceTraceDto>()
-				});
 				continue;
 			}
 
@@ -85,16 +78,73 @@ public partial class OrderService
 				})
 				.ToListAsync();
 
-			traces.Add(new OrderTraceDto
+			if (footprints != null && footprints.Any())
+			{
+				traces.Add(new OrderTraceDto
+				{
+					OrderId = order.Id,
+					ProductionOrderId = productionOrder.Id,
+					OrderNumber = order.OrderNumber,
+					ReadyDate = order.ReadyDate,
+					Workplaces = footprints
+				});
+			}
+			else
+			{
+				traces.Add(await CreateVirtualTraces(order, productionOrder));
+			}
+		}
+
+		return traces;
+	}
+
+	/// <summary>
+	/// Виртуальный след для заказа, который ещё не в производстве
+	/// </summary>
+	private async Task<OrderTraceDto> CreateVirtualTraces(Order order, ProductionOrder productionOrder)
+	{
+
+			var fromWorkplaces = _context.WorkplaceTransitions
+			 .Select(wt => wt.FromWorkplaceId)
+			 .Distinct()
+			 .ToList();
+
+			var toWorkplaces = _context.WorkplaceTransitions
+				.Select(wt => wt.ToWorkplaceId)
+				.Distinct()
+				.ToList();
+
+			var allWorkplaceIds = fromWorkplaces
+				.Union(toWorkplaces)
+				.ToList();
+
+			// Если граф пустой — берём все рабочие места
+			if (!allWorkplaceIds.Any())
+			{
+				allWorkplaceIds = _context.Workplaces
+					.Where(w => w.IsWorkplace)
+					.Select(w => w.Id)
+					.ToList();
+			}
+
+			var workplaces = _context.Workplaces
+				.Where(w => allWorkplaceIds.Contains(w.Id) && w.IsWorkplace)
+				.OrderBy(w => w.Level)
+				.Select(w => new WorkplaceTraceDto
+				{
+					WorkplaceId = w.Id,
+					WorkplaceName = w.Name,
+					Status = "planned"
+				})
+				.ToList();
+
+			return new OrderTraceDto
 			{
 				OrderId = order.Id,
 				ProductionOrderId = productionOrder.Id,
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
-				Workplaces = footprints
-			});
-		}
-
-		return traces;
+				Workplaces = workplaces
+			};
 	}
 }

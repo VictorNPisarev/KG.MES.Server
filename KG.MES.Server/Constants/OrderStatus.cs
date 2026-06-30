@@ -2,7 +2,7 @@ namespace KG.MES.Server.Constants;
 
 public static class OrderStatus
 {
-	public static class WorkplaceStatus
+	public static class WorkplaceStatus //TODO после объединения переноса всех проектов в этот solution сделать так, чтобы в запрос api статус брался через константы этого класса
 	{
 		public const string Planned = "planned";
 		public const string Joinery = "joinery";
@@ -23,7 +23,7 @@ public static class OrderStatus
 
 		public static bool CanTransition(string from, string to)
 		{
-			if (!Level.ContainsKey(from) || !Level.ContainsKey(to))
+			if (!Level.ContainsKey(from.ToLower()) || !Level.ContainsKey(to.ToLower()))
 				return false;
 			return Level[to] > Level[from];
 		}

@@ -1,6 +1,7 @@
 using KG.MES.Server.Controllers;
 using KG.MES.Server.Models.Dto;
 using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Models.Entities;
 
 namespace KG.MES.Server.Services.Interfaces;
 

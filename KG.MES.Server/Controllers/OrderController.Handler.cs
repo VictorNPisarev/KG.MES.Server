@@ -128,8 +128,10 @@ public partial class OrderController
 	public async Task<IActionResult> GetOrderTraceHandler(string identifier)
 	{
 		var traces = await _orderService.GetOrderTraceByNumberAsync(identifier);
+		
 		if (traces == null || traces.Count == 0)
 			return NotFound(new { error = "Order not found" });
+
 		return Ok(new { orders = traces });
 	}
 
