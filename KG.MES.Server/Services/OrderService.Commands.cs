@@ -237,7 +237,28 @@ public partial class OrderService
 
 		try
 		{
-			await UpdateStatusAsync(productionOrderId, workplaceId, OrderStatus.WorkplaceStatus.Completed);
+			var productionOrder = await _context.ProductionOrders
+				.Include(po => po.CurrentWorkplace)
+				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+			var workplace = await _context.Workplaces
+				.FirstOrDefaultAsync(w => w.Id == workplaceId);
+
+			if (productionOrder == null)
+			{
+				return new OperationResultDto
+				{
+					Success = false,
+					Message = "Order not found"
+				};
+			}
+
+			await UpdateStatusAsync(productionOrder.Id, workplaceId, OrderStatus.WorkplaceStatus.Completed);
+
+			if(workplace?.Code == WorkplaceCodes.Packing)
+			{
+				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
+			}
 
 			var operationLog = new OperationLog
 			{

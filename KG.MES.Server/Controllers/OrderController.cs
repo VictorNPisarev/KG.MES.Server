@@ -1,5 +1,6 @@
 
 using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -103,4 +104,21 @@ public partial class OrderController : ControllerBase
 	[HttpPost("orders/{orderId}/departure")]
 	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
 
+	// GET: api/orders/{orderId}/commercial
+	[HttpGet("orders/{orderId}/commercial")]
+	public async Task<IActionResult> GetOrderCommercial(Guid orderId)
+	{
+		var commercial = await _orderService.GetOrderCommercialAsync(orderId);
+		return Ok(commercial);
+	}
+
+	// PUT: api/orders/{orderId}/commercial
+	[HttpPut("orders/{orderId}/commercial")]
+	public async Task<IActionResult> UpdateOrderCommercial(
+		Guid orderId,
+		[FromBody] OrderCommercialRequestDto request)
+	{
+		var result = await _orderService.UpdateOrderCommercialAsync(orderId, request);
+		return Ok(result);
+	}
 }
