@@ -48,7 +48,7 @@ public class SupplyService : ISupplyService
 			.ToListAsync();
 	}
 
-	public async Task<List<OrderSupplyItemDto>> GetOrderSupplyItemsAsync(Guid orderId)
+	public async Task<List<SupplyOrderListItemDto>> GetOrderSupplyItemsAsync(Guid orderId)
 	{
 		return await _context.OrderSupplies
 			.Where(os => os.OrderId == orderId)
@@ -57,7 +57,7 @@ public class SupplyService : ISupplyService
 			.GroupJoin(_context.SupplyConditions, x => x.si.ConditionId, sc => sc.Id, (x, sc) => new { x.si, x.st, sc })
 			.SelectMany(x => x.sc.DefaultIfEmpty(), (x, sc) => new { x.si, x.st, sc })
 			.GroupJoin(_context.Comments, x => x.si.CommentId, c => c.Id, (x, c) => new { x.si, x.st, x.sc, c })
-			.SelectMany(x => x.c.DefaultIfEmpty(), (x, c) => new OrderSupplyItemDto
+			.SelectMany(x => x.c.DefaultIfEmpty(), (x, c) => new SupplyOrderListItemDto
 			{
 				OrderSupplyId = x.si.OrderSupplyId,
 				SupplyTypeId = x.si.SupplyTypeId,
