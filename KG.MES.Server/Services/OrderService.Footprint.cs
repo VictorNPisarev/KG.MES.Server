@@ -218,29 +218,25 @@ public partial class OrderService
 			else
 			{
 				await UpdateStatusAsync(productionOrderId, workplaceId, status);
-				//var existing = await _context.OrderFootprints
-				//	.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId && fp.WorkplaceId == workplaceId);
 
-				//if (existing != null)
-				//{
-				//	oldStatus = existing.Status;
-				//	existing.Status = status;
-				//	existing.UpdatedAt = DateTime.UtcNow;
-				//}
 				await ActivateNextWorkplacesAsync(productionOrderId, workplaceId);
 				await ActivateParallelWorkplacesAsync(productionOrderId, workplaceId);
 
 			}
 
 			await SetProductionOrderCurrentWorkplaceAsync(productionOrderId, workplaceId);
-			//var productionOrder = await _context.ProductionOrders
-			//	.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 
-			//if (productionOrder != null)
-			//{
-			//	productionOrder.CurrentWorkplaceId = workplaceId;
-			//	productionOrder.UpdatedAt = DateTime.UtcNow;
-			//}
+			var productionOrder = await _context.ProductionOrders
+				.Include(po => po.CurrentWorkplace)
+				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+			var workplace = await _context.Workplaces
+				.FirstOrDefaultAsync(w => w.Id == workplaceId);
+
+			if (productionOrder!= null && workplace?.Code == WorkplaceCodes.Packing && status == Constants.OrderStatus.WorkplaceStatus.Completed)
+			{
+				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
+			}
 
 			await _context.SaveChangesAsync();
 

@@ -67,7 +67,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderSupplyItemDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+		var result = JsonSerializer.Deserialize<List<SupplyOrderListItemDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
 		result.Should().NotBeNull();
 		result!.Should().HaveCount(2);

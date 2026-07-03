@@ -1,6 +1,7 @@
 using System.Globalization;
 using KG.MES.Server.Constants;
 using KG.MES.Server.Data;
+//using KG.MES.Server.Extensions;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -116,6 +117,8 @@ public partial class OrderService : IOrderService
 		// Применяем сортировку
 		IOrderedQueryable<OrderListItemDto> orderedQuery;
 
+		//orderedQuery = query.OrderByProperty(sortBy ?? "ready_date", sortOrder);
+
 		switch (sortBy?.ToLower())
 		{
 			case "order_number":
@@ -202,7 +205,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		//using var transaction = await _context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -210,7 +213,7 @@ public partial class OrderService : IOrderService
 			
 			if (!result.Success)
 			{
-				await transaction.RollbackAsync();
+				//await transaction.RollbackAsync();
 				return result;
 			}
 			// Меняю все следы заказа (footprint) на completed
@@ -249,7 +252,7 @@ public partial class OrderService : IOrderService
 				}
 			}
 
-			await transaction.CommitAsync();
+			//await transaction.CommitAsync();
 
 			return new SetOrderStatusResultDto
 			{
