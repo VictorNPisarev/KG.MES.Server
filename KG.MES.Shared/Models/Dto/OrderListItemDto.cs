@@ -48,4 +48,8 @@ public class OrderListItemDto
 
 	[JsonPropertyName("machine")]
 	public string? Machine { get; set; }
+
+	[JsonPropertyName("rtm_date")]
+	public DateTime? RtmDate { get; set; }
+
 }

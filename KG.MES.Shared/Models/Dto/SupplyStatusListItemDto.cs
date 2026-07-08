@@ -19,6 +19,9 @@ public class SupplyStatusListItemDto
 	[JsonPropertyName("current_workplace_id")]
 	public Guid? CurrentWorkplaceId { get; set; }
 
+	[JsonPropertyName("current_status")]
+	public string? CurrentStatus { get; set; }
+
 	[JsonPropertyName("lumber")]
 	public string? Lumber { get; set; }
 
@@ -49,6 +52,15 @@ public class SupplyStatusListItemDto
 	[JsonPropertyName("alumWaterShield_comment")]
 	public string? AlumWaterShieldComment { get; set; }
 
+	[JsonPropertyName("windowsill")]
+	public string? Windowsill { get; set; }
+
+	[JsonPropertyName("windowsill_comment")]
+	public string? WindowsillComment { get; set; }
+
 	[JsonPropertyName("machine")]
 	public string? Machine { get; set; }
+
+	[JsonPropertyName("rtm_date")]
+	public DateTime? RtmDate { get; set; }
 }

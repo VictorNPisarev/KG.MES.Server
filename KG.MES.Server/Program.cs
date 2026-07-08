@@ -95,7 +95,7 @@ static string GetConnectionString()
 	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
 	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
 	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "x126ko33";//"WGbbYT8t!q";//
+	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "WGbbYT8t!q";//"x126ko33";//
 
 	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 }

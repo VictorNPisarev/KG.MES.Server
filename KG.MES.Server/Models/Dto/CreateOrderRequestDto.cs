@@ -16,7 +16,7 @@ public class CreateOrderRequestDto
 	public string? GlazingBead { get; set; }
 	public bool IsTwoSidePaint { get; set; }
 	public string? Machine { get; set; }
-	public DateTime? StartDate { get; set; }
+	public DateTime? RtmDate { get; set; }
 	public DateTime? So8Date { get; set; }
 	public int ApprovedLeadDays { get; set; }
 	public int UnapprovedLeadDays { get; set; }

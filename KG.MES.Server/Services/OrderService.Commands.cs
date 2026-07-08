@@ -31,7 +31,7 @@ public partial class OrderService
 				IsOnlyPaid = request.IsOnlyPaid,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				StartDate = request.StartDate,
+				RtmDate = request.RtmDate,
 				So8Date = request.So8Date,
 				ApprovedLeadDays = request.ApprovedLeadDays,
 				UnapprovedLeadDays = request.UnapprovedLeadDays,

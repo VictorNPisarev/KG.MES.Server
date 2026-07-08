@@ -101,16 +101,19 @@ public partial class OrderService : IOrderService
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
-				Machine = x.po.Machine
+				Machine = x.po.Machine,
+				RtmDate = x.o.RtmDate
 			});
-
-		if (workplaceIds != null && workplaceIds.Any())
-		{
-			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
-		}
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+
+		if (
+			//string.IsNullOrEmpty(orderNumber) &&
+			workplaceIds != null && workplaceIds.Any())
+		{
+			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+		}
 
 		var total = await query.CountAsync();
 
