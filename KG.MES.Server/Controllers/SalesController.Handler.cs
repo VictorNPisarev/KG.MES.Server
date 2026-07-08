@@ -5,21 +5,35 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
 public partial class SalesController : ControllerBase
 {
-	// GET: api/sales/orders
-	[HttpGet("orders")]
-	public Task<IActionResult> GetSalesOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
-			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null,
-			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null,
-			[FromQuery] string? customerName = null, [FromQuery] Guid? managerId = null)
-		=> GetSalesOrdersHandler(page,limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds, customerName, managerId);
+	private readonly IOrderService _orderService;
+	private readonly ILogger<SalesController> _logger;
 
-	// GET: api/sales/orders/{orderId}
-	[HttpGet("orders/{orderId}")]
-	public async Task<IActionResult> GetSalesOrder(Guid orderId)
+	public SalesController(IOrderService orderService, ILogger<SalesController> logger)
+	{
+		_orderService = orderService;
+		_logger = logger;
+	}
+
+	public async Task<IActionResult> GetSalesOrdersHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
+			string? sortOrder = "asc", string? orderNumber = null,
+			Guid? workplaceId = null, List<Guid>? workplaceIds = null,
+			string? customerName = null, Guid? managerId = null)
+	{
+		if (workplaceId.HasValue)
+		{
+			workplaceIds ??= [];
+			workplaceIds.Add(workplaceId.Value);
+		}
+
+		var result = await _orderService.GetSalesOrdersAsync(
+			page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> GetSalesOrderHandler(Guid orderId)
 	{
 		//var order = await _orderService.GetSalesOrderByIdAsync(orderId);
 		//if (order == null)
@@ -29,9 +43,7 @@ public partial class SalesController : ControllerBase
 		return Ok();
 	}
 
-	// GET: api/sales/orders/by-number/{orderNumber}
-	[HttpGet("orders/by-number/{orderNumber}")]
-	public async Task<IActionResult> GetSalesOrderByNumber(string orderNumber)
+	public async Task<IActionResult> GetSalesOrderByNumberHandler(string orderNumber)
 	{
 		//var order = await _orderService.GetSalesOrderByNumberAsync(orderNumber);
 		//if (order == null)
@@ -41,17 +53,13 @@ public partial class SalesController : ControllerBase
 		return Ok();
 	}
 
-	// GET: api/sales/customers
-	[HttpGet("customers")]
-	public async Task<IActionResult> GetCustomers([FromQuery] string? search = null)
+	public async Task<IActionResult> GetCustomersHandler([FromQuery] string? search = null)
 	{
 		var customers = await _orderService.GetCustomersAsync(search);
 		return Ok(customers);
 	}
 
-	// GET: api/sales/customers/{customerId}
-	[HttpGet("customers/{customerId}")]
-	public async Task<IActionResult> GetCustomer(Guid customerId)
+	public async Task<IActionResult> GetCustomerHandler(Guid customerId)
 	{
 		//var customer = await _orderService.GetCustomerByIdAsync(customerId);
 		//if (customer == null)
@@ -69,9 +77,7 @@ public partial class SalesController : ControllerBase
 	//	return CreatedAtAction(nameof(GetCustomer), new { customerId = customer.Id }, customer);
 	//}
 
-	// GET: api/sales/orders/{orderId}/commercial
-	[HttpGet("orders/{orderId}/commercial")]
-	public async Task<IActionResult> GetOrderCommercial(Guid orderId)
+	public async Task<IActionResult> GetOrderCommercialHandler(Guid orderId)
 	{
 		var commercial = await _orderService.GetOrderCommercialAsync(orderId);
 		if (commercial == null)
@@ -80,9 +86,7 @@ public partial class SalesController : ControllerBase
 		return Ok(commercial);
 	}
 
-	// PUT: api/sales/orders/{orderId}/commercial
-	[HttpPut("orders/{orderId}/commercial")]
-	public async Task<IActionResult> UpdateOrderCommercial(
+	public async Task<IActionResult> UpdateOrderCommercialHandler(
 		Guid orderId,
 		[FromBody] OrderCommercialRequestDto request)
 	{
@@ -91,9 +95,7 @@ public partial class SalesController : ControllerBase
 		return Ok();
 	}
 
-	// GET: api/sales/managers
-	[HttpGet("managers")]
-	public async Task<IActionResult> GetManagers()
+	public async Task<IActionResult> GetManagersHandler()
 	{
 		//var managers = await _orderService.GetSalesManagersAsync();
 		//return Ok(managers);

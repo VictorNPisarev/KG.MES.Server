@@ -32,12 +32,25 @@ public partial class OrderService
 	public async Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
-		var query = _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+		var orderQuery = _context.Orders.AsQueryable();
+
+		if (!string.IsNullOrEmpty(orderNumber))
+			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+
+		var wProductionOrderQuery = orderQuery.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
+
+		if (
+			//string.IsNullOrEmpty(orderNumber) && 
+			workplaceIds != null && workplaceIds.Any())
+		{
+			wProductionOrderQuery = wProductionOrderQuery.Where(o => workplaceIds.Contains(o.po.CurrentWorkplaceId ?? Guid.Empty));
+		}
+
+		var query = wProductionOrderQuery
 			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
-			.Join(_context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
-			.LeftJoin(_context.Users, x => x.s.ManagerId, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
-			.LeftJoin(_context.Customers, x => x.s.CustomerId, c => c.Id, (x, c) => 
+			.LeftJoin(_context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
+			.LeftJoin(_context.Users, x => x.s != null ? x.s.ManagerId : (Guid?)null, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
+			.LeftJoin(_context.Customers, x => x.s != null ? x.s.CustomerId : (Guid?)null, c => c.Id, (x, c) => 
 			new SalesOrderListItemDto
 			{
 				Id = x.o.Id,
@@ -60,20 +73,10 @@ public partial class OrderService
 				Currency = x.s != null ? x.s.Currency : null
 			});
 
-		if (workplaceIds != null && workplaceIds.Any())
-		{
-			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
-		}
-
-		if (!string.IsNullOrEmpty(orderNumber))
-			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
-
 		var total = await query.CountAsync();
 
 		// Применяем сортировку
-		IOrderedQueryable<SalesOrderListItemDto> orderedQuery;
-
-		orderedQuery = query.OrderByProperty(sortBy ?? "ReadyDate", sortOrder);
+		var orderedQuery = query.OrderBy(o => o.ReadyDate);
 
 		//switch (sortBy?.ToLower())
 		//{
@@ -88,7 +91,7 @@ public partial class OrderService
 		//		break;
 		//	case "ready_date":
 		//	default:
-		//		orderedQuery = OrderByReadyDate(query, sortOrder);
+				//orderedQuery = OrderByReadyDate(query, sortOrder);
 		//		break;
 		//}
 
