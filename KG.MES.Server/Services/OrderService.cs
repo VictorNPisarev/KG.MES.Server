@@ -97,6 +97,7 @@ public partial class OrderService : IOrderService
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
+				IsTwoSidePaint = x.po.IsTwoSidePaint,
 				CreatedAt = x.o.CreatedAt,
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,

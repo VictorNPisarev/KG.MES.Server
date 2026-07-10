@@ -10,7 +10,7 @@ namespace KG.MES.Server.Services;
 
 public partial class OrderService
 {
-	public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderRequestDto request)
+	public async Task<CreateOrderResultDto> CreateOrderAsync(OrderRequestDto request)
 	{
 		using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -373,6 +373,177 @@ public partial class OrderService
 			await transaction.RollbackAsync();
 			_logger.LogError(ex, "Error in UpdateOrderFootprintBatchAsync");
 			throw;
+		}
+	}
+
+	/// <summary>
+	/// Получить заказ для редактирования
+	/// </summary>
+	public async Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId)
+	{
+		var order = await _context.Orders
+			.FirstOrDefaultAsync(o => o.Id == orderId);
+
+		if (order == null)
+			return null;
+
+		var productionOrder = await _context.ProductionOrders
+			.FirstOrDefaultAsync(po => po.OrderId == orderId);
+
+		if (productionOrder == null)
+			return null;
+
+		return new OrderRequestDto
+		{
+			//Id = order.Id,
+			OrderNumber = order.OrderNumber,
+			ReadyDate = order.ReadyDate,
+			WindowCount = order.WindowCount,
+			WindowArea = order.WindowArea,
+			PlateCount = order.PlateCount,
+			PlateArea = order.PlateArea,
+			IsEconom = order.IsEconom,
+			IsClaim = order.IsClaim,
+			IsOnlyPaid = order.IsOnlyPaid,
+			Comment = productionOrder.Comment,
+			Lumber = productionOrder.Lumber,
+			GlazingBead = productionOrder.GlazingBead,
+			IsTwoSidePaint = productionOrder.IsTwoSidePaint,
+			Machine = productionOrder.Machine,
+			RtmDate = order.RtmDate,
+			So8Date = order.So8Date,
+			ApprovedLeadDays = order.ApprovedLeadDays ?? 0,
+			UnapprovedLeadDays = order.UnapprovedLeadDays ?? 0
+		};
+	}
+
+	/// <summary>
+	/// Обновить заказ
+	/// </summary>
+	public async Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto)
+	{
+		using var transaction = await _context.Database.BeginTransactionAsync();
+
+		try
+		{
+			var order = await _context.Orders
+				.FirstOrDefaultAsync(o => o.Id == orderId);
+
+			if (order == null)
+				return false;
+
+			var productionOrder = await _context.ProductionOrders
+				.FirstOrDefaultAsync(po => po.OrderId == orderId);
+
+			if (productionOrder == null)
+				return false;
+
+			// Обновляем заказ
+			order.OrderNumber = dto.OrderNumber;
+			order.ReadyDate = dto.ReadyDate;
+			order.WindowCount = dto.WindowCount;
+			order.WindowArea = dto.WindowArea;
+			order.PlateCount = dto.PlateCount;
+			order.PlateArea = dto.PlateArea;
+			order.IsEconom = dto.IsEconom;
+			order.IsClaim = dto.IsClaim;
+			order.IsOnlyPaid = dto.IsOnlyPaid;
+			order.UpdatedAt = DateTime.UtcNow;
+			order.RtmDate = dto.RtmDate;
+			order.So8Date = dto.So8Date;
+			order.ApprovedLeadDays = dto.ApprovedLeadDays;
+			order.UnapprovedLeadDays = dto.UnapprovedLeadDays;
+
+			// Обновляем производственный заказ
+			productionOrder.Comment = dto.Comment;
+			productionOrder.Lumber = dto.Lumber;
+			productionOrder.GlazingBead = dto.GlazingBead;
+			productionOrder.IsTwoSidePaint = dto.IsTwoSidePaint;
+			productionOrder.Machine = dto.Machine;
+			productionOrder.UpdatedAt = DateTime.UtcNow;
+
+			await _context.SaveChangesAsync();
+			await transaction.CommitAsync();
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			await transaction.RollbackAsync();
+			_logger.LogError(ex, "Error updating order {OrderId}", orderId);
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Удалить заказ
+	/// </summary>
+	public async Task<bool> DeleteOrderAsync(Guid orderId)
+	{
+		using var transaction = await _context.Database.BeginTransactionAsync();
+
+		try
+		{
+			var order = await _context.Orders
+				.Include(o => o.ProductionOrder)
+				.Include(o => o.OrderSupply)
+					.ThenInclude(os => os!.SupplyItems)
+				.FirstOrDefaultAsync(o => o.Id == orderId);
+
+			Console.WriteLine();
+			Console.WriteLine();
+			Console.WriteLine();
+			Console.WriteLine();
+
+			if (order == null)
+			{
+				Console.WriteLine("if (order == null)");
+				return false;
+			}
+
+			Console.WriteLine("Order not null");
+			Console.WriteLine();
+			Console.WriteLine();
+			Console.WriteLine();
+			Console.WriteLine();
+
+			// Удаляем связанные данные (каскадно, но явно для контроля)
+			if (order.OrderSupply != null)
+			{
+				// Удаляем supply_items (если есть)
+				if (order.OrderSupply.SupplyItems != null)
+				{
+					_context.SupplyItems.RemoveRange(order.OrderSupply.SupplyItems);
+				}
+				_context.OrderSupplies.Remove(order.OrderSupply);
+			}
+
+			if (order.ProductionOrder != null)
+			{
+				// Удаляем footprints
+				var footprints = await _context.OrderFootprints
+					.Where(fp => fp.ProductionOrderId == order.ProductionOrder.Id)
+					.ToListAsync();
+				if (footprints.Any())
+				{
+					_context.OrderFootprints.RemoveRange(footprints);
+				}
+
+				_context.ProductionOrders.Remove(order.ProductionOrder);
+			}
+
+			_context.Orders.Remove(order);
+			await _context.SaveChangesAsync();
+			await transaction.CommitAsync();
+
+			_logger.LogInformation("Order {OrderId} deleted", orderId);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			await transaction.RollbackAsync();
+			_logger.LogError(ex, "Error deleting order {OrderId}", orderId);
+			return false;
 		}
 	}
 }

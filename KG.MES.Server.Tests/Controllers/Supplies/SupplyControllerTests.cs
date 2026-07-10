@@ -174,8 +174,11 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		var pendingConditionId = Guid.NewGuid();
 
 		new TestDataBuilder()
-			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "1001"; o.ReadyDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); })
-			.WithOrder(o => { o.Id = orderId2; o.OrderNumber = "1002"; o.ReadyDate = DateTime.Parse("2026-06-02T10:00:00.000Z"); })
+			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "1001"; o.ReadyDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); 
+																		o.RtmDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); })
+			.WithOrder(o => { o.Id = orderId2; o.OrderNumber = "1002"; o.ReadyDate = DateTime.Parse("2026-06-02T10:00:00.000Z");
+																		o.RtmDate = DateTime.Parse("2026-06-01T10:00:00.000Z");
+			})
 			.WithProductionOrder(po => { po.Id = porductionOrderId1; po.OrderId = orderId1; })
 			.WithProductionOrder(po => { po.Id = porductionOrderId2; po.OrderId = orderId2; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId1; os.OrderId = orderId1; })

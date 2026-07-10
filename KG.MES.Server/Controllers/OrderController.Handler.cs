@@ -1,6 +1,7 @@
 
 using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -65,7 +66,7 @@ public partial class OrderController
 		return Ok(orders);
 	}
 
-	public async Task<IActionResult> CreateOrderHandler(CreateOrderRequestDto request)
+	public async Task<IActionResult> CreateOrderHandler(OrderRequestDto request)
 	{
 		if (string.IsNullOrEmpty(request.OrderNumber))
 			return BadRequest(new { error = "orderNumber is required" });
@@ -196,5 +197,46 @@ public partial class OrderController
 		return Ok(result);
 	}
 
+	public async Task<IActionResult> GetOrderCommercialHandler(Guid orderId)
+	{
+		var commercial = await _orderService.GetOrderCommercialAsync(orderId);
+		return Ok(commercial);
+	}
 
+	public async Task<IActionResult> UpdateOrderCommercialHandler(
+		Guid orderId,
+		[FromBody] OrderCommercialRequestDto request)
+	{
+		var result = await _orderService.UpdateOrderCommercialAsync(orderId, request);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> GetOrderForEditHandler(Guid orderId)
+	{
+		var result = await _orderService.GetOrderForEditAsync(orderId);
+		if (result == null)
+			return NotFound(new { error = "Order not found" });
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> UpdateOrderHandler(Guid orderId, [FromBody] OrderRequestDto dto)
+	{
+		if (dto == null)
+			return BadRequest(new { error = "Request body is required" });
+
+		var result = await _orderService.UpdateOrderAsync(orderId, dto);
+		if (!result)
+			return NotFound(new { error = "Order not found or update failed" });
+
+		return Ok(new { success = true, message = "Order updated" });
+	}
+
+	public async Task<IActionResult> DeleteOrderHandler(Guid orderId)
+	{
+		var result = await _orderService.DeleteOrderAsync(orderId);
+		if (!result)
+			return NotFound(new { error = "Order not found or delete failed" });
+
+		return Ok(new { success = true, message = "Order deleted" });
+	}
 }

@@ -43,7 +43,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 			.WithSupplyType(st => { st.Id = supplyTypeId2; st.Name = "Стекло"; st.IsActive = true; })
 			.Build(customFactory.Services);
 
-		var request = new CreateOrderRequestDto
+		var request = new OrderRequestDto
 		{
 			OrderNumber = "TEST-999",
 			WindowCount = 2,

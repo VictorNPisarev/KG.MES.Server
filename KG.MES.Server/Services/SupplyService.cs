@@ -204,8 +204,9 @@ public class SupplyService : ISupplyService
 			//	.Join(_context.ProductionOrders, x => x.o.Id, po => po.OrderId, (x, po) => new { x.si, x.os, x.o, po })
 			//	.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.si, x.os, x.o, x.po, w })
 			//	.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, x.w, st })
-			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.o.RtmDate, x.po.Machine, 
-								ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId, WorkplaceName = x.w.Name})
+			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.o.RtmDate, x.o.IsClaim, x.o.IsEconom, x.o.IsOnlyPaid, 
+								x.po.Machine, ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId, x.po.IsTwoSidePaint,
+								WorkplaceName = x.w.Name})
 			.Select(g => new SupplyStatusListItemDto
 			{
 				Id = g.Key.Id,
@@ -216,6 +217,10 @@ public class SupplyService : ISupplyService
 				ProductionOrderId = g.Key.ProductionOrderId,
 				CurrentWorkplaceId = g.Key.CurrentWorkplaceId,
 				CurrentStatus = g.Key.WorkplaceName,
+				IsClaim = g.Key.IsClaim,
+				IsEconom = g.Key.IsEconom,
+				IsOnlyPaid = g.Key.IsOnlyPaid,
+				IsTwoSidePaint = g.Key.IsTwoSidePaint,
 				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "lumber").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				Paint = g.FirstOrDefault(x => x.st.Name == "paint")!.si.ConditionId == null ? null :

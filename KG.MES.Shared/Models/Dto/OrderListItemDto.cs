@@ -34,6 +34,9 @@ public class OrderListItemDto
 	[JsonPropertyName("is_only_paid")]
 	public bool IsOnlyPaid { get; set; }
 
+	[JsonPropertyName("is_two_side_paint")]
+	public bool IsTwoSidePaint { get; set; }
+
 	[JsonPropertyName("created_at")]
 	public DateTime CreatedAt { get; set; }
 

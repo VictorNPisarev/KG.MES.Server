@@ -1,6 +1,6 @@
 namespace KG.MES.Server.Models.Dto;
 
-public class CreateOrderRequestDto
+public class OrderRequestDto
 {
 	public string OrderNumber { get; set; } = string.Empty;
 	public DateTime? ReadyDate { get; set; }
