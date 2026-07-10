@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace KG.MES.Shared.Models.Dto;
 
-public class OrderDetailDto
+public class SalesOrderListItemDto
 {
 	[JsonPropertyName("id")]
 	public Guid Id { get; set; }
@@ -38,7 +38,7 @@ public class OrderDetailDto
 	public DateTime CreatedAt { get; set; }
 
 	[JsonPropertyName("production_order_id")]
-	public Guid ProductionOrderId { get; set; }
+	public Guid? ProductionOrderId { get; set; }
 
 	[JsonPropertyName("current_workplace_id")]
 	public Guid? CurrentWorkplaceId { get; set; }
@@ -46,21 +46,21 @@ public class OrderDetailDto
 	[JsonPropertyName("current_status")]
 	public string? CurrentStatus { get; set; }
 
-	[JsonPropertyName("comment")]
-	public string? Comment { get; set; }
+	[JsonPropertyName("manager_id")]
+	public Guid? ManagerId { get; set; }
 
-	[JsonPropertyName("lumber")]
-	public string? Lumber { get; set; }
+	[JsonPropertyName("manager_name")]
+	public string? ManagerName { get; set; }
 
-	[JsonPropertyName("glazing_bead")]
-	public string? GlazingBead { get; set; }
+	[JsonPropertyName("customer_id")]
+	public Guid? CustomerId { get; set; }
 
-	[JsonPropertyName("is_two_side_paint")]
-	public bool IsTwoSidePaint { get; set; }
+	[JsonPropertyName("customer_name")]
+	public string? CustomerName { get; set; }
 
-	[JsonPropertyName("machine")]
-	public string? Machine { get; set; }
+	[JsonPropertyName("amount")]
+	public decimal? Amount { get; set; }
 
-	[JsonPropertyName("rtm_date")]
-	public DateTime? RtmDate { get; set; }
+	[JsonPropertyName("currency")]
+	public string? Currency { get; set; }
 }

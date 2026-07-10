@@ -19,8 +19,8 @@ class Program
 	static async Task Main(string[] args)
 	{
 		var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ??
-							"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
-							//"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
+							//"Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=x126ko33";
+							"Host=192.168.0.254;Port=5432;Database=KgMes;Username=postgres;Password=WGbbYT8t!q";
 
 		await using var conn = new NpgsqlConnection(connectionString);
 		await conn.OpenAsync();
@@ -29,34 +29,36 @@ class Program
 
 		try
 		{
-			await TruncateTables(conn);
+			//await TruncateTables(conn);
 
-			var workplaces = await FetchTable("Workplaces");
-			var roles = await FetchTable("Roles");
-			var users = await FetchTable("Users");
-			var userWorkplaces = await FetchTable("UserWorkplaces");
-			var workplaceTransitions = await FetchTable("WorkplaceTransitions");
-			var orders = await FetchTable("Orders");
-			var prodOrders = await FetchTable("ProductionOrders");
-			var footprints = await FetchTable("OrderFootprints");
-			var logs = await FetchTable("OperationLogs");
-			var bomFlags = await FetchTable("BomFlags");
-			Console.WriteLine($"\n🎉 bomFlags: {bomFlags.Count}");
+			//var workplaces = await FetchTable("Workplaces");
+			//var roles = await FetchTable("Roles");
+			//var users = await FetchTable("Users");
+			//var userWorkplaces = await FetchTable("UserWorkplaces");
+			//var workplaceTransitions = await FetchTable("WorkplaceTransitions");
+			//var orders = await FetchTable("Orders");
+			//var prodOrders = await FetchTable("ProductionOrders");
+			//var footprints = await FetchTable("OrderFootprints");
+			//var logs = await FetchTable("OperationLogs");
+			//var bomFlags = await FetchTable("BomFlags");
+			//Console.WriteLine($"\n🎉 bomFlags: {bomFlags.Count}");
 
-			await MigrateRoles(conn, roles);
-			await MigrateWorkplaces(conn, workplaces);
-			await MigrateUsers(conn, users);
-			await MigrateUserWorkplaces(conn, userWorkplaces);
-			await MigrateWorkplaceRelations(conn, workplaceTransitions);
-			await MigrateOrders(conn, orders);
-			await MigrateProductionOrders(conn, prodOrders);
-			await MigrateOrderFootprints(conn, footprints);
-			await MigrateOperationLogs(conn, logs);
+			//await MigrateRoles(conn, roles);
+			//await MigrateWorkplaces(conn, workplaces);
+			//await MigrateUsers(conn, users);
+			//await MigrateUserWorkplaces(conn, userWorkplaces);
+			//await MigrateWorkplaceRelations(conn, workplaceTransitions);
+			//await MigrateOrders(conn, orders);
+			//await MigrateProductionOrders(conn, prodOrders);
+			//await MigrateOrderFootprints(conn, footprints);
+			//await MigrateOperationLogs(conn, logs);
 
-			// 1. Сначала создаём order_supply и supply_items для всех заказов
-			await CreateOrderSupplyForAllOrders(conn);
-			// 2. Потом обновляем статусы из BomFlags
-			await MigrateBomFlags(conn, bomFlags);
+			//// 1. Сначала создаём order_supply и supply_items для всех заказов
+			//await CreateOrderSupplyForAllOrders(conn);
+			//// 2. Потом обновляем статусы из BomFlags
+			//await MigrateBomFlags(conn, bomFlags);
+
+			await UpdateAdditionalFields(conn);
 
 			Console.WriteLine("\n🎉 Миграция завершена!");
 		}
@@ -96,6 +98,9 @@ class Program
 
 		using var httpClient = new HttpClient();
 		var url = $"{GasUrl}?action=exportData&table={gasTableName}";
+
+		Console.WriteLine($"📥 Url: {url}");
+
 		var response = await httpClient.GetStringAsync(url);
 
 		var data = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(response);
@@ -853,6 +858,199 @@ class Program
 			return result;
 
 		return 0;
+	}
+
+	static async Task UpdateAdditionalFields(NpgsqlConnection conn)
+	{
+		Console.WriteLine("📅 Обновление дополнительных полей заказов (rtm_date, so8_date, approved_lead_days, unapproved_lead_days)...");
+
+		// 1. Проверяем, есть ли нужные колонки в таблице orders
+		var checkColumns = await conn.QueryAsync<string>(@"
+		SELECT column_name 
+		FROM information_schema.columns 
+		WHERE table_name = 'orders' 
+		  AND column_name IN ('rtm_date', 'so8_date', 'approved_lead_days', 'unapproved_lead_days')
+	");
+		var existingColumns = checkColumns.ToList();
+
+		// Добавляем недостающие колонки
+		if (!existingColumns.Contains("rtm_date"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE orders ADD COLUMN rtm_date DATE;");
+			Console.WriteLine("   ✅ Добавлена колонка rtm_date");
+		}
+		if (!existingColumns.Contains("so8_date"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE orders ADD COLUMN so8_date DATE;");
+			Console.WriteLine("   ✅ Добавлена колонка so8_date");
+		}
+		if (!existingColumns.Contains("approved_lead_days"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE orders ADD COLUMN approved_lead_days INT;");
+			Console.WriteLine("   ✅ Добавлена колонка approved_lead_days");
+		}
+		if (!existingColumns.Contains("unapproved_lead_days"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE orders ADD COLUMN unapproved_lead_days INT;");
+			Console.WriteLine("   ✅ Добавлена колонка unapproved_lead_days");
+		}
+
+		// 2. Загружаем заказы из GAS с дополнительными полями
+		Console.WriteLine("📥 Загрузка дополнительных полей из GAS...");
+
+		var gasOrders = await FetchTable("Orders");
+		var gasOrderMap = new Dictionary<string, (DateTime? rtmDate, DateTime? so8Date, int? approvedDays, int? unapprovedDays)>();
+
+		foreach (var order in gasOrders)
+		{
+			var orderNumber = order.GetValueOrDefault("Номер заказа")?.ToString();
+			if (string.IsNullOrEmpty(orderNumber)) continue;
+			
+			var legacyId = order.GetValueOrDefault("Row ID")?.ToString();
+
+			if (string.IsNullOrEmpty(legacyId)) continue;
+
+			var rtmDate = order.GetValueOrDefault("Запуск") != null && !string.IsNullOrEmpty(order["Запуск"].ToString())
+				? DateTime.Parse(order["Запуск"].ToString()!)
+				: (DateTime?)null;
+			var so8Date = order.GetValueOrDefault("SO8") != null && !string.IsNullOrEmpty(order["SO8"].ToString())
+				? DateTime.Parse(order["SO8"].ToString()!)
+				: (DateTime?)null;
+			var approvedDays = order.GetValueOrDefault("Approved") != null
+				? int.Parse(order["Approved"].ToString()!)
+				: (int?)null;
+			var unapprovedDays = order.GetValueOrDefault("Unapproved") != null
+				? int.Parse(order["Unapproved"].ToString()!)
+				: (int?)null;
+
+			// Если номер заказа не уникален, используем год для уточнения
+			var orderYear = order.GetValueOrDefault("Год") != null
+				? int.Parse(order["Год"].ToString()!)
+				: (order.GetValueOrDefault("Готовность") != null
+					? DateTime.Parse(order["Готовность"].ToString()!).Year
+					: (int?)null);
+
+			var key = legacyId; //orderYear.HasValue ? $"{orderNumber}_{orderYear}" : orderNumber;
+			gasOrderMap[key] = (rtmDate, so8Date, approvedDays, unapprovedDays);
+		}
+
+		Console.WriteLine($"✅ Загружено {gasOrderMap.Count} записей из GAS");
+
+		// 3. Получаем заказы из БД, у которых есть legacy_id
+		var dbOrders = await conn.QueryAsync<(Guid id, string legacyId, string orderNumber, DateTime? createdAt,
+			DateTime? rtmDate, DateTime? so8Date, int? approvedLeadDays, int? unapprovedLeadDays)>(
+			@"SELECT 
+		id, 
+		legacy_id, 
+		order_number, 
+		created_at,
+		rtm_date,
+		so8_date,
+		approved_lead_days,
+		unapproved_lead_days
+	  FROM orders 
+	  WHERE legacy_id is not NULL 
+	  	AND (rtm_date IS NULL 
+		 OR so8_date IS NULL 
+		 OR approved_lead_days IS NULL 
+		 OR unapproved_lead_days IS NULL)"
+		);
+		Console.WriteLine($"📊 Найдено {dbOrders.Count()} заказов для обновления");
+
+		var updated = 0;
+		var skipped = 0;
+
+		foreach (var dbOrder in dbOrders)
+		{
+			// Пробуем найти по legacy_id (старый ID)
+			var key = dbOrder.legacyId;
+			if (!gasOrderMap.ContainsKey(key))
+			{
+				// Пробуем найти по номеру заказа
+				var orderYear = dbOrder.createdAt?.Year;
+				var altKey = orderYear.HasValue ? $"{dbOrder.orderNumber}_{orderYear}" : dbOrder.orderNumber;
+				if (!gasOrderMap.ContainsKey(altKey))
+				{
+					skipped++;
+					continue;
+				}
+				key = altKey;
+			}
+
+			var (rtmDate, so8Date, approvedDays, unapprovedDays) = gasOrderMap[key];
+
+			var updates = new List<string>();
+			var parameters = new Dictionary<string, object>();
+
+			if (rtmDate.HasValue && dbOrder.rtmDate == null)
+			{
+				updates.Add($"rtm_date = @rtm_date");
+				parameters["rtm_date"] = rtmDate.Value;
+			}
+			if (so8Date.HasValue && dbOrder.so8Date == null)
+			{
+				updates.Add($"so8_date = @so8_date");
+				parameters["so8_date"] = so8Date.Value;
+			}
+			if (approvedDays.HasValue && dbOrder.approvedLeadDays == null)
+			{
+				updates.Add($"approved_lead_days = @approved_lead_days");
+				parameters["approved_lead_days"] = approvedDays.Value;
+			}
+			if (unapprovedDays.HasValue && dbOrder.unapprovedLeadDays == null)
+			{
+				updates.Add($"unapproved_lead_days = @unapproved_lead_days");
+				parameters["unapproved_lead_days"] = unapprovedDays.Value;
+			}
+
+			if (updates.Count == 0)
+			{
+				skipped++;
+				continue;
+			}
+
+			// Добавляем updated_at и id
+			updates.Add($"updated_at = @updated_at");
+			parameters["updated_at"] = DateTime.UtcNow;
+
+			var sql = $@"
+				UPDATE orders 
+				SET {string.Join(", ", updates)}
+				WHERE id = @id
+			";
+			parameters["id"] = dbOrder.id;
+
+			await conn.ExecuteAsync(sql, parameters);
+			updated++;
+
+			if (updated % 100 == 0)
+			{
+				Console.WriteLine($"   Обновлено {updated} заказов...");
+			}
+		}
+
+		Console.WriteLine($"✅ Обновлено {updated} заказов, пропущено {skipped}");
+
+		// 4. Проверка результата
+		var stats = await conn.QueryFirstOrDefaultAsync<dynamic>(@"
+		SELECT 
+			COUNT(*) as total,
+			COUNT(CASE WHEN rtm_date IS NOT NULL THEN 1 END) as rtm_filled,
+			COUNT(CASE WHEN so8_date IS NOT NULL THEN 1 END) as so8_filled,
+			COUNT(CASE WHEN approved_lead_days IS NOT NULL THEN 1 END) as approved_filled,
+			COUNT(CASE WHEN unapproved_lead_days IS NOT NULL THEN 1 END) as unapproved_filled
+		FROM orders
+	");
+
+		if (stats != null)
+		{
+			Console.WriteLine("\n📊 Статистика после обновления:");
+			Console.WriteLine($"   Всего заказов: {stats.total}");
+			Console.WriteLine($"   Заполнено rtm_date: {stats.rtm_filled}");
+			Console.WriteLine($"   Заполнено so8_date: {stats.so8_filled}");
+			Console.WriteLine($"   Заполнено approved_lead_days: {stats.approved_filled}");
+			Console.WriteLine($"   Заполнено unapproved_lead_days: {stats.unapproved_filled}");
+		}
 	}
 }
 

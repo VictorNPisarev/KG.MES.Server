@@ -43,7 +43,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 			.WithSupplyType(st => { st.Id = supplyTypeId2; st.Name = "Стекло"; st.IsActive = true; })
 			.Build(customFactory.Services);
 
-		var request = new CreateOrderRequestDto
+		var request = new OrderRequestDto
 		{
 			OrderNumber = "TEST-999",
 			WindowCount = 2,
@@ -270,6 +270,204 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 
 		logs.Should().HaveCount(1);
 		logs[0].Notes.Should().Contain("Статус изменён с NULL на active");
+	}
+
+	[Fact]
+	public async Task UpdateOrder_ShouldUpdateOrderAndProductionOrder()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_Lifecycle_Update");
+		var client = customFactory.CreateClient();
+
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+
+		new TestDataBuilder()
+			.WithOrder(o =>
+			{
+				o.Id = orderId;
+				o.OrderNumber = "OLD-123";
+				o.WindowCount = 10;
+				o.WindowArea = 20.5m;
+				o.PlateCount = 5;
+				o.PlateArea = 10.0m;
+			})
+			.WithProductionOrder(po =>
+			{
+				po.Id = productionOrderId;
+				po.OrderId = orderId;
+				po.Comment = "Old comment";
+				po.Lumber = "Old lumber";
+			})
+			.Build(customFactory.Services);
+
+		var updateRequest = new OrderRequestDto
+		{
+			OrderNumber = "NEW-456",
+			ReadyDate = DateTime.Parse("2026-07-15"),
+			WindowCount = 15,
+			WindowArea = 30.5m,
+			PlateCount = 8,
+			PlateArea = 15.0m,
+			IsEconom = true,
+			IsClaim = false,
+			IsOnlyPaid = true,
+			Comment = "New comment",
+			Lumber = "New lumber",
+			GlazingBead = "New glazing bead",
+			IsTwoSidePaint = true,
+			Machine = "Conturex",
+			RtmDate = DateTime.Parse("2026-07-01"),
+			So8Date = DateTime.Parse("2026-07-05"),
+			ApprovedLeadDays = 10,
+			UnapprovedLeadDays = 5
+		};
+
+		// Act
+		var response = await client.PutAsJsonAsync($"/api/orders/{orderId}", updateRequest);
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var content = await response.Content.ReadAsStringAsync();
+		var json = JsonDocument.Parse(content).RootElement;
+
+		json.GetProperty("success").GetBoolean().Should().BeTrue();
+		json.GetProperty("message").GetString().Should().Be("Order updated");
+
+		// Проверяем в БД
+		using var scope = customFactory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+		var updatedOrder = await db.Orders.FindAsync(orderId);
+		updatedOrder.Should().NotBeNull();
+		updatedOrder!.OrderNumber.Should().Be("NEW-456");
+		updatedOrder.WindowCount.Should().Be(15);
+		updatedOrder.WindowArea.Should().Be(30.5m);
+		updatedOrder.PlateCount.Should().Be(8);
+		updatedOrder.PlateArea.Should().Be(15.0m);
+		updatedOrder.IsEconom.Should().BeTrue();
+		updatedOrder.IsOnlyPaid.Should().BeTrue();
+		updatedOrder.RtmDate.Should().Be(DateTime.Parse("2026-07-01"));
+		updatedOrder.So8Date.Should().Be(DateTime.Parse("2026-07-05"));
+		updatedOrder.ApprovedLeadDays.Should().Be(10);
+		updatedOrder.UnapprovedLeadDays.Should().Be(5);
+
+		var updatedProdOrder = await db.ProductionOrders.FindAsync(productionOrderId);
+		updatedProdOrder.Should().NotBeNull();
+		updatedProdOrder!.Comment.Should().Be("New comment");
+		updatedProdOrder.Lumber.Should().Be("New lumber");
+		updatedProdOrder.GlazingBead.Should().Be("New glazing bead");
+		updatedProdOrder.IsTwoSidePaint.Should().BeTrue();
+		updatedProdOrder.Machine.Should().Be("Conturex");
+	}
+
+	[Fact]
+	public async Task UpdateOrder_WhenOrderNotFound_ShouldReturnNotFound()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_Lifecycle_Update_NotFound");
+		var client = customFactory.CreateClient();
+
+		var nonExistentOrderId = Guid.NewGuid();
+
+		var updateRequest = new OrderRequestDto
+		{
+			OrderNumber = "TEST-999",
+			WindowCount = 10,
+			WindowArea = 20.5m
+		};
+
+		// Act
+		var response = await client.PutAsJsonAsync($"/api/orders/{nonExistentOrderId}", updateRequest);
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+		var content = await response.Content.ReadAsStringAsync();
+		var json = JsonDocument.Parse(content).RootElement;
+
+		json.GetProperty("error").GetString().Should().Be("Order not found or update failed");
+	}
+
+	[Fact]
+	public async Task DeleteOrder_ShouldDeleteOrderAndRelatedData()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_Lifecycle_Delete");
+		var client = customFactory.CreateClient();
+
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+		var orderSupplyId = Guid.NewGuid();
+		var workplaceId = Guid.NewGuid();
+		var supplyTypeId = Guid.NewGuid();
+		var supplyItemId = Guid.NewGuid();
+		var footprintId = Guid.NewGuid();
+
+		new TestDataBuilder()
+			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
+			.WithSupplyType(st => { st.Id = supplyTypeId; st.Name = "lumber"; st.IsActive = true; })
+			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "DEL-123"; })
+			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; })
+			.WithOrderSupply(os => { os.Id = orderSupplyId; os.OrderId = orderId; })
+			.WithSupplyItem(si => { si.Id = supplyItemId; si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = supplyTypeId; })
+			.WithOrderFootprint(fp => { fp.Id = footprintId; fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "pending"; })
+			.Build(customFactory.Services);
+
+		// Act
+		var response = await client.DeleteAsync($"/api/orders/{orderId}");
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		var content = await response.Content.ReadAsStringAsync();
+		var json = JsonDocument.Parse(content).RootElement;
+
+		json.GetProperty("success").GetBoolean().Should().BeTrue();
+		json.GetProperty("message").GetString().Should().Be("Order deleted");
+
+		// Проверяем, что все связанные данные удалены
+		using var scope = customFactory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+		var deletedOrder = await db.Orders.FindAsync(orderId);
+		deletedOrder.Should().BeNull();
+
+		var deletedProdOrder = await db.ProductionOrders.FindAsync(productionOrderId);
+		deletedProdOrder.Should().BeNull();
+
+		var deletedOrderSupply = await db.OrderSupplies.FindAsync(orderSupplyId);
+		deletedOrderSupply.Should().BeNull();
+
+		var deletedSupplyItem = await db.SupplyItems.FindAsync(supplyItemId);
+		deletedSupplyItem.Should().BeNull();
+
+		var footprints = await db.OrderFootprints
+			.Where(fp => fp.ProductionOrderId == productionOrderId)
+			.ToListAsync();
+		footprints.Should().BeEmpty();
+	}
+
+	[Fact]
+	public async Task DeleteOrder_WhenOrderNotFound_ShouldReturnNotFound()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_Lifecycle_Delete_NotFound");
+		var client = customFactory.CreateClient();
+
+		var nonExistentOrderId = Guid.NewGuid();
+
+		// Act
+		var response = await client.DeleteAsync($"/api/orders/{nonExistentOrderId}");
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+		var content = await response.Content.ReadAsStringAsync();
+		var json = JsonDocument.Parse(content).RootElement;
+
+		json.GetProperty("error").GetString().Should().Be("Order not found or delete failed");
 	}
 
 	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")

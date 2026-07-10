@@ -179,20 +179,48 @@ public class SupplyService : ISupplyService
 	public async Task<PaginatedResponse<SupplyStatusListItemDto>> GetAllSupplyItemsAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
-		var query = _context.SupplyItems
-			.Join(_context.OrderSupplies, si => si.OrderSupplyId, os => os.Id, (si, os) => new { si, os })
-			.Join(_context.Orders, x => x.os.OrderId, o => o.Id, (x, o) => new { x.si, x.os, o })
-			.Join(_context.ProductionOrders, x => x.o.Id, po => po.OrderId, (x, po) => new { x.si, x.os, x.o, po })
+		var orderQuery = _context.Orders.AsQueryable();
+
+		if (!string.IsNullOrEmpty(orderNumber))
+			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+
+		var wProductionOrderQuery = orderQuery.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
+
+		if (
+			//string.IsNullOrEmpty(orderNumber) && 
+			workplaceIds != null && workplaceIds.Any())
+		{
+			wProductionOrderQuery = wProductionOrderQuery.Where(o => workplaceIds.Contains(o.po.CurrentWorkplaceId ?? Guid.Empty));
+		}
+
+		var query = wProductionOrderQuery
+			.Join(_context.OrderSupplies, x => x.o.Id, os => os.OrderId, (x, os) => new { x.o, x.po, os })
+			.Join(_context.SupplyItems, x => x.os.Id, si => si.OrderSupplyId, (x, si) => new { x.o, x.po, x.os, si })
 			.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, st })
-			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.po.Machine, ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId })
+			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, x.os, x.si, x.st, w })
+			//var query = _context.SupplyItems
+			//	.Join(_context.OrderSupplies, si => si.OrderSupplyId, os => os.Id, (si, os) => new { si, os })
+			//	.Join(_context.Orders, x => x.os.OrderId, o => o.Id, (x, o) => new { x.si, x.os, o })
+			//	.Join(_context.ProductionOrders, x => x.o.Id, po => po.OrderId, (x, po) => new { x.si, x.os, x.o, po })
+			//	.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.si, x.os, x.o, x.po, w })
+			//	.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, x.w, st })
+			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.o.RtmDate, x.o.IsClaim, x.o.IsEconom, x.o.IsOnlyPaid, 
+								x.po.Machine, ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId, x.po.IsTwoSidePaint,
+								WorkplaceName = x.w.Name})
 			.Select(g => new SupplyStatusListItemDto
 			{
 				Id = g.Key.Id,
 				OrderNumber = g.Key.OrderNumber,
 				ReadyDate = g.Key.ReadyDate,
+				RtmDate = g.Key.RtmDate,
 				Machine = g.Key.Machine,
 				ProductionOrderId = g.Key.ProductionOrderId,
 				CurrentWorkplaceId = g.Key.CurrentWorkplaceId,
+				CurrentStatus = g.Key.WorkplaceName,
+				IsClaim = g.Key.IsClaim,
+				IsEconom = g.Key.IsEconom,
+				IsOnlyPaid = g.Key.IsOnlyPaid,
+				IsTwoSidePaint = g.Key.IsTwoSidePaint,
 				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "lumber").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				Paint = g.FirstOrDefault(x => x.st.Name == "paint")!.si.ConditionId == null ? null :
@@ -203,6 +231,8 @@ public class SupplyService : ISupplyService
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "furniture").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				AlumWaterShield = g.FirstOrDefault(x => x.st.Name == "alumWaterShield")!.si.ConditionId == null ? null :
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "alumWaterShield").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				Windowsill = g.FirstOrDefault(x => x.st.Name == "windowsill")!.si.ConditionId == null ? null :
+					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "windowsill").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				// Комментарии
 				LumberComment = g.Where(x => x.st.Name == "lumber")
 								 .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
@@ -217,6 +247,9 @@ public class SupplyService : ISupplyService
 									.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
 									.FirstOrDefault(),
 				AlumWaterShieldComment = g.Where(x => x.st.Name == "alumWaterShield")
+										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+										  .FirstOrDefault(),
+				WindowsillComment = g.Where(x => x.st.Name == "windowsill")
 										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
 										  .FirstOrDefault()
 			});

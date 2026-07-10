@@ -23,8 +23,8 @@ public class AppDbContext : DbContext
 	public DbSet<Role> Roles { get; set; }
 	public DbSet<UserWorkplace> UserWorkplaces { get; set; }
 	public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
-	//public DbSet<OrderCommercial> OrderCommercials { get; set; }
-	//public DbSet<Customer> Customers { get; set; }
+	public DbSet<OrderCommercial> OrderCommercials { get; set; }
+	public DbSet<Customer> Customers { get; set; }
 
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -211,18 +211,18 @@ public class AppDbContext : DbContext
 			.OnDelete(DeleteBehavior.Cascade);
 
 		//==========Коммерческая информация
-		//modelBuilder.Entity<OrderCommercial>()
-		//	.HasIndex(oc => oc.OrderId)
-		//	.IsUnique();  // один заказ — одна коммерческая информация
+		modelBuilder.Entity<OrderCommercial>()
+			.HasIndex(oc => oc.OrderId)
+			.IsUnique();  // один заказ — одна коммерческая информация
 
-		//modelBuilder.Entity<OrderCommercial>()
-		//	.HasOne(oc => oc.Customer)
-		//	.WithMany(c => c.OrderCommercials)
-		//	.HasForeignKey(oc => oc.CustomerId)
-		//	.OnDelete(DeleteBehavior.SetNull);
+		modelBuilder.Entity<OrderCommercial>()
+			.HasOne(oc => oc.Customer)
+			.WithMany(c => c.OrderCommercials)
+			.HasForeignKey(oc => oc.CustomerId)
+			.OnDelete(DeleteBehavior.SetNull);
 
-		//modelBuilder.Entity<Customer>()
-		//	.HasIndex(c => c.Name);
+		modelBuilder.Entity<Customer>()
+			.HasIndex(c => c.Name);
 
 
 		base.OnModelCreating(modelBuilder);

@@ -43,7 +43,7 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders
 	[HttpPost("orders")]
 	[HttpPost("orders/create")]
-	public Task<IActionResult> CreateOrder([FromBody] CreateOrderRequestDto request) => CreateOrderHandler(request);
+	public Task<IActionResult> CreateOrder([FromBody] OrderRequestDto request) => CreateOrderHandler(request);
 
 	// POST: api/orders/operations/start
 	[HttpPost("orders/operations/start")]
@@ -104,21 +104,24 @@ public partial class OrderController : ControllerBase
 	[HttpPost("orders/{orderId}/departure")]
 	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
 
-	//// GET: api/orders/{orderId}/commercial
-	//[HttpGet("orders/{orderId}/commercial")]
-	//public async Task<IActionResult> GetOrderCommercial(Guid orderId)
-	//{
-	//	var commercial = await _orderService.GetOrderCommercialAsync(orderId);
-	//	return Ok(commercial);
-	//}
+	// GET: api/orders/{orderId}/commercial
+	[HttpGet("orders/{orderId}/commercial")]
+	public  Task<IActionResult> GetOrderCommercial(Guid orderId) => GetOrderCommercialHandler(orderId);
 
-	//// PUT: api/orders/{orderId}/commercial
-	//[HttpPut("orders/{orderId}/commercial")]
-	//public async Task<IActionResult> UpdateOrderCommercial(
-	//	Guid orderId,
-	//	[FromBody] OrderCommercialRequestDto request)
-	//{
-	//	var result = await _orderService.UpdateOrderCommercialAsync(orderId, request);
-	//	return Ok(result);
-	//}
+	// PUT: api/orders/{orderId}/commercial
+	[HttpPut("orders/{orderId}/commercial")]
+	public Task<IActionResult> UpdateOrderCommercial(Guid orderId, [FromBody] OrderCommercialRequestDto request) 
+		=> UpdateOrderCommercialHandler(orderId, request);
+
+	// GET: api/orders/{orderId}/edit
+	[HttpGet("orders/{orderId}/edit")]
+	public Task<IActionResult> GetOrderForEdit(Guid orderId) => GetOrderForEditHandler(orderId);
+
+	// PUT: api/orders/{orderId}
+	[HttpPut("orders/{orderId}")]
+	public Task<IActionResult> UpdateOrder(Guid orderId, [FromBody] OrderRequestDto dto) => UpdateOrderHandler(orderId, dto);
+
+	// DELETE: api/orders/{orderId}
+	[HttpDelete("orders/{orderId}")]
+	public Task<IActionResult> DeleteOrder(Guid orderId) => DeleteOrderHandler(orderId);
 } 

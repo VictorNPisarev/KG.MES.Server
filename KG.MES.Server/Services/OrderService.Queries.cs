@@ -33,7 +33,8 @@ public partial class OrderService
 				Lumber = x.po.Lumber,
 				GlazingBead = x.po.GlazingBead,
 				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				Machine = x.po.Machine
+				Machine = x.po.Machine,
+				RtmDate = x.o.RtmDate
 			})
 			.FirstOrDefaultAsync();
 

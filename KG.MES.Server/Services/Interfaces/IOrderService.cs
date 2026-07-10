@@ -16,7 +16,7 @@ public interface IOrderService
 	Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId);
-	Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderRequestDto request);
+	Task<CreateOrderResultDto> CreateOrderAsync(OrderRequestDto request);
 	Task<OperationResultDto> BeginOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
 	Task<OperationResultDto> CompleteOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
 	Task<SetFootprintResultDto> SetOrderFootprintStatusAsync(Guid productionOrderId, Guid workplaceId, string status, Guid? userId, string notes);
@@ -28,9 +28,14 @@ public interface IOrderService
 	Task<OrderCommentDto> UpdateOrderCommentAsync(Guid orderId, Guid commentId, string content);
 	Task<SetOrderStatusResultDto> SetOrderCompleteAsync(Guid orderId, Guid? userId, string? content);
 	Task<SetOrderStatusResultDto> SetOrderDepartureAsync(Guid orderId, Guid? userId, string? content);
-	//Task<OrderCommercialDto?> GetOrderCommercialAsync(Guid orderId);
-	//Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto);
-	//Task<List<CustomerDto>> GetCustomersAsync(string? search = null);
-	//Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
-	//	int page, int limit, string? sortBy, string? sortOrder, string? orderNumber, string? customerName, Guid? managerId);
+	Task<OrderCommercialDto?> GetOrderCommercialAsync(Guid orderId);
+	Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto);
+	Task<List<CustomerDto>> GetCustomersAsync(string? search = null);
+	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
+	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+		int page, int limit, string? sortBy, string? sortOrder, string? orderNumber, string? customerName, Guid? managerId);
+	Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId);
+	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
+	Task<bool> DeleteOrderAsync(Guid orderId);
 }

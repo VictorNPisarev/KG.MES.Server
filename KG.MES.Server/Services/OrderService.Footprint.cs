@@ -217,7 +217,7 @@ public partial class OrderService
 			}
 			else
 			{
-				await UpdateStatusAsync(productionOrderId, workplaceId, status);
+				await UpdateStatusAsync(productionOrderId, workplaceId, status, true);
 
 				await ActivateNextWorkplacesAsync(productionOrderId, workplaceId);
 				await ActivateParallelWorkplacesAsync(productionOrderId, workplaceId);
@@ -335,7 +335,7 @@ public partial class OrderService
 		}
 	}
 
-	private async Task UpdateStatusAsync(Guid productionOrderId, Guid workplaceId, string newStatus)
+	private async Task UpdateStatusAsync(Guid productionOrderId, Guid workplaceId, string newStatus, bool canDowngrade = false)
 	{
 		var footprint = await _context.OrderFootprints
 			.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId && fp.WorkplaceId == workplaceId);
@@ -343,7 +343,7 @@ public partial class OrderService
 		if (footprint == null)
 			return;
 
-		if (OrderStatus.WorkplaceStatus.CanTransition(footprint.Status, newStatus))
+		if (canDowngrade || OrderStatus.WorkplaceStatus.CanTransition(footprint.Status, newStatus))
 		{
 			footprint.Status = newStatus;
 			footprint.UpdatedAt = DateTime.UtcNow;
