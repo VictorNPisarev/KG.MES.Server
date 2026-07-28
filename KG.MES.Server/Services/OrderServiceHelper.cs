@@ -15,7 +15,14 @@ public static class OrderServiceHelper
 	public static async Task<Guid?> GetNoneWorkplaceIdAsync(AppDbContext context)
 	{
 		var workplace = await context.Workplaces
-			.FirstOrDefaultAsync(w => w.Name == "Не определен" || w.Level == 0);
+			.FirstOrDefaultAsync(w => w.Code == Constants.WorkplaceCodes.None || w.Level == 0);
+		return workplace?.Id;
+	}
+
+	public static async Task<Guid?> GetWorkplaceIdAsync(AppDbContext context, string workplaceCode)
+	{
+		var workplace = await context.Workplaces
+			.FirstOrDefaultAsync(w => w.Code == workplaceCode);
 		return workplace?.Id;
 	}
 
@@ -57,8 +64,12 @@ public static class OrderServiceHelper
 
 	public static async Task<bool> IsJoineryWorkplaceAsync(AppDbContext context, Guid workplaceId)
 	{
-		var workplace = await context.Workplaces
-			.FirstOrDefaultAsync(w => w.Id == workplaceId);
-		return workplace?.Name == "Столярка";
+		var joineryId = await GetWorkplaceIdAsync(context, Constants.WorkplaceCodes.None);
+
+		return workplaceId == joineryId;
+
+		//var workplace = await context.Workplaces
+		//	.FirstOrDefaultAsync(w => w.Id == workplaceId);
+		//return workplace?.Name == "Столярка";
 	}
 }

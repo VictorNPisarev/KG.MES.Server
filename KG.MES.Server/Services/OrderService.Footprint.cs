@@ -104,6 +104,7 @@ public partial class OrderService
 	public async Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
 		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
+		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(_context, workplaceId);
 		var result = new List<OrderWorkplaceDto>();
 
 		if (isStart)
@@ -134,6 +135,12 @@ public partial class OrderService
 				.ToListAsync();
 
 			result.AddRange(newOrders);
+		}
+
+		if(!isJoinery)
+		{
+			result.RemoveAll(x => x.WindowCount == 0 && x.PlateCount > 0);
+			result.RemoveAll(x => x.IsEconom);
 		}
 
 		var allOrders = await _context.OrderFootprints

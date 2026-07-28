@@ -9,6 +9,54 @@ namespace KG.MES.Server.Controllers;
 [Route("api")]
 public partial class OrderController : ControllerBase
 {
+	//-------------------------
+	//POST
+	//-------------------------
+
+
+	// POST: api/orders
+	[HttpPost("orders")]
+	[HttpPost("orders/create")]
+	public Task<IActionResult> CreateOrder([FromBody] OrderRequestDto request) => CreateOrderHandler(request);
+
+	// POST: api/orders/operations/start
+	[HttpPost("orders/operations/start")]
+	[HttpPost("operations/start")]
+	public Task<IActionResult> BeginOrderWorkplace([FromBody] BeginWorkplaceRequestDto request) => BeginOrderWorkplaceHandler(request);
+
+	// POST: api/orders/operations/complete
+	[HttpPost("orders/operations/complete")]
+	[HttpPost("operations/complete")]
+	public Task<IActionResult> CompleteOrderWorkplace([FromBody] CompleteWorkplaceRequestDto request) => CompleteOrderWorkplaceHandler(request);
+
+	// POST: api/orders/{orderId}/complete
+	[HttpPost("orders/{orderId}/complete")]
+	public Task<IActionResult> OrderComplete(Guid orderId) => SetOrderCompleteHandler(orderId);
+
+	// POST: api/orders/{orderId}/departure
+	[HttpPost("orders/{orderId}/departure")]
+	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
+
+	// POST: api/orders/{orderId}/comments
+	[HttpPost("orders/{orderId}/comments")]
+	public Task<IActionResult> AddOrderComment(Guid orderId, [FromBody] AddCommentRequestDto request) => AddOrderCommentHandler(orderId, request);
+
+	// POST: api/orders/{orderId}/productionOrderComments
+	[HttpPost("orders/{orderId}/productionOrderComments")]
+	public Task<IActionResult> AddProductionOrderComment(Guid orderId, [FromBody] AddProductionOrderCommentRequestDto request)
+		=> AddProductionOrderCommentHandler(orderId, request);
+
+	// POST: api/orders/{orderId}/OrderSupplyComments
+	[HttpPost("orders/{orderId}/OrderSupplyComments")]
+	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
+
+
+
+	//-------------------------
+	//GET
+	//-------------------------
+
+
 	// GET: api/orders
 	[HttpGet("orders")]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
@@ -40,20 +88,32 @@ public partial class OrderController : ControllerBase
 	[HttpGet("orders/workplaces/{workplaceId}/in-work")]
 	public Task<IActionResult> GetActiveAndPendingOrders(Guid workplaceId) => GetActiveAndPendingOrdersHandler(workplaceId);
 
-	// POST: api/orders
-	[HttpPost("orders")]
-	[HttpPost("orders/create")]
-	public Task<IActionResult> CreateOrder([FromBody] OrderRequestDto request) => CreateOrderHandler(request);
+	// GET: api/orders/{identifier}/trace  
+	[HttpGet("orders/{identifier}/trace")]
+	public Task<IActionResult> GetOrderTrace(string identifier) => GetOrderTraceHandler(identifier);
 
-	// POST: api/orders/operations/start
-	[HttpPost("orders/operations/start")]
-	[HttpPost("operations/start")]
-	public Task<IActionResult> BeginOrderWorkplace([FromBody] BeginWorkplaceRequestDto request) => BeginOrderWorkplaceHandler(request);
+	// GET: api/orders/{orderId}/comments
+	[HttpGet("orders/{orderId}/comments")]
+	public Task<IActionResult> GetOrderComments(Guid orderId) => GetOrderCommentsHandler(orderId);
 
-	// POST: api/orders/operations/complete
-	[HttpPost("orders/operations/complete")]
-	[HttpPost("operations/complete")]
-	public Task<IActionResult> CompleteOrderWorkplace([FromBody] CompleteWorkplaceRequestDto request) => CompleteOrderWorkplaceHandler(request);
+	// GET: api/orders/{orderId}/commercial
+	[HttpGet("orders/{orderId}/commercial")]
+	public Task<IActionResult> GetOrderCommercial(Guid orderId) => GetOrderCommercialHandler(orderId);
+
+	// GET: api/orders/{orderId}/edit
+	[HttpGet("orders/{orderId}/edit")]
+	public Task<IActionResult> GetOrderForEdit(Guid orderId) => GetOrderForEditHandler(orderId);
+
+	// GET: api/orders/{identifier}
+	[HttpGet("orders/{identifier}")]
+	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
+
+
+
+	//-------------------------
+	//PUT
+	//-------------------------
+
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}
 	[HttpPut("orders/footprint/{productionOrderId}/workplace/{workplaceId}")]
@@ -71,57 +131,25 @@ public partial class OrderController : ControllerBase
 	public Task<IActionResult> UpdateOrderComment(Guid orderId, Guid commentId, [FromBody] UpdateCommentRequestDto request)
 		=> UpdateOrderCommentHandler(orderId, commentId, request);
 
-	// GET: api/orders/{identifier}/trace  
-	[HttpGet("orders/{identifier}/trace")]
-	public Task<IActionResult> GetOrderTrace(string identifier) => GetOrderTraceHandler(identifier);
-
-	// GET: api/orders/{orderId}/comments
-	[HttpGet("orders/{orderId}/comments")]
-	public Task<IActionResult> GetOrderComments(Guid orderId) => GetOrderCommentsHandler(orderId);
-
-	// POST: api/orders/{orderId}/comments
-	[HttpPost("orders/{orderId}/comments")]
-	public Task<IActionResult> AddOrderComment(Guid orderId, [FromBody] AddCommentRequestDto request) => AddOrderCommentHandler(orderId, request);
-
-	// GET: api/orders/{identifier}
-	[HttpGet("orders/{identifier}")]
-	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
-
-	// POST: api/orders/{orderId}/productionOrderComments
-	[HttpPost("orders/{orderId}/productionOrderComments")]
-	public Task<IActionResult> AddProductionOrderComment( Guid orderId, [FromBody] AddProductionOrderCommentRequestDto request)
-		=> AddProductionOrderCommentHandler(orderId, request);
-
-	// POST: api/orders/{orderId}/OrderSupplyComments
-	[HttpPost("orders/{orderId}/OrderSupplyComments")]
-	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
-
-	// POST: api/orders/{orderId}/complete
-	[HttpPost("orders/{orderId}/complete")]
-	public Task<IActionResult> OrderComplete(Guid orderId) => SetOrderCompleteHandler(orderId);
-
-	// POST: api/orders/{orderId}/departure
-	[HttpPost("orders/{orderId}/departure")]
-	public Task<IActionResult> OrderDeparture(Guid orderId) => SetOrderDepartureHandler(orderId);
-
-	// GET: api/orders/{orderId}/commercial
-	[HttpGet("orders/{orderId}/commercial")]
-	public  Task<IActionResult> GetOrderCommercial(Guid orderId) => GetOrderCommercialHandler(orderId);
-
 	// PUT: api/orders/{orderId}/commercial
 	[HttpPut("orders/{orderId}/commercial")]
-	public Task<IActionResult> UpdateOrderCommercial(Guid orderId, [FromBody] OrderCommercialRequestDto request) 
+	public Task<IActionResult> UpdateOrderCommercial(Guid orderId, [FromBody] OrderCommercialRequestDto request)
 		=> UpdateOrderCommercialHandler(orderId, request);
-
-	// GET: api/orders/{orderId}/edit
-	[HttpGet("orders/{orderId}/edit")]
-	public Task<IActionResult> GetOrderForEdit(Guid orderId) => GetOrderForEditHandler(orderId);
 
 	// PUT: api/orders/{orderId}
 	[HttpPut("orders/{orderId}")]
 	public Task<IActionResult> UpdateOrder(Guid orderId, [FromBody] OrderRequestDto dto) => UpdateOrderHandler(orderId, dto);
 
+
+
+	//-------------------------
+	//DELETE
+	//-------------------------
+
+
 	// DELETE: api/orders/{orderId}
 	[HttpDelete("orders/{orderId}")]
 	public Task<IActionResult> DeleteOrder(Guid orderId) => DeleteOrderHandler(orderId);
-} 
+
+
+}
