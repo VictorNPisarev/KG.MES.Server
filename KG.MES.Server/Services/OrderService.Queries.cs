@@ -60,6 +60,7 @@ public partial class OrderService
 		foreach (var order in orders)
 		{
 			var productionOrder = await _context.ProductionOrders
+				.Include(po => po.CurrentWorkplace)
 				.FirstOrDefaultAsync(po => po.OrderId == order.Id);
 
 			if (productionOrder == null)
@@ -87,6 +88,7 @@ public partial class OrderService
 					ProductionOrderId = productionOrder.Id,
 					OrderNumber = order.OrderNumber,
 					ReadyDate = order.ReadyDate,
+					Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
 					Workplaces = footprints
 				});
 			}
@@ -145,6 +147,7 @@ public partial class OrderService
 				ProductionOrderId = productionOrder.Id,
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
+				Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
 				Workplaces = workplaces
 			};
 	}
