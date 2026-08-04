@@ -70,6 +70,12 @@ public class SupplyStatusListItemDto
 	[JsonPropertyName("windowsill_comment")]
 	public string? WindowsillComment { get; set; }
 
+	[JsonPropertyName("woodAlum")]
+	public string? WoodAlum { get; set; }
+
+	[JsonPropertyName("woodAlum_comment")]
+	public string? WoodAlumComment { get; set; }
+
 	[JsonPropertyName("machine")]
 	public string? Machine { get; set; }
 

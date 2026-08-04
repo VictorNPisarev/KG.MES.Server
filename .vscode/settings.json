@@ -1,0 +1,20 @@
+{
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.patterns": 
+	{
+		"*.razor": "${capture}.razor.cs, ${capture}.razor.css",
+		"*Controller.cs": "${capture}Controller.Handler.cs",
+		"appsettings.json": "appsettings.*.json",
+		"appsettings.Development.json": "appsettings.Development.*.json"
+	},
+	"json.schemas":
+	[
+		{
+			"fileMatch":
+			[
+				"**/appsettings.*.example.json"
+			],
+			"schema": {}
+		}
+	]
+}
