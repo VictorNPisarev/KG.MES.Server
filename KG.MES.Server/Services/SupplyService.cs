@@ -233,6 +233,8 @@ public class SupplyService : ISupplyService
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "alumWaterShield").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				Windowsill = g.FirstOrDefault(x => x.st.Name == "windowsill")!.si.ConditionId == null ? null :
 					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "windowsill").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				WoodAlum = g.FirstOrDefault(x => x.st.Name == "woodAlum")!.si.ConditionId == null ? null :
+					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "woodAlum").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
 				// Комментарии
 				LumberComment = g.Where(x => x.st.Name == "lumber")
 								 .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
@@ -250,6 +252,9 @@ public class SupplyService : ISupplyService
 										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
 										  .FirstOrDefault(),
 				WindowsillComment = g.Where(x => x.st.Name == "windowsill")
+										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+										  .FirstOrDefault(),
+				WoodAlumComment = g.Where(x => x.st.Name == "woodAlum")
 										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
 										  .FirstOrDefault()
 			});
