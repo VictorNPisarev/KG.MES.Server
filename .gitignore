@@ -6,13 +6,14 @@ publish/
 
 # IDE
 .vs/
-.vscode/
+#.vscode/
 .idea/
 
 # User secrets
 secrets.json
 appsettings.Development.json
 appsettings.Production.json
+!appsettings.*.example.json
 
 # Environment variables
 .env

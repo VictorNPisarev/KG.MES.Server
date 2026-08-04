@@ -83,21 +83,11 @@ app.Run();
 
 static void ConfigureDatabase(IServiceCollection services, IConfiguration configuration)
 {
-	var connectionString = GetConnectionString();
+	var connectionString = configuration.GetConnectionString("DefaultConnection")
+	?? "Host=localhost;Port=5432;Database=KgMes;Username=postgres;Password=postgres";
+
 	services.AddDbContext<AppDbContext>(options =>
 		options.UseNpgsql(connectionString));
-}
-
-static string GetConnectionString()
-{
-	// Чтение из .env или переменных окружения
-	var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost"; //"192.168.0.254";
-	var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-	var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "KgMes";
-	var username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-	var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "x126ko33";//"WGbbYT8t!q";//
-
-	return $"Host={host};Port={port};Database={database};Username={username};Password={password}";
 }
 
 public partial class Program { }
