@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace KG.MES.Server.Migrations
 {
     /// <inheritdoc />
-    public partial class AddProductionCalendarTable : Migration
+    public partial class AddUserDevices : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

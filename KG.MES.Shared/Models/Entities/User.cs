@@ -12,6 +12,7 @@ public class User
 	[Column("role_id")] public Guid? RoleId { get; set; }
 	[Column("created_at")] public DateTime CreatedAt { get; set; }
 	[Column("updated_at")] public DateTime UpdatedAt { get; set; }
+	[Column("is_device_check_enabled")] public bool IsDeviceCheckEnabled { get; set; } = false;
 
 	[ForeignKey("RoleId")]
 	public Role? Role { get; set; }
@@ -20,4 +21,6 @@ public class User
 	public ICollection<OrderBlock>? OrderBlocks { get; set; }
 	public ICollection<OperationLog>? OperationLogs { get; set; }
 	public ICollection<Comment>? Comments { get; set; }
+	public ICollection<UserDevice>? UserDevices { get; set; }
+
 }
