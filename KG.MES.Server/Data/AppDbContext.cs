@@ -25,6 +25,8 @@ public class AppDbContext : DbContext
 	public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
 	public DbSet<OrderCommercial> OrderCommercials { get; set; }
 	public DbSet<Customer> Customers { get; set; }
+	public DbSet<License> Licenses { get; set; }
+	public DbSet<Device> Devices { get; set; }
 	public DbSet<UserDevice> UserDevices { get; set; }
 
 
@@ -227,42 +229,17 @@ public class AppDbContext : DbContext
 			.HasIndex(c => c.Name);
 
 		// ========== 🆕 UserDevices ==========
-		modelBuilder.Entity<UserDevice>(entity =>
-		{
-			// Индексы
-			entity.HasIndex(e => e.UserId)
-				.HasDatabaseName("idx_user_devices_user_id");
+		modelBuilder.Entity<License>()
+			.HasIndex(l => l.KeyCode)
+			.IsUnique();
 
-			entity.HasIndex(e => e.DeviceId)
-				.HasDatabaseName("idx_user_devices_device_id");
+		modelBuilder.Entity<Device>()
+			.HasIndex(d => d.DeviceHardwareId)
+			.IsUnique();
 
-			// Составной индекс + фильтр (самый важный для проверки)
-			entity.HasIndex(e => new { e.UserId, e.DeviceId })
-				.HasDatabaseName("idx_user_devices_user_device_active")
-				.IsUnique()
-				.HasFilter("\"is_active\" = true");
-
-			// Индекс для ключа активации
-			entity.HasIndex(e => e.ActivationKey)
-				.HasDatabaseName("idx_user_devices_activation_key")
-				.HasFilter("\"activation_key\" IS NOT NULL");
-
-			// Индекс для активных устройств
-			entity.HasIndex(e => e.IsActive)
-				.HasDatabaseName("idx_user_devices_active")
-				.HasFilter("\"is_active\" = true");
-
-			// Индекс для сортировки по последнему использованию
-			entity.HasIndex(e => e.LastUsedAt)
-				.HasDatabaseName("idx_user_devices_last_used")
-				.HasFilter("\"last_used_at\" IS NOT NULL");
-
-			// Связь с User
-			entity.HasOne(e => e.User)
-				.WithMany(u => u.UserDevices)
-				.HasForeignKey(e => e.UserId)
-				.OnDelete(DeleteBehavior.Cascade);
-		});
+		modelBuilder.Entity<UserDevice>()
+			.HasIndex(ud => new { ud.UserId, ud.DeviceId })
+			.IsUnique();
 
 		base.OnModelCreating(modelBuilder);
 	}

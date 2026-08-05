@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using KG.MES.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KG.MES.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805110251_AddLicensesAndDevices3")]
+    partial class AddLicensesAndDevices3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -771,14 +774,6 @@ namespace KG.MES.Server.Migrations
                         .HasColumnType("text")
                         .HasColumnName("email");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsPasswordSet")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_password_set");
-
                     b.Property<string>("LegacyId")
                         .HasColumnType("text")
                         .HasColumnName("legacy_id");
@@ -787,10 +782,6 @@ namespace KG.MES.Server.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("text")
-                        .HasColumnName("password_hash");
 
                     b.Property<Guid?>("RoleId")
                         .HasColumnType("uuid")

@@ -51,7 +51,7 @@ dotnet run --project KG.MES.Server
 dotnet publish -c Release -o \\server\inetpub\wwwroot\Kg.Mes.Server
 
 #с помощью скрипта (не требует менять строку подключения - подхватывается из appsettings соответствующего environment)
-.\publishServer -Environment Production
+.\publishServer.ps1 -Environment Production
 ```
 
 ## Development
@@ -59,7 +59,7 @@ dotnet publish -c Release -o \\server\inetpub\wwwroot\Kg.Mes.Server
 dotnet publish -o C:\DEVelop\KG.MES.DeployTest\api
 
 #с помощью скрипта (не требует менять строку подключения - подхватывается из appsettings соответствующего environment)
-.\publishServer -Environment Development
+.\publishServer.ps1 -Environment Development
 ```
 
 ## Endpoints

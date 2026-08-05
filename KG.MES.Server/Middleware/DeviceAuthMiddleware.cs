@@ -70,7 +70,7 @@ public class DeviceAuthMiddleware
 		// ============================================================
 		// 2. ПРОВЕРЯЕМ, ВКЛЮЧЕНА ЛИ ПРОВЕРКА
 		// ============================================================
-		var isDeviceCheckEnabled = await userDeviceService.IsDeviceCheckEnabledAsync(userId);
+		var isDeviceCheckEnabled = false;
 
 		if (!isDeviceCheckEnabled)
 		{
@@ -88,8 +88,8 @@ public class DeviceAuthMiddleware
 		// ============================================================
 		// 3. ПРОВЕРКА ВКЛЮЧЕНА — ПРОВЕРЯЕМ УСТРОЙСТВО
 		// ============================================================
-		var existingDevice = await dbContext.UserDevices
-		.FirstOrDefaultAsync(d => d.UserId == userId && d.DeviceId == deviceId);
+		var existingDevice = await dbContext.Devices
+		.FirstOrDefaultAsync(d => d.DeviceHardwareId == deviceId);
 
 		//устройство не найдено - проверяю ActivationKey в запросе - возможно это регистрация устройства
 		if (existingDevice == null)
@@ -101,7 +101,7 @@ public class DeviceAuthMiddleware
 				deviceId, userId);
 		}
 
-		var isValid = existingDevice.IsActive && !string.IsNullOrEmpty(existingDevice.ActivationKey);
+		var isValid = existingDevice.License?.IsActive ?? false && !string.IsNullOrEmpty(existingDevice.License?.KeyCode);
 
 		//устройство уже использовалось, но либо отозван ключ, либо несанкционированный экземпляр приложения (без связки ключ-deviceId)
 		if (!isValid)

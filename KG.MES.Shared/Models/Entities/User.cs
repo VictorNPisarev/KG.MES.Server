@@ -12,10 +12,11 @@ public class User
 	[Column("role_id")] public Guid? RoleId { get; set; }
 	[Column("created_at")] public DateTime CreatedAt { get; set; }
 	[Column("updated_at")] public DateTime UpdatedAt { get; set; }
-	[Column("is_device_check_enabled")] public bool IsDeviceCheckEnabled { get; set; } = false;
+	[Column("password_hash")] public string? PasswordHash { get; set; }
+	[Column("is_password_set")] public bool IsPasswordSet { get; set; }
+	[Column("is_active")] public bool IsActive { get; set; } = true;
 
-	[ForeignKey("RoleId")]
-	public Role? Role { get; set; }
+	[ForeignKey("RoleId")] public Role? Role { get; set; }
 
 	public ICollection<UserWorkplace>? UserWorkplaces { get; set; }
 	public ICollection<OrderBlock>? OrderBlocks { get; set; }

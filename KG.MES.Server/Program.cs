@@ -4,6 +4,8 @@ using KG.MES.Server.Data;
 using KG.MES.Server.Hubs;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +24,8 @@ builder.Services.AddScoped<IWorkplaceService, WorkplaceService>();
 builder.Services.AddScoped<OrderAttributeService>();
 builder.Services.AddScoped<LeadTimeCalculationService>();
 builder.Services.AddScoped<UserDeviceService>();
+builder.Services.AddScoped<ILicenseService, LicenseService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)
 builder.Services.AddControllers()
