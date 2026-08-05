@@ -1,5 +1,7 @@
 // KG.MES.Server/Services/UserDeviceService.cs
+using System.Runtime.InteropServices;
 using KG.MES.Server.Data;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -23,29 +25,49 @@ public class UserDeviceService
 	public async Task<UserDevice> RegisterDeviceAsync(Guid userId, string deviceId, string? deviceName = null, string? activationKey = null)
 	{
 		// Проверяем, существует ли уже устройство с таким deviceId для этого пользователя
-		var existing = await _context.UserDevices
+		var existingDevice = await _context.UserDevices
 			.FirstOrDefaultAsync(d => d.UserId == userId && d.DeviceId == deviceId);
 
-		if (existing != null)
+		if (existingDevice != null)
 		{
 			//TODO если устройство не активно - ключ отозван. Условие не актуально - надо убрать этот кусок
 			// Если устройство было неактивным — реактивируем
-			if (!existing.IsActive)
+			if (!existingDevice.IsActive)
 			{
-				existing.IsActive = true;
-				existing.RevokedAt = null;
+				existingDevice.IsActive = true;
+				existingDevice.RevokedAt = null;
 				//existing.UpdatedAt = DateTime.UtcNow;
 				await _context.SaveChangesAsync();
 				_logger.LogInformation("🔐 Device {DeviceId} reactivated for user {UserId}", deviceId, userId);
-				return existing;
+				return existingDevice;
 			}
 
 			// Уже активное устройство — просто обновляем время
-			existing.LastUsedAt = DateTime.UtcNow;
+			existingDevice.LastUsedAt = DateTime.UtcNow;
 			//existing.UpdatedAt = DateTime.UtcNow;
 			await _context.SaveChangesAsync();
 			_logger.LogInformation("ℹ️ Device {DeviceId} already registered for user {UserId}", deviceId, userId);
-			return existing;
+			return existingDevice;
+		}
+
+		if (activationKey != null)
+		{
+			var existingKey = await _context.UserDevices
+				.FirstOrDefaultAsync(d => d.UserId == userId && d.ActivationKey == activationKey && string.IsNullOrEmpty(deviceId));
+
+			if (existingKey != null)
+			{
+				existingKey.DeviceId = deviceId;
+				existingKey.DeviceName = deviceName;
+				existingKey.IsActive = true;
+				existingKey.IsPrimary = true;
+				existingKey.RegisteredAt = DateTime.UtcNow;
+				existingKey.LastUsedAt = DateTime.UtcNow;
+
+				await _context.SaveChangesAsync();
+				_logger.LogInformation("ℹ️ Device {DeviceId} already registered for user {UserId}", deviceId, userId);
+				return existingKey;
+			}
 		}
 
 		// Создаём новое устройство
@@ -62,6 +84,7 @@ public class UserDeviceService
 			LastUsedAt = DateTime.UtcNow,
 		};
 
+		//TODO не уверен, что это вообще нужно
 		// Если это первое активное устройство — делаем его основным
 		var activeCount = await _context.UserDevices
 			.CountAsync(d => d.UserId == userId && d.IsActive);
@@ -230,7 +253,7 @@ public class UserDeviceService
 	/// <summary>
 	/// Получить статистику устройств пользователя
 	/// </summary>
-	public async Task<DeviceStatsDto> GetDeviceStatsAsync(Guid userId)
+	public async Task<UserDeviceStatsDto> GetDeviceStatsAsync(Guid userId)
 	{
 		var allDevices = await _context.UserDevices
 			.Where(d => d.UserId == userId)
@@ -238,25 +261,18 @@ public class UserDeviceService
 
 		var activeDevices = allDevices.Where(d => d.IsActive).ToList();
 
-		return new DeviceStatsDto
+		return new UserDeviceStatsDto
 		{
 			TotalDevices = allDevices.Count,
 			ActiveDevices = activeDevices.Count,
 			RevokedDevices = allDevices.Count(d => !d.IsActive),
-			PrimaryDevice = activeDevices.FirstOrDefault(d => d.IsPrimary),
-			LastUsed = activeDevices.OrderByDescending(d => d.LastUsedAt).FirstOrDefault()
+			PrimaryDevice = activeDevices
+				.FirstOrDefault(d => d.IsPrimary)
+				?.ToUserDeviceDto(),
+			LastUsedDevice = activeDevices
+				.OrderByDescending(d => d.LastUsedAt)
+				.FirstOrDefault()
+				?.ToUserDeviceDto()
 		};
 	}
-}
-
-/// <summary>
-/// DTO для статистики устройств
-/// </summary>
-public class DeviceStatsDto
-{
-	public int TotalDevices { get; set; }
-	public int ActiveDevices { get; set; }
-	public int RevokedDevices { get; set; }
-	public UserDevice? PrimaryDevice { get; set; }
-	public UserDevice? LastUsed { get; set; }
 }

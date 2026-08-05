@@ -20,6 +20,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ISupplyService, SupplyService>();
 builder.Services.AddScoped<IWorkplaceService, WorkplaceService>();
 builder.Services.AddScoped<OrderAttributeService>();
+builder.Services.AddScoped<LeadTimeCalculationService>();
+builder.Services.AddScoped<UserDeviceService>();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)
 builder.Services.AddControllers()
@@ -29,7 +31,6 @@ builder.Services.AddControllers()
 		options.JsonSerializerOptions.WriteIndented = true;
 	});
 
-builder.Services.AddScoped<LeadTimeCalculationService>(); 
 builder.Services.AddHttpClient();
 
 // Добавляем SignalR

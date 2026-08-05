@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using KG.MES.Shared.Models.Dto;
 
 namespace KG.MES.Shared.Models.Entities;
 
@@ -20,4 +21,20 @@ public class UserDevice
 
 	[ForeignKey("UserId")]
 	public User? User { get; set; }
+}
+
+public static class DeviceExtensions
+{
+	public static UserDeviceDto ToUserDeviceDto(this UserDevice device)
+	{
+		return new UserDeviceDto
+		{
+			Id = device.Id,
+			DeviceId = device.DeviceId,
+			DeviceName = device.DeviceName,
+			IsPrimary = device.IsPrimary,
+			LastUsedAt = device.LastUsedAt,
+			RegisteredAt = device.RegisteredAt
+		};
+	}
 }
