@@ -12,10 +12,10 @@ public class LicenseValidationResult
 	public string? Reason { get; set; }
 
 	[JsonPropertyName("license_id")]
-	public Guid? LicenseId { get; set; }
+	public Guid LicenseId { get; set; }
 
 	[JsonPropertyName("device_id")]
-	public Guid? DeviceId { get; set; }
+	public Guid DeviceId { get; set; }
 
 	[JsonPropertyName("device_name")]
 	public string? DeviceName { get; set; }

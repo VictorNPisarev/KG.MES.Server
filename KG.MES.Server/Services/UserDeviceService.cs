@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KG.MES.Server.Services;
 
-public class UserDeviceService
+public class UserDeviceService : IUserDeviceService
 {
 	private readonly AppDbContext _context;
 	private readonly ILogger<UserDeviceService> _logger;
@@ -22,7 +22,7 @@ public class UserDeviceService
 	/// <summary>
 	/// Зарегистрировать новое устройство для пользователя
 	/// </summary>
-	public async Task<Device> RegisterDeviceAsync(Guid userId, string deviceId, string? deviceName = null, string? licenseKey = null)
+	public async Task<Device> RegisterDeviceAsync(Guid userId, string deviceId, string? deviceName = null)
 	{
 		// Проверяем, существует ли уже устройство с таким deviceId для этого пользователя
 		var existingDevice = await _context.Devices.Include(d => d.License)
@@ -122,5 +122,43 @@ public class UserDeviceService
 
 		_logger.LogInformation("🔒 License {DeviceId} revoked", license.Id);
 		return true;
+	}
+
+	public async Task LinkUserDeviceAsync(Guid userId, Guid deviceId)
+	{
+		// Проверяем, есть ли уже такая связь
+		var exists = await _context.UserDevices
+			.AnyAsync(ud => ud.UserId == userId && ud.DeviceId == deviceId);
+
+		if (!exists)
+		{
+			var userDevice = new UserDevice
+			{
+				Id = Guid.NewGuid(),
+				UserId = userId,
+				DeviceId = deviceId,
+				CreatedAt = DateTime.UtcNow,
+				LastUsedAt = DateTime.UtcNow
+			};
+
+			_context.UserDevices.Add(userDevice);
+			await _context.SaveChangesAsync();
+
+			_logger.LogInformation(
+				"🔗 User {UserId} linked to device {DeviceId} for the first time",
+				userId, deviceId);
+		}
+		else
+		{
+			// Обновляем время последнего использования
+			var userDevice = await _context.UserDevices
+				.FirstOrDefaultAsync(ud => ud.UserId == userId && ud.DeviceId == deviceId);
+
+			if (userDevice != null)
+			{
+				userDevice.LastUsedAt = DateTime.UtcNow;
+				await _context.SaveChangesAsync();
+			}
+		}
 	}
 }

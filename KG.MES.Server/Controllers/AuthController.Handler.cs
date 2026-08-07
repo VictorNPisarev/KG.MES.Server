@@ -1,80 +1,44 @@
 
 using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 public partial class AuthController
 {
-	private readonly IUserService _userService;
-	private readonly ILicenseService _licenseService;
-	private readonly IJwtService _jwtService;
+	private readonly IAuthService _authService;
 	private readonly ILogger<AuthController> _logger;
 
 	public AuthController(
-		IUserService userService,
-		ILicenseService licenseService,
-		IJwtService jwtService,
-		ILogger<AuthController> logger)
+		ILogger<AuthController> logger, 
+		IAuthService authService)
 	{
-		_userService = userService;
-		_licenseService = licenseService;
-		_jwtService = jwtService;
+		_authService = authService;
 		_logger = logger;
 	}
 
 	public async Task<IActionResult> LoginHandler(LoginRequestDto request)
 	{
-		// ============================================================
-		// 1. ПРОВЕРЯЕМ ПОЛЬЗОВАТЕЛЯ
-		// ============================================================
-		var user = await _userService.AuthenticateAsync(request.Email, request.Password);
-		if (user == null)
+		var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+		var result = await _authService.AuthenticateUserAsync(request, ipAddress);
+
+		if (!result.Success)
 		{
-			_logger.LogWarning("Login failed for {Email}", request.Email);
-			return Unauthorized(new { error = "Invalid email or password" });
+			return Unauthorized(new { error = result.Error });
 		}
 
-		// ============================================================
-		// 2. ПРОВЕРЯЕМ ЛИЦЕНЗИЮ И УСТРОЙСТВО
-		// ============================================================
-		var licenseResult = await _licenseService.ValidateAndBindAsync(
-			request.LicenseKey,
-			request.DeviceId,
-			request.DeviceName ?? Environment.MachineName,
-			HttpContext.Connection.RemoteIpAddress?.ToString()
-		);
+		return Ok(result.Response);
+	}
 
-		if (!licenseResult.IsValid)
+	public async Task<IActionResult> RefreshHandler(RefreshRequestDto request)
+	{
+		var result = await _authService.RefreshAuthenticationToken(request);
+
+		if (!result.Success)
 		{
-			_logger.LogWarning(
-				"License validation failed for user {Email}: {Reason}",
-				request.Email, licenseResult.Reason);
-			return Unauthorized(new { error = licenseResult.Reason });
+			return Unauthorized(new { error = result.Error });
 		}
 
-		// ============================================================
-		// 3. ВЫДАЁМ JWT ТОКЕН
-		// ============================================================
-		var token = _jwtService.GenerateToken(
-			user.Id,
-			user.Email,
-			user.Role?.Name ?? "user"
-		);
-
-		_logger.LogInformation("User {Email} logged in successfully", request.Email);
-
-		return Ok(new
-		{
-			access_token = token,
-			token_type = "Bearer",
-			expires_in = 3600, // 1 час
-			user = new
-			{
-				user.Id,
-				user.Email,
-				user.Name,
-				role = user.Role?.Name
-			}
-		});
+		return Ok(result.Response);
 	}
 }

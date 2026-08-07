@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using KG.MES.Server.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
@@ -42,6 +43,12 @@ public class JwtService : IJwtService
 
 		return new JwtSecurityTokenHandler().WriteToken(token);
 	}
+
+	public string GenerateRefreshToken()
+	{
+		return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+	}
+
 
 	public ClaimsPrincipal? ValidateToken(string token)
 	{

@@ -28,7 +28,7 @@ public class LicenseService : ILicenseService
 			return LicenseValidationResult.Fail("License key is required");
 
 		if (string.IsNullOrEmpty(deviceHardwareId))
-			return LicenseValidationResult.Fail("Device ID is required");
+			return LicenseValidationResult.Fail("Device hardware ID is required");
 
 		var license = await _context.Licenses
 			.Include(l => l.Device)

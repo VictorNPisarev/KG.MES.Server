@@ -28,6 +28,7 @@ public class AppDbContext : DbContext
 	public DbSet<License> Licenses { get; set; }
 	public DbSet<Device> Devices { get; set; }
 	public DbSet<UserDevice> UserDevices { get; set; }
+	public DbSet<RefreshToken> RefreshTokens { get; set; }
 
 
 
@@ -240,6 +241,31 @@ public class AppDbContext : DbContext
 		modelBuilder.Entity<UserDevice>()
 			.HasIndex(ud => new { ud.UserId, ud.DeviceId })
 			.IsUnique();
+
+		modelBuilder.Entity<RefreshToken>(entity =>
+		{
+			entity.ToTable("refresh_tokens");
+			entity.HasKey(e => e.Id);
+			entity.HasIndex(e => e.Token).IsUnique();
+			entity.HasIndex(e => e.UserId);
+			entity.HasIndex(e => e.DeviceId);
+			entity.HasIndex(e => e.LicenseId);
+
+			entity.HasOne(rt => rt.User)
+				.WithMany()
+				.HasForeignKey(rt => rt.UserId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			entity.HasOne(rt => rt.Device)
+				.WithMany()
+				.HasForeignKey(rt => rt.DeviceId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			entity.HasOne(rt => rt.License)
+				.WithMany()
+				.HasForeignKey(rt => rt.LicenseId)
+				.OnDelete(DeleteBehavior.Cascade);
+		});
 
 		base.OnModelCreating(modelBuilder);
 	}

@@ -24,7 +24,7 @@ public class Device
 	public Guid LicenseId { get; set; }
 
 	[Column("registered_at")]
-	[DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+	//[DatabaseGenerated(DatabaseGeneratedOption.Computed)]
 	public DateTime RegisteredAt { get; set; }
 
 	[Column("last_used_at")]

@@ -50,8 +50,8 @@ public class UserService : IUserService
 		if (user == null)
 			return false;
 
-		//user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
-		//user.IsPasswordSet = true;
+		user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
 		await _context.SaveChangesAsync();
 
 		return true;

@@ -10,12 +10,12 @@ public class LoginRequestDto
 	[JsonPropertyName("password")]
 	public string Password { get; set; } = string.Empty;
 
-	[JsonPropertyName("license_key")]
+	[JsonPropertyName("licenseKey")]
 	public string LicenseKey { get; set; } = string.Empty;
 
-	[JsonPropertyName("device_id")]
-	public string DeviceId { get; set; } = string.Empty;
+	[JsonPropertyName("deviceHardwareId")]
+	public string DeviceHardwareId { get; set; } = string.Empty;
 
-	[JsonPropertyName("device_name")]
+	[JsonPropertyName("deviceName")]
 	public string? DeviceName { get; set; }
 }

@@ -94,8 +94,7 @@ public class DeviceAuthMiddleware
 		//устройство не найдено - проверяю ActivationKey в запросе - возможно это регистрация устройства
 		if (existingDevice == null)
 		{
-			existingDevice = await userDeviceService.RegisterDeviceAsync(userId, deviceId,
-				context.Request.Headers["X-Device-Name"], context.Request.Headers["X-Device-ActivationKey"]);
+			existingDevice = await userDeviceService.RegisterDeviceAsync(userId, deviceId, context.Request.Headers["X-Device-Name"]);
 
 			_logger.LogDebug("ℹ️ Device {DeviceId} saved for user {UserId} (check disabled)",
 				deviceId, userId);
