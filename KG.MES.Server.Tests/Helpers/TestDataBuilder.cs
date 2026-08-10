@@ -20,6 +20,9 @@ public class TestDataBuilder
 	private readonly List<SupplyItem> _supplyItems = [];
 	private readonly List<SupplyType> _supplyTypes = [];
 	private readonly List<SupplyCondition> _supplyConditions = [];
+	private readonly List<License> _licenses = [];
+	private readonly List<Device> _devices = [];
+	private readonly List<RefreshToken> _refreshTokens = [];
 
 
 	public TestDataBuilder WithRole(Action<Role> configure)
@@ -223,6 +226,50 @@ public class TestDataBuilder
 		return this;
 	}
 
+	public TestDataBuilder WithLicense(Action<License> configure)
+	{
+		var license = new License
+		{
+			Id = Guid.NewGuid(),
+			KeyCode = "XXXX-XXXX-XXXX-XXXX",
+			IsActive = true,
+			CreatedAt = DateTime.UtcNow
+		};
+		configure(license);
+		_licenses.Add(license);
+		return this;
+	}
+
+	public TestDataBuilder WithDevice(Action<Device> configure)
+	{
+		var device = new Device
+		{
+			Id = Guid.NewGuid(),
+			DeviceHardwareId = "test-device",
+			DeviceName = "Test Device",
+			RegisteredAt = DateTime.UtcNow
+		};
+		configure(device);
+		_devices.Add(device);
+		return this;
+	}
+
+	public TestDataBuilder WithRefreshToken(Action<RefreshToken> configure)
+	{
+		var refreshToken = new RefreshToken
+		{
+			Id = Guid.NewGuid(),
+			Token = "test-refresh-token",
+			CreatedAt = DateTime.UtcNow,
+			ExpiresAt = DateTime.UtcNow.AddDays(7),
+			IsRevoked = false
+		};
+		configure(refreshToken);
+		_refreshTokens.Add(refreshToken);
+		return this;
+	}
+
+
 
 	public void Build(IServiceProvider serviceProvider)
 	{
@@ -243,6 +290,9 @@ public class TestDataBuilder
 		db.SupplyItems.AddRange(_supplyItems);
 		db.SupplyTypes.AddRange(_supplyTypes);
 		db.SupplyConditions.AddRange(_supplyConditions);
+		db.Licenses.AddRange(_licenses);
+		db.Devices.AddRange(_devices);
+		db.RefreshTokens.AddRange(_refreshTokens);
 
 		db.SaveChanges();
 	}

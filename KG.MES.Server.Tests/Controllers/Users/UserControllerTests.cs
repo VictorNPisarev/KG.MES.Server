@@ -1,8 +1,10 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using KG.MES.Server.Data;
 using KG.MES.Server.Tests.Helpers;
 using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -119,7 +121,51 @@ public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>
 		var json = await ParseJsonResponse(response);
 
 		json.GetArrayLength().Should().Be(2);
-		// ... остальные проверки
+	}
+
+	[Fact]
+	public async Task SetPassword_ShouldHashPassword()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory();
+		var client = customFactory.CreateClient();
+
+		Role? createdRole = null;
+		User? createdUser = null;
+
+		new TestDataBuilder()
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u =>
+			{
+				u.Email = "test@example.com";
+				u.Name = "Тест";
+				u.RoleId = createdRole?.Id;
+				u.PasswordHash = null;
+				u.IsPasswordSet = false;
+				createdUser = u;
+			})
+			.Build(customFactory.Services);
+
+		var request = new
+		{
+			email = "test@example.com",
+			newPassword = "NewPassword123!"
+		};
+
+		// Act
+		var response = await client.PostAsJsonAsync("/api/users/set-password", request);
+
+		// Assert
+		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+
+		// Проверяем, что пароль установлен
+		using var scope = customFactory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
+
+		user.Should().NotBeNull();
+		user!.PasswordHash.Should().NotBeNullOrEmpty();
+		user.IsPasswordSet.Should().BeTrue();
 	}
 
 	// ====== Вспомогательные методы ======
