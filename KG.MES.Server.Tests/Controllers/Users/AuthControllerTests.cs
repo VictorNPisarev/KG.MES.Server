@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentAssertions;
 using KG.MES.Server.Data;
 using KG.MES.Server.Tests.Helpers;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -253,12 +254,15 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			})
 			.Build(customFactory.Services);
 
-		// Act
-		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
+		var request = new RefreshRequestDto
 		{
-			refresh_token = "test-refresh-token",
-			device_hardware_id = "test-device-123"
-		});
+			RefreshToken = "test-refresh-token",
+			DeviceHardwareId = "test-device-123",
+			LicenseKey = "TEST-1234-5678-90AB"
+		};
+
+		// Act
+		var response = await client.PostAsJsonAsync("/api/auth/refresh", request);
 
 		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
@@ -321,7 +325,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
-			device_hardware_id = "test-device-123"
+			device_hardware_id = "test-device-123",
+			license_key = "TEST-1234-5678-90AB"
 		});
 
 		// Assert
@@ -383,7 +388,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
-			device_hardware_id = "different-device-456"
+			device_hardware_id = "different-device-456",
+			license_key = "TEST-1234-5678-90AB"
 		});
 
 		// Assert
@@ -391,6 +397,195 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 
 		var json = await ParseJsonResponse(response);
 		json.GetProperty("error").GetString().Should().Be("Device mismatch");
+	}
+
+	[Fact]
+	public async Task Refresh_WithExpiredLicense_ShouldReturnUnauthorized()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory();
+		var client = customFactory.CreateClient();
+
+		Role? createdRole = null;
+		User? createdUser = null;
+		License? createdLicense = null;
+		Device? createdDevice = null;
+		RefreshToken? createdRefreshToken = null;
+
+		new TestDataBuilder()
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u =>
+			{
+				u.Email = "test@example.com";
+				u.Name = "Тестовый пользователь";
+				u.RoleId = createdRole?.Id;
+				u.IsPasswordSet = true;
+				createdUser = u;
+			})
+			.WithLicense(l =>
+			{
+				l.KeyCode = "EXPIRED-1234-5678-90AB";
+				l.IsActive = true;
+				l.ExpiresAt = DateTime.UtcNow.AddDays(-1);
+				createdLicense = l;
+			})
+			.WithDevice(d =>
+			{
+				d.DeviceHardwareId = "test-device-123";
+				d.DeviceName = "Test PC";
+				d.LicenseId = createdLicense!.Id;
+				createdDevice = d;
+			})
+			.WithRefreshToken(rt =>
+			{
+				rt.UserId = createdUser!.Id;
+				rt.DeviceId = createdDevice!.Id;
+				rt.Token = "test-refresh-token";
+				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
+				rt.IsRevoked = false;
+				createdRefreshToken = rt;
+			})
+			.Build(customFactory.Services);
+
+		// Act
+		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
+		{
+			refresh_token = "test-refresh-token",
+			device_hardware_id = "test-device-123",
+			license_key = "EXPIRED-1234-5678-90AB"
+		});
+
+		// Assert
+		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+
+		var json = await ParseJsonResponse(response);
+		json.GetProperty("error").GetString().Should().Be("License expired");
+	}
+
+	[Fact]
+	public async Task Refresh_WithRevokedLicense_ShouldReturnUnauthorized()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory();
+		var client = customFactory.CreateClient();
+
+		Role? createdRole = null;
+		User? createdUser = null;
+		License? createdLicense = null;
+		Device? createdDevice = null;
+		RefreshToken? createdRefreshToken = null;
+
+		new TestDataBuilder()
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u =>
+			{
+				u.Email = "test@example.com";
+				u.Name = "Тестовый пользователь";
+				u.RoleId = createdRole?.Id;
+				u.IsPasswordSet = true;
+				createdUser = u;
+			})
+			.WithLicense(l =>
+			{
+				l.KeyCode = "REVOKED-1234-5678-90AB";
+				l.IsActive = false;  // ← отозвана
+				l.ExpiresAt = DateTime.UtcNow.AddDays(30);
+				createdLicense = l;
+			})
+			.WithDevice(d =>
+			{
+				d.DeviceHardwareId = "test-device-123";
+				d.DeviceName = "Test PC";
+				d.LicenseId = createdLicense!.Id;
+				createdDevice = d;
+			})
+			.WithRefreshToken(rt =>
+			{
+				rt.UserId = createdUser!.Id;
+				rt.DeviceId = createdDevice!.Id;
+				rt.Token = "test-refresh-token";
+				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
+				rt.IsRevoked = false;
+				createdRefreshToken = rt;
+			})
+			.Build(customFactory.Services);
+
+		// Act
+		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
+		{
+			refresh_token = "test-refresh-token",
+			device_hardware_id = "test-device-123",
+			license_key = "REVOKED-1234-5678-90AB"
+		});
+
+		// Assert
+		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+
+		var json = await ParseJsonResponse(response);
+		json.GetProperty("error").GetString().Should().Be("License is revoked");
+	}
+
+	[Fact]
+	public async Task Refresh_WithDifferentLicenseKey_ShouldReturnUnauthorized()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory();
+		var client = customFactory.CreateClient();
+
+		Role? createdRole = null;
+		User? createdUser = null;
+		License? createdLicense = null;
+		Device? createdDevice = null;
+		RefreshToken? createdRefreshToken = null;
+
+		new TestDataBuilder()
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u =>
+			{
+				u.Email = "test@example.com";
+				u.Name = "Тестовый пользователь";
+				u.RoleId = createdRole?.Id;
+				u.IsPasswordSet = true;
+				createdUser = u;
+			})
+			.WithLicense(l =>
+			{
+				l.KeyCode = "TEST-1234-5678-90AB";
+				l.IsActive = true;
+				l.ExpiresAt = DateTime.UtcNow.AddDays(30);
+				createdLicense = l;
+			})
+			.WithDevice(d =>
+			{
+				d.DeviceHardwareId = "test-device-123";
+				d.DeviceName = "Test PC";
+				d.LicenseId = createdLicense!.Id;
+				createdDevice = d;
+			})
+			.WithRefreshToken(rt =>
+			{
+				rt.UserId = createdUser!.Id;
+				rt.DeviceId = createdDevice!.Id;
+				rt.Token = "test-refresh-token";
+				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
+				rt.IsRevoked = false;
+				createdRefreshToken = rt;
+			})
+			.Build(customFactory.Services);
+
+		// Act — другой ключ
+		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
+		{
+			refresh_token = "test-refresh-token",
+			device_hardware_id = "test-device-123",
+			license_key = "DIFFERENT-XXXX-XXXX-XXXX"
+		});
+
+		// Assert
+		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+
+		var json = await ParseJsonResponse(response);
+		json.GetProperty("error").GetString().Should().Be("Invalid license key");
 	}
 
 	// ====== Вспомогательные методы ======

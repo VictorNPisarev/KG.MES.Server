@@ -127,7 +127,7 @@ public class AuthService : IAuthService
 		if (string.IsNullOrEmpty(request.RefreshToken))
 			return LoginResultDto.CreateFailure("Refresh token is required");
 
-		// 1. Проверяем Refresh-токен
+		// 1. Проверяю Refresh-токен
 		var refreshToken = await _context.RefreshTokens
 			.Include(rt => rt.User)
 			.ThenInclude(u => u!.Role)
@@ -140,11 +140,23 @@ public class AuthService : IAuthService
 		if (refreshToken.ExpiresAt < DateTime.UtcNow)
 			return LoginResultDto.CreateFailure("Refresh token expired");
 
-		// 2. Проверяем устройство
+		// 2. Проверяю устройство
 		if (refreshToken.Device?.DeviceHardwareId != request.DeviceHardwareId)
 			return LoginResultDto.CreateFailure("Device mismatch");
 
-		// 3. Генерируем новый Access Token
+		// 3. Проверяю лицензию
+		var license = await _context.Licenses.FirstOrDefaultAsync(l => l.Id == refreshToken.Device.LicenseId && l.KeyCode == request.LicenseKey);
+
+		if(license == null)
+			return LoginResultDto.CreateFailure("Invalid license key");
+
+		if (!license.IsActive)
+			return LoginResultDto.CreateFailure("License is revoked");
+
+		if (license.ExpiresAt.HasValue && license.ExpiresAt < DateTime.UtcNow)
+			return LoginResultDto.CreateFailure("License expired");
+
+		// 4. Генерируем новый Access Token
 		var user = refreshToken.User ?? new();
 		var newAccessToken = _jwtService.GenerateToken(
 			user.Id,
