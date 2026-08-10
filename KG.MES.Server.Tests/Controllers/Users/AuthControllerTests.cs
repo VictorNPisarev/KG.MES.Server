@@ -15,9 +15,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace KG.MES.Server.Tests.Controllers.Users;
 
 [Trait("Category", "Users")]
-public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
 	private readonly WebApplicationFactory<Program> _factory;
+	private WebApplicationFactory<Program>? _customFactory; // ← Храним ссылку
 
 	public AuthControllerTests(WebApplicationFactory<Program> factory)
 	{
@@ -590,19 +591,43 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 
 	// ====== Вспомогательные методы ======
 
+	//private WebApplicationFactory<Program> SetupTestFactory()
+	//{
+	//	return _factory.WithWebHostBuilder(builder =>
+	//	{
+	//		builder.ConfigureServices(services =>
+	//		{
+	//			services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
+	//			services.RemoveAll<DbContextOptions<AppDbContext>>();
+	//			services.AddDbContext<AppDbContext>(options =>
+	//				options.UseInMemoryDatabase("TestDb"));
+	//			services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+	//		});
+	//	});
+	//}
+
 	private WebApplicationFactory<Program> SetupTestFactory()
 	{
-		return _factory.WithWebHostBuilder(builder =>
+		var dbName = $"TestDb_{Guid.NewGuid():N}";
+
+		_customFactory = _factory.WithWebHostBuilder(builder =>
 		{
 			builder.ConfigureServices(services =>
 			{
 				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
 				services.RemoveAll<DbContextOptions<AppDbContext>>();
 				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase("TestDb"));
+					options.UseInMemoryDatabase(dbName));
 				services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 			});
 		});
+
+		return _customFactory;
+	}
+
+	public void Dispose()
+	{
+		_customFactory?.Dispose(); // ← Очищаем после каждого теста!
 	}
 
 	private async Task<JsonElement> ParseJsonResponse(HttpResponseMessage response)

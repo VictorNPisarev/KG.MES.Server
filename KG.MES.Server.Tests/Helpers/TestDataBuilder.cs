@@ -247,7 +247,8 @@ public class TestDataBuilder
 			Id = Guid.NewGuid(),
 			DeviceHardwareId = "test-device",
 			DeviceName = "Test Device",
-			RegisteredAt = DateTime.UtcNow
+			RegisteredAt = DateTime.UtcNow,
+			LicenseId = Guid.NewGuid()
 		};
 		configure(device);
 		_devices.Add(device);
