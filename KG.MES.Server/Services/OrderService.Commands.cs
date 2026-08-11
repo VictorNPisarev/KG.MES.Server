@@ -490,22 +490,10 @@ public partial class OrderService
 					.ThenInclude(os => os!.SupplyItems)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-
 			if (order == null)
 			{
-				Console.WriteLine("if (order == null)");
 				return false;
 			}
-
-			Console.WriteLine("Order not null");
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
 
 			// Удаляем связанные данные (каскадно, но явно для контроля)
 			if (order.OrderSupply != null)

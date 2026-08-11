@@ -64,7 +64,7 @@ public static class OrderServiceHelper
 
 	public static async Task<bool> IsJoineryWorkplaceAsync(AppDbContext context, Guid workplaceId)
 	{
-		var joineryId = await GetWorkplaceIdAsync(context, Constants.WorkplaceCodes.None);
+		var joineryId = await GetWorkplaceIdAsync(context, Constants.WorkplaceCodes.Joinery);
 
 		return workplaceId == joineryId;
 

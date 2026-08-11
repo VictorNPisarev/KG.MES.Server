@@ -17,21 +17,17 @@ using Xunit;
 namespace KG.MES.Server.Tests.Controllers;
 
 [Trait("Category", "Supply")]
-public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class SupplyControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public SupplyControllerTests(WebApplicationFactory<Program> factory)
+	public SupplyControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetOrderSupplyItems_ShouldReturnCorrectFormatWithNulls()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Supply_Items");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var orderSupplyId = Guid.NewGuid();
@@ -39,7 +35,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		var glassTypeId = Guid.NewGuid();
 		var pendingConditionId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "SUPPLY-1"; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId; os.OrderId = orderId; })
 			.WithSupplyType(st => { st.Id = lumberTypeId; st.Name = "lumber"; st.IsActive = true; })
@@ -58,8 +54,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 				si.OrderSupplyId = orderSupplyId;
 				si.SupplyTypeId = glassTypeId;
 				si.ConditionId = null; // Без статуса, как в Node.js
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// Act
 		var response = await client.GetAsync($"/api/orders/{orderId}/supplies");
@@ -84,8 +79,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 	public async Task UpdateAllSupplyItems_ShouldAcceptClientFormatAndReturnSuccess()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Supply_UpdateAll_ClientFormat");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var orderSupplyId = Guid.NewGuid();
@@ -93,15 +87,46 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		var paintTypeId = Guid.NewGuid();
 		var pendingConditionId = Guid.NewGuid();
 
-		new TestDataBuilder()
-			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "BATCH-1"; })
-			.WithOrderSupply(os => { os.Id = orderSupplyId; os.OrderId = orderId; })
-			.WithSupplyType(st => { st.Id = lumberTypeId; st.Name = "lumber"; st.IsActive = true; })
-			.WithSupplyType(st => { st.Id = paintTypeId; st.Name = "paint"; st.IsActive = true; })
-			.WithSupplyCondition(sc => { sc.Id = pendingConditionId; sc.ConditionCode = "pending"; })
-			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = lumberTypeId; si.ConditionId = null; })
-			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = paintTypeId; si.ConditionId = null; })
-			.Build(customFactory.Services);
+		BuildTestData(builder => builder
+			.WithOrder(o =>
+			{
+				o.Id = orderId;
+				o.OrderNumber = "BATCH-1";
+			})
+			.WithOrderSupply(os => 
+			{
+				os.Id = orderSupplyId;
+				os.OrderId = orderId;
+			})
+			.WithSupplyType(st =>
+			{
+				st.Id = lumberTypeId;
+				st.Name = "lumber";
+				st.IsActive = true;
+			})
+			.WithSupplyType(st =>
+			{
+				st.Id = paintTypeId;
+				st.Name = "paint";
+				st.IsActive = true;
+			})
+			.WithSupplyCondition(sc =>
+			{
+				sc.Id = pendingConditionId;
+				sc.ConditionCode = "pending";
+			})
+			.WithSupplyItem(si =>
+			{
+				si.OrderSupplyId = orderSupplyId;
+				si.SupplyTypeId = lumberTypeId;
+				si.ConditionId = null;
+			})
+			.WithSupplyItem(si =>
+			{
+				si.OrderSupplyId = orderSupplyId;
+				si.SupplyTypeId = paintTypeId;
+				si.ConditionId = null;
+			}));
 
 		// Формируем запрос ТОЧНО так, как это делает клиент (обёртка с полем "supplies")
 		var clientRequest = new
@@ -127,7 +152,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		result.Message.Should().Be("2 supply items updated");
 
 		// Проверяем, что данные действительно обновились в БД
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// Проверяем lumber item
@@ -159,8 +184,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 	public async Task GetAllSupplyItems_ShouldReturnAllOrders()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Supply_All");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var orderId1 = Guid.NewGuid(); // Заказ с complete статусами
@@ -174,7 +198,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		var completeConditionId = Guid.NewGuid();
 		var pendingConditionId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => {w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; w.Level = 30;})
 			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "1001"; o.ReadyDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); 
 																		o.RtmDate = DateTime.Parse("2026-06-01T10:00:00.000Z"); })
@@ -194,8 +218,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId1; si.SupplyTypeId = paintTypeId; si.ConditionId = completeConditionId; })
 			// Заказ 2: есть pending
 			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId2; si.SupplyTypeId = lumberTypeId; si.ConditionId = pendingConditionId; })
-			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId2; si.SupplyTypeId = paintTypeId; si.ConditionId = null; })
-			.Build(customFactory.Services);
+			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId2; si.SupplyTypeId = paintTypeId; si.ConditionId = null; }));
 
 		// Act
 		var response = await client.GetAsync("/api/supplies?page=1&limit=50");
@@ -217,23 +240,5 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		// Проверяем, что заказы отсортированы по ready_date
 		json.GetProperty("data")[0].GetProperty("order_number").GetString().Should().Be("1001");
 		json.GetProperty("data")[1].GetProperty("order_number").GetString().Should().Be("1002");
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
-				});
-			});
-		});
 	}
 }

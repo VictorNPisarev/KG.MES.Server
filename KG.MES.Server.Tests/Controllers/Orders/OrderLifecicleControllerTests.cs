@@ -16,32 +16,27 @@ using Xunit;
 namespace KG.MES.Server.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderLifecycleControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public OrderLifecycleControllerTests(WebApplicationFactory<Program> factory)
+	public OrderLifecycleControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task CreateOrder_ShouldCreateOrderProductionAndSupplyItems()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Create");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var noneId = Guid.NewGuid();
 		var supplyTypeId1 = Guid.NewGuid();
 		var supplyTypeId2 = Guid.NewGuid();
 
 		// Подготовка БД: рабочее место "none" и активные типы снабжения
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = noneId; w.Name = "none"; w.IsWorkplace = false; })
 			.WithSupplyType(st => { st.Id = supplyTypeId1; st.Name = "Фурнитура"; st.IsActive = true; })
-			.WithSupplyType(st => { st.Id = supplyTypeId2; st.Name = "Стекло"; st.IsActive = true; })
-			.Build(customFactory.Services);
+			.WithSupplyType(st => { st.Id = supplyTypeId2; st.Name = "Стекло"; st.IsActive = true; }));
 
 		var request = new OrderRequestDto
 		{
@@ -75,7 +70,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 
 		// Дополнительная проверка в БД: ProductionOrder должен указывать на "none"
 		var productionOrderId = Guid.Parse(json.GetProperty("productionOrderId").GetString()!);
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		var prodOrder = await db.ProductionOrders.FindAsync(productionOrderId);
@@ -87,8 +82,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task BeginOrderWorkplace_WhenNoFootprints_ShouldBuildFullPathAndLog()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Start");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var noneId = Guid.NewGuid();
 		var startWorkplaceId = Guid.NewGuid(); // "Торцовка"
@@ -97,7 +91,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		var productionOrderId = Guid.NewGuid();
 		var userId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = noneId; w.Name = "none"; w.IsWorkplace = false; })
 			.WithWorkplace(w => { w.Id = startWorkplaceId; w.Name = "Торцовка"; w.IsWorkplace = true; })
 			.WithWorkplace(w => { w.Id = nextWorkplaceId; w.Name = "Профилирование"; w.IsWorkplace = true; })
@@ -109,8 +103,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 				po.Id = productionOrderId;
 				po.OrderId = orderId;
 				po.CurrentWorkplaceId = noneId;
-			})
-			.Build(customFactory.Services);
+			}));
 
 		var request = new BeginWorkplaceRequestDto
 		{
@@ -127,7 +120,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// 1. CurrentWorkplaceId обновился
@@ -160,15 +153,14 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task CompleteOrderWorkplace_ShouldUpdateStatusAndLog()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Complete");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 		var userId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "COMP-1"; })
 			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; po.CurrentWorkplaceId = workplaceId; })
@@ -177,8 +169,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 				fp.ProductionOrderId = productionOrderId;
 				fp.WorkplaceId = workplaceId;
 				fp.Status = "active"; // Уже в работе
-			})
-			.Build(customFactory.Services);
+			}));
 
 		var request = new CompleteWorkplaceRequestDto
 		{
@@ -195,7 +186,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// 1. Статус футпринта изменился на completed
@@ -218,8 +209,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task SetOrderFootprintStatus_WhenNoFootprints_ShouldBuildPathAndUpdate()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_SetStatus");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var noneId = Guid.NewGuid();
 		var workplaceId = Guid.NewGuid();
@@ -227,14 +217,13 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		var productionOrderId = Guid.NewGuid();
 		var userId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = noneId; w.Name = "none"; w.IsWorkplace = false; })
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Покраска"; w.IsWorkplace = true; })
 			.WithWorkplaceTransition(t => { t.FromWorkplaceId = noneId; t.ToWorkplaceId = workplaceId; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "SET-1"; })
-			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; })
+			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; }));
 			// ВАЖНО: Футпринтов нет
-			.Build(customFactory.Services);
 
 		var request = new SetFootprintStatusRequestDto
 		{
@@ -249,7 +238,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// 1. Футпринт создан и статус установлен
@@ -276,13 +265,12 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task UpdateOrder_ShouldUpdateOrderAndProductionOrder()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Update");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o =>
 			{
 				o.Id = orderId;
@@ -298,8 +286,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 				po.OrderId = orderId;
 				po.Comment = "Old comment";
 				po.Lumber = "Old lumber";
-			})
-			.Build(customFactory.Services);
+			}));
 
 		var updateRequest = new OrderRequestDto
 		{
@@ -336,7 +323,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		json.GetProperty("message").GetString().Should().Be("Order updated");
 
 		// Проверяем в БД
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		var updatedOrder = await db.Orders.FindAsync(orderId);
@@ -366,8 +353,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task UpdateOrder_WhenOrderNotFound_ShouldReturnNotFound()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Update_NotFound");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var nonExistentOrderId = Guid.NewGuid();
 
@@ -394,8 +380,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task DeleteOrder_ShouldDeleteOrderAndRelatedData()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Delete");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
@@ -405,15 +390,14 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		var supplyItemId = Guid.NewGuid();
 		var footprintId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
 			.WithSupplyType(st => { st.Id = supplyTypeId; st.Name = "lumber"; st.IsActive = true; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "DEL-123"; })
 			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId; os.OrderId = orderId; })
 			.WithSupplyItem(si => { si.Id = supplyItemId; si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = supplyTypeId; })
-			.WithOrderFootprint(fp => { fp.Id = footprintId; fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "pending"; })
-			.Build(customFactory.Services);
+			.WithOrderFootprint(fp => { fp.Id = footprintId; fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "pending"; }));
 
 		// Act
 		var response = await client.DeleteAsync($"/api/orders/{orderId}");
@@ -428,7 +412,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		json.GetProperty("message").GetString().Should().Be("Order deleted");
 
 		// Проверяем, что все связанные данные удалены
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		var deletedOrder = await db.Orders.FindAsync(orderId);
@@ -453,8 +437,7 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 	public async Task DeleteOrder_WhenOrderNotFound_ShouldReturnNotFound()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Lifecycle_Delete_NotFound");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var nonExistentOrderId = Guid.NewGuid();
 
@@ -468,23 +451,5 @@ public class OrderLifecycleControllerTests : IClassFixture<WebApplicationFactory
 		var json = JsonDocument.Parse(content).RootElement;
 
 		json.GetProperty("error").GetString().Should().Be("Order not found or delete failed");
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
-				});
-			});
-		});
 	}
 }

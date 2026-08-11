@@ -15,29 +15,22 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace KG.MES.Server.Tests.Controllers.Users;
 
 [Trait("Category", "Users")]
-public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+public class AuthControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-	private WebApplicationFactory<Program>? _customFactory; // ← Храним ссылку
-
-	public AuthControllerTests(WebApplicationFactory<Program> factory)
+	public AuthControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task Login_WithValidCredentials_ShouldReturnTokens()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
-
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
 		License? createdLicense = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -53,11 +46,10 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				l.IsActive = true;
 				l.ExpiresAt = DateTime.UtcNow.AddDays(30);
 				createdLicense = l;
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// Устанавливаем пароль через PasswordHasher (не через TestDataBuilder, т.к. он не знает про хеширование)
-		using (var scope = customFactory.Services.CreateScope())
+		using (var scope = Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 			var user = await db.Users.FirstAsync(u => u.Email == "test@example.com");
@@ -75,10 +67,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			deviceName = "Test PC"
 		};
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
 		var json = await ParseJsonResponse(response);
@@ -97,15 +87,13 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Login_WithInvalidPassword_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
 		License? createdLicense = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -120,10 +108,9 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				l.KeyCode = "TEST-1234-5678-90AB";
 				l.IsActive = true;
 				createdLicense = l;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		using (var scope = customFactory.Services.CreateScope())
+		using (var scope = Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 			var user = await db.Users.FirstAsync(u => u.Email == "test@example.com");
@@ -140,10 +127,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			deviceHardwareId = "test-device-123"
 		};
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -153,15 +138,13 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Login_WithExpiredLicense_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
 		License? createdLicense = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -177,10 +160,9 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				l.IsActive = true;
 				l.ExpiresAt = DateTime.UtcNow.AddDays(-1);
 				createdLicense = l;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		using (var scope = customFactory.Services.CreateScope())
+		using (var scope = Services.CreateScope())
 		{
 			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 			var user = await db.Users.FirstAsync(u => u.Email == "test@example.com");
@@ -197,10 +179,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			deviceHardwareId = "test-device-123"
 		};
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -210,9 +190,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithValidToken_ShouldReturnNewAccessToken()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -220,7 +198,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -252,8 +230,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = false;
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
 		var request = new RefreshRequestDto
 		{
@@ -262,10 +239,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			LicenseKey = "TEST-1234-5678-90AB"
 		};
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", request);
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
 		var json = await ParseJsonResponse(response);
@@ -277,9 +252,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithRevokedToken_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -287,7 +260,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -319,10 +292,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = true;  // ← отозван
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
@@ -330,7 +301,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			license_key = "TEST-1234-5678-90AB"
 		});
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -340,9 +310,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithDeviceMismatch_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -350,7 +318,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -382,10 +350,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = false;
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		// Act — другой device_id
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
@@ -393,7 +359,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			license_key = "TEST-1234-5678-90AB"
 		});
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -403,9 +368,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithExpiredLicense_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -413,7 +376,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -445,10 +408,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = false;
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
@@ -456,7 +417,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			license_key = "EXPIRED-1234-5678-90AB"
 		});
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -466,9 +426,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithRevokedLicense_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -476,7 +434,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -508,10 +466,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = false;
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		// Act
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
@@ -519,7 +475,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			license_key = "REVOKED-1234-5678-90AB"
 		});
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -529,9 +484,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	[Fact]
 	public async Task Refresh_WithDifferentLicenseKey_ShouldReturnUnauthorized()
 	{
-		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		Role? createdRole = null;
 		User? createdUser = null;
@@ -539,7 +492,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 		Device? createdDevice = null;
 		RefreshToken? createdRefreshToken = null;
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
 			.WithUser(u =>
 			{
@@ -571,10 +524,8 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 				rt.ExpiresAt = DateTime.UtcNow.AddDays(7);
 				rt.IsRevoked = false;
 				createdRefreshToken = rt;
-			})
-			.Build(customFactory.Services);
+			}));
 
-		// Act — другой ключ
 		var response = await client.PostAsJsonAsync("/api/auth/refresh", new
 		{
 			refresh_token = "test-refresh-token",
@@ -582,7 +533,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 			license_key = "DIFFERENT-XXXX-XXXX-XXXX"
 		});
 
-		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
@@ -590,45 +540,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 	}
 
 	// ====== Вспомогательные методы ======
-
-	//private WebApplicationFactory<Program> SetupTestFactory()
-	//{
-	//	return _factory.WithWebHostBuilder(builder =>
-	//	{
-	//		builder.ConfigureServices(services =>
-	//		{
-	//			services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-	//			services.RemoveAll<DbContextOptions<AppDbContext>>();
-	//			services.AddDbContext<AppDbContext>(options =>
-	//				options.UseInMemoryDatabase("TestDb"));
-	//			services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-	//		});
-	//	});
-	//}
-
-	private WebApplicationFactory<Program> SetupTestFactory()
-	{
-		var dbName = $"TestDb_{Guid.NewGuid():N}";
-
-		_customFactory = _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase(dbName));
-				services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-			});
-		});
-
-		return _customFactory;
-	}
-
-	public void Dispose()
-	{
-		_customFactory?.Dispose(); // ← Очищаем после каждого теста!
-	}
 
 	private async Task<JsonElement> ParseJsonResponse(HttpResponseMessage response)
 	{

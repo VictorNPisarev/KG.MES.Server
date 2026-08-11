@@ -107,7 +107,11 @@ public partial class OrderService : IOrderService
 			});
 
 		if (!string.IsNullOrEmpty(orderNumber))
-			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+		{
+			//query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+			var lowerFilter = orderNumber.ToLower();
+			query = query.Where(o => o.OrderNumber != null && o.OrderNumber.ToLower().Contains(lowerFilter));
+		}
 
 		if (
 			//string.IsNullOrEmpty(orderNumber) &&
@@ -209,7 +213,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		//using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await _context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -217,46 +221,54 @@ public partial class OrderService : IOrderService
 			
 			if (!result.Success)
 			{
-				//await transaction.RollbackAsync();
+				await transaction.RollbackAsync();
 				return result;
 			}
 			// Меняю все следы заказа (footprint) на completed
 
-			var Order = await _context.Orders
+			var order = await _context.Orders
 				.Include(o => o.ProductionOrder)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
+			if (order?.ProductionOrder == null)
+			{
+				await transaction.RollbackAsync();
+				return new SetOrderStatusResultDto
+				{
+					Success = false,
+					Message = "Производственный заказ не найден"
+				};
+			}
+
+
 
 			var footprints = await _context.OrderFootprints
-				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
+				.Where(fp => fp.ProductionOrderId == order!.ProductionOrder!.Id)
 				.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
 				.ToListAsync();
 
-			if (footprints.Any())
+			foreach (var footprint in footprints)
 			{
-				foreach (var footprint in footprints)
-				{
-					footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
+				footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
 
-					_context.OperationLogs.Add(
-						new OperationLog
-						{
-							Id = Guid.NewGuid(),
-							ProductionOrderId = footprint.ProductionOrderId,
-							WorkplaceId = footprint.WorkplaceId,
-							UserId = userId, //TODO
-							OperationType = "COMPLETE", //TODO
-							OperationTime = DateTime.UtcNow,
-							CreatedAt = DateTime.UtcNow,
-							Notes = "Цикл производства завершен",
-							Source = "Handle change by Order COMPLETE"
-						}
-					);
-					await _context.SaveChangesAsync();
-				}
+				_context.OperationLogs.Add(
+					new OperationLog
+					{
+						Id = Guid.NewGuid(),
+						ProductionOrderId = footprint.ProductionOrderId,
+						WorkplaceId = footprint.WorkplaceId,
+						UserId = userId, //TODO
+						OperationType = "COMPLETE", //TODO
+						OperationTime = DateTime.UtcNow,
+						CreatedAt = DateTime.UtcNow,
+						Notes = "Цикл производства завершен",
+						Source = "Handle change by Order COMPLETE"
+					}
+				);
 			}
 
-			//await transaction.CommitAsync();
+			await _context.SaveChangesAsync();
+			await transaction.CommitAsync();
 
 			return new SetOrderStatusResultDto
 			{

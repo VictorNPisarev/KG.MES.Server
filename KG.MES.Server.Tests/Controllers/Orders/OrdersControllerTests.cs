@@ -14,21 +14,17 @@ using Xunit;
 namespace KG.MES.Server.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrdersControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public OrdersControllerTests(WebApplicationFactory<Program> factory)
+	public OrdersControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetOrders_ShouldReturnPaginatedAndSortedData()
 	{
 		// 1. Arrange (Подготовка)
-		var customFactory = SetupTestFactory("TestDb_Orders");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var order1Id = Guid.NewGuid();
@@ -36,7 +32,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		var order3Id = Guid.NewGuid();
 
 		// Создаем тестовые данные через Builder
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w =>
 			{
 				w.Id = workplaceId;
@@ -81,8 +77,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 			{
 				po.OrderId = order3Id;
 				po.CurrentWorkplaceId = workplaceId;
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// 2. Act (Выполняем запрос с параметрами пагинации и сортировки)
 		var url = "/api/orders?page=1&limit=50&sortBy=ready_date&sortOrder=asc";
@@ -134,22 +129,20 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 	public async Task GetOrders_WithWorkplaceFilter_ShouldReturnFilteredData()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Orders_Filter");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplace1Id = Guid.NewGuid();
 		var workplace2Id = Guid.NewGuid();
 		var order1Id = Guid.NewGuid();
 		var order2Id = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Сборка"; })
 			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Покраска"; })
 			.WithOrder(o => { o.Id = order1Id; o.OrderNumber = "100"; })
 			.WithProductionOrder(po => { po.OrderId = order1Id; po.CurrentWorkplaceId = workplace1Id; })
 			.WithOrder(o => { o.Id = order2Id; o.OrderNumber = "200"; })
-			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplace2Id; })
-			.Build(customFactory.Services);
+			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplace2Id; }));
 
 		// Act - фильтруем по workplace1
 		var url = $"/api/orders?workplaceId={workplace1Id}";
@@ -167,19 +160,5 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		result!.Data.Should().HaveCount(1); // Только один заказ на workplace1
 		result.Data[0].Id.Should().Be(order1Id);
 		result.Data[0].CurrentWorkplaceId.Should().Be(workplace1Id);
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase(dbName));
-			});
-		});
 	}
 }
