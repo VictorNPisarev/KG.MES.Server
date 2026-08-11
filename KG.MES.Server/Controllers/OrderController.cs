@@ -1,12 +1,14 @@
 
 using KG.MES.Server.Models.Dto;
 using KG.MES.Shared.Models.Dto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public partial class OrderController : ControllerBase
 {
 	//-------------------------
@@ -22,11 +24,13 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/operations/start
 	[HttpPost("orders/operations/start")]
 	[HttpPost("operations/start")]
+	[AllowAnonymous]
 	public Task<IActionResult> BeginOrderWorkplace([FromBody] BeginWorkplaceRequestDto request) => BeginOrderWorkplaceHandler(request);
 
 	// POST: api/orders/operations/complete
 	[HttpPost("orders/operations/complete")]
 	[HttpPost("operations/complete")]
+	[AllowAnonymous]
 	public Task<IActionResult> CompleteOrderWorkplace([FromBody] CompleteWorkplaceRequestDto request) => CompleteOrderWorkplaceHandler(request);
 
 	// POST: api/orders/{orderId}/complete
@@ -82,6 +86,7 @@ public partial class OrderController : ControllerBase
 
 	// GET: api/orders/in-work?workplaceId=...
 	[HttpGet("orders/in-work")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetActiveAndPendingOrdersCompatible([FromQuery] Guid workplaceId) => GetActiveAndPendingOrdersHandler(workplaceId);
 
 	// GET: api/orders/workplaces/{workplaceId}/in-work

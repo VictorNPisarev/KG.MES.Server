@@ -28,6 +28,8 @@ builder.Services.AddScoped<ILicenseService, LicenseService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)
 builder.Services.AddControllers()
@@ -68,9 +70,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-
-app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("AllowAll");
 
 if (app.Environment.IsDevelopment())
 {
