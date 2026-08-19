@@ -11,13 +11,13 @@ namespace KG.MES.Server.Controllers;
 /// </summary>
 public partial class OrderController
 {
-	private readonly IOrderService _orderService;
-	private readonly ILogger<OrderController> _logger;
+	private readonly IOrderService orderService;
+	private readonly ILogger<OrderController> logger;
 
 	public OrderController(IOrderService orderService, ILogger<OrderController> logger)
 	{
-		_orderService = orderService;
-		_logger = logger;
+		this.orderService = orderService;
+		this.logger = logger;
 	}
 
 
@@ -30,7 +30,7 @@ public partial class OrderController
 			workplaceIds.Add(workplaceId.Value);
 		}
 
-		var result = await _orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
 
 		return Ok(result);
 	}
@@ -40,7 +40,7 @@ public partial class OrderController
 		if (workplaceId == Guid.Empty)
 			return BadRequest(new { error = "workplaceId is required" });
 
-		var orders = await _orderService.GetPendingOrdersForWorkplaceAsync(workplaceId);
+		var orders = await orderService.GetPendingOrdersForWorkplaceAsync(workplaceId);
 
 		return Ok(orders);
 	}
@@ -50,7 +50,7 @@ public partial class OrderController
 		if (workplaceId == Guid.Empty)
 			return BadRequest(new { error = "workplaceId is required" });
 
-		var orders = await _orderService.GetActiveOrdersForWorkplaceAsync(workplaceId);
+		var orders = await orderService.GetActiveOrdersForWorkplaceAsync(workplaceId);
 
 		return Ok(orders);
 	}
@@ -61,7 +61,7 @@ public partial class OrderController
 		if (workplaceId == Guid.Empty)
 			return BadRequest(new { error = "workplaceId is required" });
 
-		var orders = await _orderService.GetActiveAndPendingOrdersForWorkplaceAsync(workplaceId);
+		var orders = await orderService.GetActiveAndPendingOrdersForWorkplaceAsync(workplaceId);
 
 		return Ok(orders);
 	}
@@ -71,7 +71,7 @@ public partial class OrderController
 		if (string.IsNullOrEmpty(request.OrderNumber))
 			return BadRequest(new { error = "orderNumber is required" });
 
-		var result = await _orderService.CreateOrderAsync(request);
+		var result = await orderService.CreateOrderAsync(request);
 
 		return Ok(result);
 	}
@@ -81,7 +81,7 @@ public partial class OrderController
 		if (request.ProductionOrderId == Guid.Empty || request.WorkplaceId == Guid.Empty || request.UserId == Guid.Empty)
 			return BadRequest(new { error = "productionOrderId, workplaceId, and userId are required" });
 
-		var result = await _orderService.BeginOrderWorkplaceAsync(
+		var result = await orderService.BeginOrderWorkplaceAsync(
 			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? " ", request.Source ?? "API");
 
 		return Ok(result);
@@ -91,7 +91,7 @@ public partial class OrderController
 	{
 		if (request.ProductionOrderId == Guid.Empty || request.WorkplaceId == Guid.Empty || request.UserId == Guid.Empty)
 			return BadRequest(new { error = "productionOrderId, workplaceId, and userId are required" });
-		var result = await _orderService.CompleteOrderWorkplaceAsync(
+		var result = await orderService.CompleteOrderWorkplaceAsync(
 			request.ProductionOrderId, request.WorkplaceId, request.UserId, request.Notes ?? " ", request.Source ?? "API");
 		return Ok(result);
 	}
@@ -103,7 +103,7 @@ public partial class OrderController
 	{
 		if (string.IsNullOrEmpty(request.Status))
 			return BadRequest(new { error = "status is required" });
-		var result = await _orderService.SetOrderFootprintStatusAsync(
+		var result = await orderService.SetOrderFootprintStatusAsync(
 			productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
 		return Ok(result);
 	}
@@ -112,7 +112,7 @@ public partial class OrderController
 	{
 		if (request.Footprints == null || request.Footprints.Count == 0)
 			return BadRequest(new { error = "footprints array is required" });
-		var result = await _orderService.UpdateOrderFootprintBatchAsync(
+		var result = await orderService.UpdateOrderFootprintBatchAsync(
 			productionOrderId, request.Footprints, request.UserId, request.Notes ?? " ");
 		return Ok(result);
 	}
@@ -122,13 +122,13 @@ public partial class OrderController
 		if (string.IsNullOrEmpty(request.Content))
 			return BadRequest(new { error = "content is required" });
 
-		var result = await _orderService.UpdateOrderCommentAsync(orderId, commentId, request.Content);
+		var result = await orderService.UpdateOrderCommentAsync(orderId, commentId, request.Content);
 		return Ok(result);
 	}
 
 	public async Task<IActionResult> GetOrderTraceHandler(string identifier)
 	{
-		var traces = await _orderService.GetOrderTraceByNumberAsync(identifier);
+		var traces = await orderService.GetOrderTraceByNumberAsync(identifier);
 		
 		if (traces == null || traces.Count == 0)
 			return NotFound(new { error = "Order not found" });
@@ -138,7 +138,7 @@ public partial class OrderController
 
 	public async Task<IActionResult> GetOrderCommentsHandler(Guid orderId)
 	{
-		var comments = await _orderService.GetOrderCommentsAsync(orderId);
+		var comments = await orderService.GetOrderCommentsAsync(orderId);
 		return Ok(comments);
 	}
 
@@ -147,7 +147,7 @@ public partial class OrderController
 		if (string.IsNullOrEmpty(request.Content))
 			return BadRequest(new { error = "content is required" });
 
-		var result = await _orderService.AddOrderCommentAsync(orderId, request.UserId, request.Content);
+		var result = await orderService.AddOrderCommentAsync(orderId, request.UserId, request.Content);
 		return Ok(result);
 	}
 
@@ -155,8 +155,8 @@ public partial class OrderController
 	{
 		var isUuid = Guid.TryParse(identifier, out var orderId);
 		var order = isUuid
-			? await _orderService.GetOrderByIdAsync(orderId)
-			: await _orderService.GetOrderByNumberAsync(identifier);
+			? await orderService.GetOrderByIdAsync(orderId)
+			: await orderService.GetOrderByNumberAsync(identifier);
 
 		if (order == null)
 			return NotFound(new { error = "Order not found" });
@@ -168,7 +168,7 @@ public partial class OrderController
 		if (string.IsNullOrEmpty(request.Content))
 			return BadRequest(new { error = "content is required" });
 
-		var result = await _orderService.AddProductionOrderCommentAsync(
+		var result = await orderService.AddProductionOrderCommentAsync(
 			orderId, request.ProductionOrderId, request.UserId, request.Content);
 
 		return Ok(result);
@@ -179,7 +179,7 @@ public partial class OrderController
 		if (string.IsNullOrEmpty(request.Content))
 			return BadRequest(new { error = "content is required" });
 
-		var result = await _orderService.AddSupplyCommentAsync(
+		var result = await orderService.AddSupplyCommentAsync(
 			orderId, request.SupplyTypeId, request.UserId, request.Content);
 
 		return Ok(result);
@@ -187,19 +187,19 @@ public partial class OrderController
 
 		public async Task<IActionResult> SetOrderCompleteHandler(Guid orderId)
 	{
-		var result = await _orderService.SetOrderCompleteAsync(orderId, null, null);
+		var result = await orderService.SetOrderCompleteAsync(orderId, null, null);
 		return Ok(result);
 	}
 
 	public async Task<IActionResult> SetOrderDepartureHandler(Guid orderId)
 	{
-		var result = await _orderService.SetOrderDepartureAsync(orderId, null, null);
+		var result = await orderService.SetOrderDepartureAsync(orderId, null, null);
 		return Ok(result);
 	}
 
 	public async Task<IActionResult> GetOrderCommercialHandler(Guid orderId)
 	{
-		var commercial = await _orderService.GetOrderCommercialAsync(orderId);
+		var commercial = await orderService.GetOrderCommercialAsync(orderId);
 		return Ok(commercial);
 	}
 
@@ -207,13 +207,13 @@ public partial class OrderController
 		Guid orderId,
 		[FromBody] OrderCommercialRequestDto request)
 	{
-		var result = await _orderService.UpdateOrderCommercialAsync(orderId, request);
+		var result = await orderService.UpdateOrderCommercialAsync(orderId, request);
 		return Ok(result);
 	}
 
 	public async Task<IActionResult> GetOrderForEditHandler(Guid orderId)
 	{
-		var result = await _orderService.GetOrderForEditAsync(orderId);
+		var result = await orderService.GetOrderForEditAsync(orderId);
 		if (result == null)
 			return NotFound(new { error = "Order not found" });
 		return Ok(result);
@@ -224,7 +224,7 @@ public partial class OrderController
 		if (dto == null)
 			return BadRequest(new { error = "Request body is required" });
 
-		var result = await _orderService.UpdateOrderAsync(orderId, dto);
+		var result = await orderService.UpdateOrderAsync(orderId, dto);
 		if (!result)
 			return NotFound(new { error = "Order not found or update failed" });
 
@@ -233,7 +233,7 @@ public partial class OrderController
 
 	public async Task<IActionResult> DeleteOrderHandler(Guid orderId)
 	{
-		var result = await _orderService.DeleteOrderAsync(orderId);
+		var result = await orderService.DeleteOrderAsync(orderId);
 		if (!result)
 			return NotFound(new { error = "Order not found or delete failed" });
 

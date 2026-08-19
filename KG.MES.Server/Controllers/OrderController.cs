@@ -63,6 +63,7 @@ public partial class OrderController : ControllerBase
 
 	// GET: api/orders
 	[HttpGet("orders")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
@@ -95,6 +96,7 @@ public partial class OrderController : ControllerBase
 
 	// GET: api/orders/{identifier}/trace  
 	[HttpGet("orders/{identifier}/trace")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetOrderTrace(string identifier) => GetOrderTraceHandler(identifier);
 
 	// GET: api/orders/{orderId}/comments

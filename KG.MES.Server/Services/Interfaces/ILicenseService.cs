@@ -1,6 +1,7 @@
 // KG.MES.Server/Services/Interfaces/ILicenseService.cs
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
+using KG.MES.Shared.Models.Enums;
 
 namespace KG.MES.Server.Services.Interfaces;
 
@@ -38,5 +39,50 @@ public interface ILicenseService
 	/// <summary>
 	/// Создать новую лицензию
 	/// </summary>
-	Task<License> CreateAsync(string? notes = null, int? expiresDays = 30);
+	Task<License> CreateAsync(string? notes = null, int? expiresDays = 30, LicenseType type = LicenseType.SingleDevice, int? maxDevices = null);
+
+	/// <summary>
+	/// Список всех лицензий
+	/// </summary>
+	/// <param name="page"></param>
+	/// <param name="limit"></param>
+	/// <param name="search"></param>
+	/// <param name="type"></param>
+	/// <param name="isActive"></param>
+	/// <returns></returns>
+	Task<PaginatedResponse<LicenseDto>> GetAllLicensesAsync(
+	int page, int limit, string? search, LicenseType? type, bool? isActive);
+
+	/// <summary>
+	/// Детали лицензии по ID
+	/// </summary>
+	/// <param name="licenseId"></param>
+	/// <returns></returns>
+	Task<LicenseDto?> GetLicenseDetailsAsync(Guid licenseId);
+
+	/// <summary>
+	/// Активировать лицензию
+	/// </summary>
+	/// <param name="licenseId"></param>
+	/// <returns></returns>
+	Task<bool> ActivateAsync(Guid licenseId);
+
+	/// <summary>
+	/// Все устройства, привязанные к лицензии
+	/// </summary>
+	/// <param name="licenseId"></param>
+	/// <returns></returns>
+	Task<List<DeviceInfoDto>> GetLicenseDevicesAsync(Guid licenseId);
+
+
+	//Task<bool> RevokeDeviceFromLicenseAsync(Guid licenseId, Guid deviceId);
+
+	/// <summary>
+	/// Продлить лицензию на указанное количество дней
+	/// </summary>
+	/// <param name="licenseId"></param>
+	/// <param name="daysToAdd"></param>
+	/// <returns></returns>
+	Task<bool> ExtendLicenseAsync(Guid licenseId, int? daysToAdd);
+
 }

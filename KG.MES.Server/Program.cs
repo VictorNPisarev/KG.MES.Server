@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using KG.MES.Server.Data;
@@ -5,9 +6,11 @@ using KG.MES.Server.Hubs;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -28,7 +31,27 @@ builder.Services.AddScoped<ILicenseService, LicenseService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddAuthentication().AddJwtBearer();
+
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "KG.MES.Apps";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = true,
+			ValidIssuer = jwtIssuer,
+			ValidateAudience = true,
+			ValidAudience = jwtAudience,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+			ValidateLifetime = true,
+			ClockSkew = TimeSpan.Zero // ← Важно: не даем запас по времени
+		};
+	});
+
 builder.Services.AddAuthorization();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)

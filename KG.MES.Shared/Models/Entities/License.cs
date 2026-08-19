@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Dynamic;
+using KG.MES.Shared.Models.Enums;
 
 namespace KG.MES.Shared.Models.Entities;
 
@@ -33,6 +35,28 @@ public class License
 	[Column("notes")]
 	public string? Notes { get; set; }
 
+	[Column("license_type")]
+	public LicenseType LicenseType { get; set; } = LicenseType.SingleDevice;
+	
+	[Column("max_devices")]
+	private int? maxDevices = null;
+
+	[NotMapped]
+	public int? MaxDevices
+	{
+		get => LicenseType == LicenseType.SingleDevice ? 1 : maxDevices;
+		private set => maxDevices = value;
+	}
+
 	// Навигационное свойство
-	public Device? Device { get; set; }
+	public ICollection<Device>? Devices { get; set; }
+	
+	public void SetMaxDevices(int? value)
+	{
+		if (LicenseType != LicenseType.SingleDevice)
+		{
+			MaxDevices = value;
+		}
+	}
 }
+

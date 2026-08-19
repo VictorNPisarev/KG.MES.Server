@@ -11,9 +11,9 @@ namespace KG.MES.Server.Tests.Services;
 [Trait("Category", "Unit")]
 public class LicenseServiceTests : IDisposable
 {
-	private readonly AppDbContext _context;
-	private readonly LicenseService _service;
-	private readonly Mock<ILogger<LicenseService>> _loggerMock;
+	private readonly AppDbContext context;
+	private readonly LicenseService service;
+	private readonly Mock<ILogger<LicenseService>> loggerMock;
 
 	public LicenseServiceTests()
 	{
@@ -22,21 +22,21 @@ public class LicenseServiceTests : IDisposable
 			.UseInMemoryDatabase($"TestDb_{Guid.NewGuid():N}")
 			.Options;
 
-		_context = new AppDbContext(options);
-		_loggerMock = new Mock<ILogger<LicenseService>>();
-		_service = new LicenseService(_context, _loggerMock.Object);
+		context = new AppDbContext(options);
+		loggerMock = new Mock<ILogger<LicenseService>>();
+		service = new LicenseService(context, loggerMock.Object);
 	}
 
 	public void Dispose()
 	{
-		_context.Dispose();
+		context.Dispose();
 	}
 
 	[Fact]
 	public async Task CreateAsync_ShouldCreateLicenseWithValidKey()
 	{
 		// Act
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 
 		// Assert
 		license.Should().NotBeNull();
@@ -53,7 +53,7 @@ public class LicenseServiceTests : IDisposable
 	public async Task CreateAsync_WithoutExpiration_ShouldCreateLicenseWithoutExpiration()
 	{
 		// Act
-		var license = await _service.CreateAsync("Test license", null);
+		var license = await service.CreateAsync("Test license", null);
 
 		// Assert
 		license.ExpiresAt.Should().BeNull();
@@ -63,10 +63,10 @@ public class LicenseServiceTests : IDisposable
 	public async Task GetByKeyAsync_ShouldReturnLicense()
 	{
 		// Arrange
-		var createdLicense = await _service.CreateAsync("Test license", 30);
+		var createdLicense = await service.CreateAsync("Test license", 30);
 
 		// Act
-		var foundLicense = await _service.GetByKeyAsync(createdLicense.KeyCode);
+		var foundLicense = await service.GetByKeyAsync(createdLicense.KeyCode);
 
 		// Assert
 		foundLicense.Should().NotBeNull();
@@ -79,7 +79,7 @@ public class LicenseServiceTests : IDisposable
 	public async Task GetByKeyAsync_WithInvalidKey_ShouldReturnNull()
 	{
 		// Act
-		var foundLicense = await _service.GetByKeyAsync("INVALID-KEY");
+		var foundLicense = await service.GetByKeyAsync("INVALID-KEY");
 
 		// Assert
 		foundLicense.Should().BeNull();
@@ -89,10 +89,10 @@ public class LicenseServiceTests : IDisposable
 	public async Task IsActiveAsync_ShouldReturnTrueForActiveLicense()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 
 		// Act
-		var isActive = await _service.IsActiveAsync(license.Id);
+		var isActive = await service.IsActiveAsync(license.Id);
 
 		// Assert
 		isActive.Should().BeTrue();
@@ -102,10 +102,10 @@ public class LicenseServiceTests : IDisposable
 	public async Task IsActiveAsync_ShouldReturnFalseForExpiredLicense()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", -1); // Истекла вчера
+		var license = await service.CreateAsync("Test license", -1); // Истекла вчера
 
 		// Act
-		var isActive = await _service.IsActiveAsync(license.Id);
+		var isActive = await service.IsActiveAsync(license.Id);
 
 		// Assert
 		isActive.Should().BeFalse();
@@ -115,11 +115,11 @@ public class LicenseServiceTests : IDisposable
 	public async Task IsActiveAsync_ShouldReturnFalseForRevokedLicense()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
-		await _service.RevokeAsync(license.Id, "Test revocation");
+		var license = await service.CreateAsync("Test license", 30);
+		await service.RevokeAsync(license.Id, "Test revocation");
 
 		// Act
-		var isActive = await _service.IsActiveAsync(license.Id);
+		var isActive = await service.IsActiveAsync(license.Id);
 
 		// Assert
 		isActive.Should().BeFalse();
@@ -129,15 +129,15 @@ public class LicenseServiceTests : IDisposable
 	public async Task RevokeAsync_ShouldDeactivateLicense()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 
 		// Act
-		var result = await _service.RevokeAsync(license.Id, "Test revocation");
+		var result = await service.RevokeAsync(license.Id, "Test revocation");
 
 		// Assert
 		result.Should().BeTrue();
 
-		var revokedLicense = await _service.GetByIdAsync(license.Id);
+		var revokedLicense = await service.GetByIdAsync(license.Id);
 		revokedLicense.Should().NotBeNull();
 		revokedLicense!.IsActive.Should().BeFalse();
 		revokedLicense.RevokedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
@@ -148,7 +148,7 @@ public class LicenseServiceTests : IDisposable
 	public async Task RevokeAsync_WithNonExistentLicense_ShouldReturnFalse()
 	{
 		// Act
-		var result = await _service.RevokeAsync(Guid.NewGuid(), "Test");
+		var result = await service.RevokeAsync(Guid.NewGuid(), "Test");
 
 		// Assert
 		result.Should().BeFalse();
@@ -158,12 +158,12 @@ public class LicenseServiceTests : IDisposable
 	public async Task ValidateAndBindAsync_ShouldBindLicenseToNewDevice()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 		var deviceId = "TEST-DEVICE-001";
 		var deviceName = "Test PC";
 
 		// Act
-		var result = await _service.ValidateAndBindAsync(
+		var result = await service.ValidateAndBindAsync(
 			license.KeyCode,
 			deviceId,
 			deviceName,
@@ -177,29 +177,30 @@ public class LicenseServiceTests : IDisposable
 		result.DeviceId.Should().NotBeEmpty();
 
 		// Проверяем, что устройство привязалось
-		var updatedLicense = await _service.GetByKeyAsync(license.KeyCode);
+		var updatedLicense = await service.GetByKeyAsync(license.KeyCode);
 		updatedLicense.Should().NotBeNull();
-		updatedLicense!.Device.Should().NotBeNull();
-		updatedLicense.Device!.DeviceHardwareId.Should().Be(deviceId);
-		updatedLicense.Device.DeviceName.Should().Be(deviceName);
-		updatedLicense.Device.LastIp.Should().Be("192.168.1.1");
+		updatedLicense.Devices.Should().NotBeNull();
+		updatedLicense.Devices.Single().Should().NotBeNull();
+		updatedLicense.Devices.Single().DeviceHardwareId.Should().Be(deviceId);
+		updatedLicense.Devices.Single().DeviceName.Should().Be(deviceName);
+		updatedLicense.Devices.Single().LastIp.Should().Be("192.168.1.1");
 	}
 
 	[Fact]
 	public async Task ValidateAndBindAsync_WithSameDevice_ShouldUpdateLastUsed()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 		var deviceId = "TEST-DEVICE-001";
 
 		// Первая привязка
-		var firstResult = await _service.ValidateAndBindAsync(license.KeyCode, deviceId, "Test PC", "192.168.1.1");
-		var firstDevice = await _context.Devices.FindAsync(firstResult.DeviceId);
+		var firstResult = await service.ValidateAndBindAsync(license.KeyCode, deviceId, "Test PC", "192.168.1.1");
+		var firstDevice = await context.Devices.FindAsync(firstResult.DeviceId);
 		var firstUsedAt = firstDevice!.LastUsedAt;
 
 		// Act - вторая привязка с тем же устройством
 		await Task.Delay(100); // Чтобы время изменилось
-		var secondResult = await _service.ValidateAndBindAsync(
+		var secondResult = await service.ValidateAndBindAsync(
 			license.KeyCode,
 			deviceId,
 			"Test PC Updated",
@@ -209,26 +210,30 @@ public class LicenseServiceTests : IDisposable
 		// Assert
 		secondResult.IsValid.Should().BeTrue();
 
-		var updatedLicense = await _service.GetByKeyAsync(license.KeyCode);
+		var updatedLicense = await service.GetByKeyAsync(license.KeyCode);
 		updatedLicense.Should().NotBeNull();
-		updatedLicense!.Device!.DeviceName.Should().Be("Test PC Updated");
-		updatedLicense.Device.LastIp.Should().Be("192.168.1.2");
-		updatedLicense.Device.LastUsedAt.Should().NotBeNull();
-		updatedLicense.Device.LastUsedAt!.Value.Should().BeAfter(firstUsedAt!.Value);
+		updatedLicense.Devices.Should().NotBeNull();
+		updatedLicense.Devices.First().Should().NotBeNull();
+		updatedLicense.Devices.First().DeviceName.Should().Be("Test PC Updated");
+		updatedLicense.Devices.Last().DeviceName.Should().Be("Test PC Updated");
+		updatedLicense.Devices.First().LastIp.Should().Be("192.168.1.1");
+		updatedLicense.Devices.Last().LastIp.Should().Be("192.168.1.2");
+		updatedLicense.Devices.Last().LastUsedAt.Should().NotBeNull();
+		updatedLicense.Devices.Last().LastUsedAt!.Value.Should().BeAfter(firstUsedAt!.Value);
 	}
 
 	[Fact]
 	public async Task ValidateAndBindAsync_WithDifferentDevice_ShouldFail()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 		var deviceId1 = "TEST-DEVICE-001";
 
 		// Привязываем к первому устройству
-		await _service.ValidateAndBindAsync(license.KeyCode, deviceId1, "Test PC 1", null);
+		await service.ValidateAndBindAsync(license.KeyCode, deviceId1, "Test PC 1", null);
 
 		// Act - пытаемся привязать к другому устройству
-		var result = await _service.ValidateAndBindAsync(
+		var result = await service.ValidateAndBindAsync(
 			license.KeyCode,
 			"TEST-DEVICE-002",
 			"Test PC 2",
@@ -244,7 +249,7 @@ public class LicenseServiceTests : IDisposable
 	public async Task ValidateAndBindAsync_WithInvalidKey_ShouldFail()
 	{
 		// Act
-		var result = await _service.ValidateAndBindAsync(
+		var result = await service.ValidateAndBindAsync(
 			"INVALID-KEY",
 			"TEST-DEVICE-001",
 			"Test PC",
@@ -260,10 +265,10 @@ public class LicenseServiceTests : IDisposable
 	public async Task ValidateAndBindAsync_WithEmptyDeviceId_ShouldFail()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", 30);
+		var license = await service.CreateAsync("Test license", 30);
 
 		// Act
-		var result = await _service.ValidateAndBindAsync(
+		var result = await service.ValidateAndBindAsync(
 			license.KeyCode,
 			"",
 			"Test PC",
@@ -279,10 +284,10 @@ public class LicenseServiceTests : IDisposable
 	public async Task ValidateAndBindAsync_WithExpiredLicense_ShouldFail()
 	{
 		// Arrange
-		var license = await _service.CreateAsync("Test license", -1); // Истекла
+		var license = await service.CreateAsync("Test license", -1); // Истекла
 
 		// Act
-		var result = await _service.ValidateAndBindAsync(
+		var result = await service.ValidateAndBindAsync(
 			license.KeyCode,
 			"TEST-DEVICE-001",
 			"Test PC",
