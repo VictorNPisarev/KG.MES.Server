@@ -1,6 +1,8 @@
 using System.Globalization;
 using KG.MES.Server.Constants;
 using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
+
 //using KG.MES.Server.Extensions;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
@@ -67,7 +69,7 @@ public partial class OrderService : IOrderService
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
-				CreatedAt = x.o.CreatedAt,
+				CreatedAt = x.o.CreatedAt.ToProductionTime(),
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
@@ -98,7 +100,7 @@ public partial class OrderService : IOrderService
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
 				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				CreatedAt = x.o.CreatedAt,
+				CreatedAt = x.o.CreatedAt.ToProductionTime(),
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
