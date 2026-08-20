@@ -1,4 +1,5 @@
 // KG.MES.Server/Services/OrderService.Comments.cs
+using KG.MES.Server.Extensions;
 using KG.MES.Server.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -24,8 +25,8 @@ public partial class OrderService
 				{
 					Id = x.Comment.Id,
 					Content = x.Comment.Content,
-					CreatedAt = x.Comment.CreatedAt,
-					UpdatedAt = x.Comment.UpdatedAt,
+					CreatedAt = x.Comment.CreatedAt.ToProductionTime(),
+					UpdatedAt = x.Comment.UpdatedAt.ToProductionTime(),
 					UserName = u != null ? u.Name : null
 				})
 			.OrderByDescending(c => c.CreatedAt)
@@ -76,8 +77,8 @@ public partial class OrderService
 			{
 				Id = comment.Id,
 				Content = comment.Content,
-				CreatedAt = comment.CreatedAt,
-				UpdatedAt = comment.UpdatedAt,
+				CreatedAt = comment.CreatedAt.ToProductionTime(),
+				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -132,8 +133,8 @@ public partial class OrderService
 			{
 				Id = comment.Id,
 				Content = comment.Content,
-				CreatedAt = comment.CreatedAt,
-				UpdatedAt = comment.UpdatedAt,
+				CreatedAt = comment.CreatedAt.ToProductionTime(),
+				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -196,8 +197,8 @@ public partial class OrderService
 			{
 				Id = comment.Id,
 				Content = comment.Content,
-				CreatedAt = comment.CreatedAt,
-				UpdatedAt = comment.UpdatedAt,
+				CreatedAt = comment.CreatedAt.ToProductionTime(),
+				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -235,8 +236,8 @@ public partial class OrderService
 		{
 			Id = comment.Id,
 			Content = comment.Content,
-			CreatedAt = comment.CreatedAt,
-			UpdatedAt = comment.UpdatedAt,
+			CreatedAt = comment.CreatedAt.ToProductionTime(),
+			UpdatedAt = comment.UpdatedAt.ToProductionTime(),
 			UserName = await _context.Users.Where(u => u.Id == comment.UserId).Select(u => u.Name).FirstOrDefaultAsync()
 		};
 	}

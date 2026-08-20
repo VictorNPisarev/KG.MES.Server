@@ -1,4 +1,5 @@
 using KG.MES.Server.Constants;
+using KG.MES.Server.Extensions;
 using KG.MES.Server.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -189,7 +190,7 @@ public partial class OrderService
 			{
 				Id = b.Id,
 				Reason = b.Reason,
-				BlockedAt = b.BlockedAt,
+				BlockedAt = b.BlockedAt.ToProductionTime(),
 				UserId = b.UserId
 			}).ToList();
 

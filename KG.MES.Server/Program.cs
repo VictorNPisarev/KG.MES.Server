@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
 using KG.MES.Server.Hubs;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
@@ -11,8 +12,11 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Регистрируем DbContext
+// Регистрация DbContext
 ConfigureDatabase(builder.Services, builder.Configuration);
+
+// Инициализация часового пояса через конфиг
+DateTimeExtensions.Initialize(builder.Configuration);
 
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();

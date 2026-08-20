@@ -1,6 +1,7 @@
 // KG.MES.Server/Services/WorkplaceService.cs
 using KG.MES.Server.Constants;
 using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
@@ -109,7 +110,7 @@ public class WorkplaceService : IWorkplaceService
 			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new ActiveOrderDto
 			{
 				OrderNumber = o.OrderNumber,
-				StartedAt = x.fp.CreatedAt,
+				StartedAt = x.fp.CreatedAt.ToProductionTime(),
 				HoursInWork = (DateTime.UtcNow - x.fp.CreatedAt).TotalHours
 			})
 			.OrderByDescending(o => o.StartedAt)
@@ -144,7 +145,7 @@ public class WorkplaceService : IWorkplaceService
 		var query = _context.OperationLogs
 			.Where(ol => ol.WorkplaceId == workplaceId)
 			.Join(_context.ProductionOrders, ol => ol.ProductionOrderId, po => po.Id, (ol, po) => new { ol, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceHistoryDto
+			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new
 			{
 				OperationTime = x.ol.OperationTime,
 				OperationType = x.ol.OperationType,
@@ -159,10 +160,19 @@ public class WorkplaceService : IWorkplaceService
 		if (to.HasValue)
 			query = query.Where(h => h.OperationTime <= to.Value);
 
-		return await query
+		var result = await query
 			.OrderByDescending(h => h.OperationTime)
 			.Take(limit)
 			.ToListAsync();
+
+		return result.Select(h => new WorkplaceHistoryDto
+		{
+			OperationTime = h.OperationTime.ToProductionTime(),
+			OperationType = h.OperationType,
+			OrderNumber = h.OrderNumber,
+			UserName = h.UserName,
+			Notes = h.Notes
+		}).ToList();
 	}
 
 	public async Task<List<WorkplaceBlockDto>> GetWorkplaceBlocksAsync(Guid workplaceId)
@@ -176,7 +186,7 @@ public class WorkplaceService : IWorkplaceService
 				ProductionOrderId = x.b.ProductionOrderId,
 				OrderNumber = o.OrderNumber,
 				Reason = x.b.Reason,
-				BlockedAt = x.b.BlockedAt,
+				BlockedAt = x.b.BlockedAt.ToProductionTime(),
 				UserName = _context.Users.Where(u => u.Id == x.b.UserId).Select(u => u.Name).FirstOrDefault()
 			})
 			.OrderByDescending(b => b.BlockedAt)
