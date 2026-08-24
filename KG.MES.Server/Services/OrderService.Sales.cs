@@ -63,7 +63,7 @@ public partial class OrderService
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
-				CreatedAt = x.o.CreatedAt.ToProductionTime(),
+				CreatedAt = x.o.CreatedAt,
 				ProductionOrderId = x.po != null ? x.po.Id : (Guid?)null,
 				CurrentWorkplaceId = x.po != null ? x.po.CurrentWorkplaceId : (Guid?)null,
 				CurrentStatus = x.w != null ? x.w.Name : null,
@@ -99,6 +99,11 @@ public partial class OrderService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
 
 		return new PaginatedResponse<SalesOrderListItemDto>
 		{
@@ -151,7 +156,7 @@ public partial class OrderService
 						IsEconom = o.IsEconom,
 						IsClaim = o.IsClaim,
 						IsOnlyPaid = o.IsOnlyPaid,
-						CreatedAt = o.CreatedAt.ToProductionTime(),
+						CreatedAt = o.CreatedAt,
 						ProductionOrderId = po != null ? po.Id : (Guid?)null,
 						CurrentWorkplaceId = po != null ? po.CurrentWorkplaceId : (Guid?)null,
 						CurrentStatus = w != null ? w.Name : null,
@@ -205,6 +210,11 @@ public partial class OrderService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
 
 		return new PaginatedResponse<SalesOrderListItemDto>
 		{

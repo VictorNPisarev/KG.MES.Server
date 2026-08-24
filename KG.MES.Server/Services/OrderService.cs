@@ -100,7 +100,7 @@ public partial class OrderService : IOrderService
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
 				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				CreatedAt = x.o.CreatedAt.ToProductionTime(),
+				CreatedAt = x.o.CreatedAt,
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
@@ -146,6 +146,11 @@ public partial class OrderService : IOrderService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
 
 		return new PaginatedResponse<OrderListItemDto>
 		{

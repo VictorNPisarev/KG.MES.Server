@@ -18,4 +18,16 @@ public class WorkplaceHistoryDto
 
 	[JsonPropertyName("notes")]
 	public string? Notes { get; set; }
+
+	[JsonPropertyName("window_count")]
+	public int WindowCount { get; set; }
+
+	[JsonPropertyName("window_area")]
+	public decimal? WindowArea { get; set; }
+
+	[JsonPropertyName("plate_count")]
+	public int PlateCount { get; set; }
+
+	[JsonPropertyName("plate_area")]
+	public decimal? PlateArea { get; set; }
 }

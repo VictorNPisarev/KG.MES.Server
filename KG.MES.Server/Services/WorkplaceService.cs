@@ -150,6 +150,10 @@ public class WorkplaceService : IWorkplaceService
 				OperationTime = x.ol.OperationTime,
 				OperationType = x.ol.OperationType,
 				OrderNumber = o.OrderNumber,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
 				UserName = _context.Users.Where(u => u.Id == x.ol.UserId).Select(u => u.Name).FirstOrDefault(),
 				Notes = x.ol.Notes
 			});
@@ -170,6 +174,10 @@ public class WorkplaceService : IWorkplaceService
 			OperationTime = h.OperationTime.ToProductionTime(),
 			OperationType = h.OperationType,
 			OrderNumber = h.OrderNumber,
+			WindowCount = h.WindowCount,
+			WindowArea = h.WindowArea,
+			PlateCount = h.PlateCount,
+			PlateArea = h.PlateArea,
 			UserName = h.UserName,
 			Notes = h.Notes
 		}).ToList();
