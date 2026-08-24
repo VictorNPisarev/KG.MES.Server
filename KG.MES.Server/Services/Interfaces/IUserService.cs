@@ -27,4 +27,5 @@ public interface IUserService
 
 	Task<bool> SetUserRoleAsync(Guid userId, string roleName);
 
+	Task<List<RoleDto>> GetAllRolesAsync();
 }

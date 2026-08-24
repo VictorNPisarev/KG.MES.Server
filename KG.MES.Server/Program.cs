@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -48,7 +49,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 			ValidateIssuerSigningKey = true,
 			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
 			ValidateLifetime = true,
-			ClockSkew = TimeSpan.Zero // ← Важно: не даем запас по времени
+			ClockSkew = TimeSpan.Zero, // ← Важно: не даем запас по времени
+			RoleClaimType = ClaimTypes.Role
 		};
 	});
 

@@ -8,6 +8,7 @@ namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api/admin")]
+[Authorize(Roles = "Admin,Advanced,Middle")]
 //[Authorize(Roles = "Admin,User")]
 public partial class AdminController : ControllerBase
 {
@@ -78,4 +79,8 @@ public partial class AdminController : ControllerBase
 	[HttpGet("users/{userId}")]
 	public Task<IActionResult> GetUserById(Guid userId)
 		=> GetUserByIdHandler(userId);
+
+	[HttpGet("roles")]
+	public Task<IActionResult> GetRoles()
+		=> GetRolesHandler();
 }

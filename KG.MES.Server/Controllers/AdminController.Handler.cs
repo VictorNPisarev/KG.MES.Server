@@ -110,6 +110,9 @@ public partial class AdminController
 			return result;
 		});
 
+	public Task<IActionResult> GetRolesHandler()
+		=> HandleAsync(() => userService.GetAllRolesAsync());
+
 	// Вспомогательный метод для обработки результатов
 	private async Task<IActionResult> HandleAsync<T>(Func<Task<T>> action)
 	{

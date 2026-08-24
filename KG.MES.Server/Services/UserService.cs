@@ -358,6 +358,23 @@ public class UserService : IUserService
 	}
 
 	/// <summary>
+	/// все доступные роли
+	/// </summary>
+	/// <returns></returns>
+	public async Task<List<RoleDto>> GetAllRolesAsync()
+	{
+		return await _context.Roles
+			.OrderBy(r => r.Level)
+			.Select(r => new RoleDto
+			{
+				Id = r.Id,
+				Name = r.Name,
+				Level = r.Level
+			})
+			.ToListAsync();
+	}
+
+	/// <summary>
 	/// Назначить роль пользователю
 	/// </summary>
 	public async Task<bool> SetUserRoleAsync(Guid userId, string roleName)
