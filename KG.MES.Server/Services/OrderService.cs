@@ -188,12 +188,34 @@ public partial class OrderService : IOrderService
 		var productionOrder = await _context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
-		if (productionOrder != null)
+		if (productionOrder == null)
 		{
-			productionOrder.CurrentWorkplaceId = status.Id;
-			productionOrder.UpdatedAt = DateTime.UtcNow;
-			await _context.SaveChangesAsync();
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Производственный заказ для OrderId '{orderId}' не найден"
+			};
 		}
+
+		var oldWorkplaceId = productionOrder.CurrentWorkplaceId;
+		productionOrder.CurrentWorkplaceId = status.Id;
+		productionOrder.UpdatedAt = DateTime.UtcNow;
+
+		var operationLog = new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = productionOrder.Id,
+			WorkplaceId = status.Id,
+			UserId = userId,
+			OperationType = "COMPLETE",
+			OperationTime = DateTime.UtcNow,
+			Notes = notes ?? $"Статус изменен на '{targetStatusName}'",
+			Source = "SetOrderStatusAsync",
+			CreatedAt = DateTime.UtcNow
+		};
+
+		_context.OperationLogs.Add(operationLog);
+		await _context.SaveChangesAsync();
 
 		return new SetOrderStatusResultDto
 		{
