@@ -1,7 +1,6 @@
 
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
-using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Shared.Controllers;

@@ -5,8 +5,6 @@ using FluentAssertions;
 using KG.MES.Shared.Data;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Tests.Helpers;
-using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
