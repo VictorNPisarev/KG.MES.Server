@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Server.Data;
-using KG.MES.Server.Tests.Helpers;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace KG.MES.Server.Tests.Controllers.Users;
+namespace KG.MES.Shared.Tests.Controllers.Users;
 
 [Trait("Category", "Users")]
 public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>>

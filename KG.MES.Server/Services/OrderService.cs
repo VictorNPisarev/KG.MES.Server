@@ -1,15 +1,15 @@
 using System.Globalization;
-using KG.MES.Server.Constants;
-using KG.MES.Server.Data;
-using KG.MES.Server.Extensions;
+using KG.MES.Shared.Constants;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Extensions;
 
 //using KG.MES.Server.Extensions;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService : IOrderService
 {
@@ -100,7 +100,7 @@ public partial class OrderService : IOrderService
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
 				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				CreatedAt = x.o.CreatedAt.ToProductionTime(),
+				CreatedAt = x.o.CreatedAt,
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
@@ -147,6 +147,11 @@ public partial class OrderService : IOrderService
 			.Take(limit)
 			.ToListAsync();
 
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
+
 		return new PaginatedResponse<OrderListItemDto>
 		{
 			Data = items,
@@ -183,12 +188,34 @@ public partial class OrderService : IOrderService
 		var productionOrder = await _context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
-		if (productionOrder != null)
+		if (productionOrder == null)
 		{
-			productionOrder.CurrentWorkplaceId = status.Id;
-			productionOrder.UpdatedAt = DateTime.UtcNow;
-			await _context.SaveChangesAsync();
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Производственный заказ для OrderId '{orderId}' не найден"
+			};
 		}
+
+		var oldWorkplaceId = productionOrder.CurrentWorkplaceId;
+		productionOrder.CurrentWorkplaceId = status.Id;
+		productionOrder.UpdatedAt = DateTime.UtcNow;
+
+		var operationLog = new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = productionOrder.Id,
+			WorkplaceId = status.Id,
+			UserId = userId,
+			OperationType = "COMPLETE",
+			OperationTime = DateTime.UtcNow,
+			Notes = notes ?? $"Статус изменен на '{targetStatusName}'",
+			Source = "SetOrderStatusAsync",
+			CreatedAt = DateTime.UtcNow
+		};
+
+		_context.OperationLogs.Add(operationLog);
+		await _context.SaveChangesAsync();
 
 		return new SetOrderStatusResultDto
 		{

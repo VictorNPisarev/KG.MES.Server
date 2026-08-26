@@ -1,12 +1,12 @@
 // KG.MES.Server/Services/WorkplaceService.cs
-using KG.MES.Server.Constants;
-using KG.MES.Server.Data;
-using KG.MES.Server.Extensions;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Constants;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Extensions;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public class WorkplaceService : IWorkplaceService
 {
@@ -44,7 +44,8 @@ public class WorkplaceService : IWorkplaceService
 				Id = w.Id,
 				Name = w.Name,
 				IsWorkplace = w.IsWorkplace,
-				Level = w.Level
+				Level = w.Level,
+				Code = w.Code
 			})
 			.ToListAsync();
 
@@ -150,6 +151,10 @@ public class WorkplaceService : IWorkplaceService
 				OperationTime = x.ol.OperationTime,
 				OperationType = x.ol.OperationType,
 				OrderNumber = o.OrderNumber,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
 				UserName = _context.Users.Where(u => u.Id == x.ol.UserId).Select(u => u.Name).FirstOrDefault(),
 				Notes = x.ol.Notes
 			});
@@ -170,6 +175,10 @@ public class WorkplaceService : IWorkplaceService
 			OperationTime = h.OperationTime.ToProductionTime(),
 			OperationType = h.OperationType,
 			OrderNumber = h.OrderNumber,
+			WindowCount = h.WindowCount,
+			WindowArea = h.WindowArea,
+			PlateCount = h.PlateCount,
+			PlateArea = h.PlateArea,
 			UserName = h.UserName,
 			Notes = h.Notes
 		}).ToList();

@@ -1,11 +1,11 @@
 // KG.MES.Server/Services/OrderService.Comments.cs
-using KG.MES.Server.Extensions;
-using KG.MES.Server.Hubs;
+using KG.MES.Shared.Extensions;
+using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService
 {
@@ -25,14 +25,21 @@ public partial class OrderService
 				{
 					Id = x.Comment.Id,
 					Content = x.Comment.Content,
-					CreatedAt = x.Comment.CreatedAt.ToProductionTime(),
-					UpdatedAt = x.Comment.UpdatedAt.ToProductionTime(),
+					CreatedAt = x.Comment.CreatedAt,
+					UpdatedAt = x.Comment.UpdatedAt,
 					UserName = u != null ? u.Name : null
 				})
 			.OrderByDescending(c => c.CreatedAt)
 			.ToListAsync();
 
-		return comments;
+		return comments.Select(c => new OrderCommentDto
+		{
+			Id = c.Id,
+			Content = c.Content,
+			CreatedAt = c.CreatedAt.ToProductionTime(),
+			UpdatedAt = c.UpdatedAt.ToProductionTime(),
+			UserName = c.UserName
+		}).ToList();
 	}
 	
 	public async Task<OrderCommentDto> AddOrderCommentAsync(Guid orderId, Guid? userId, string content)

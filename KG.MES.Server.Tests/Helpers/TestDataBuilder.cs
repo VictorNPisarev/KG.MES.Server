@@ -1,9 +1,9 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace KG.MES.Server.Tests.Helpers;
+namespace KG.MES.Shared.Tests.Helpers;
 
 public class TestDataBuilder
 {
@@ -20,6 +20,7 @@ public class TestDataBuilder
 	private readonly List<SupplyItem> _supplyItems = [];
 	private readonly List<SupplyType> _supplyTypes = [];
 	private readonly List<SupplyCondition> _supplyConditions = [];
+	private readonly List<OperationLog> _operationLogs = [];
 
 
 	public TestDataBuilder WithRole(Action<Role> configure)
@@ -223,6 +224,25 @@ public class TestDataBuilder
 		return this;
 	}
 
+	public TestDataBuilder WithOperationLog(Action<OperationLog> configure)
+	{
+		var log = new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = _productionOrders.LastOrDefault()?.Id ?? Guid.NewGuid(),
+			WorkplaceId = _workplaces.LastOrDefault()?.Id ?? Guid.NewGuid(),
+			UserId = null,
+			OperationType = "START",
+			OperationTime = DateTime.UtcNow,
+			Notes = "Test log",
+			Source = "Test",
+			CreatedAt = DateTime.UtcNow
+		};
+		configure(log);
+		_operationLogs.Add(log);
+		return this;
+	}
+
 
 	public void Build(IServiceProvider serviceProvider)
 	{
@@ -243,7 +263,8 @@ public class TestDataBuilder
 		db.SupplyItems.AddRange(_supplyItems);
 		db.SupplyTypes.AddRange(_supplyTypes);
 		db.SupplyConditions.AddRange(_supplyConditions);
-
+		db.OperationLogs.AddRange(_operationLogs);
+		
 		db.SaveChanges();
 	}
 }

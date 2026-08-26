@@ -1,10 +1,9 @@
 
-using KG.MES.Server.Models.Dto;
-using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Server.Controllers;
+namespace KG.MES.Shared.Controllers;
 
 /// <summary>
 /// Обработчики запросов

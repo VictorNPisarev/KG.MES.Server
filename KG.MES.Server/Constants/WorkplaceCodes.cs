@@ -1,4 +1,4 @@
-namespace KG.MES.Server.Constants;
+namespace KG.MES.Shared.Constants;
 
 public static class WorkplaceCodes
 {

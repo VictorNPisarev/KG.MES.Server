@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace KG.MES.Server.Extensions;
+namespace KG.MES.Shared.Extensions;
 
 public static class DateTimeExtensions
 {
