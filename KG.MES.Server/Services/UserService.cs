@@ -1,10 +1,10 @@
-using KG.MES.Server.Data;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public class UserService : IUserService
 {

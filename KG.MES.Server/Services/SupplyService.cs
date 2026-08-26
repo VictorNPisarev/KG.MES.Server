@@ -1,13 +1,13 @@
 // KG.MES.Server/Services/SupplyService.cs
-using KG.MES.Server.Data;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
-using KG.MES.Server.Hubs;
-using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Hubs;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public class SupplyService : ISupplyService
 {
