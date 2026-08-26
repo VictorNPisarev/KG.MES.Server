@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 
-namespace KG.MES.Server.Hubs;
+namespace KG.MES.Shared.Hubs;
 
 public class NotificationHub : Hub
 {

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KG.MES.Server.Models.Dto;
+namespace KG.MES.Shared.Models.Dto;
 
 public class UpdateOrderSupplyItemsRequestDto
 {

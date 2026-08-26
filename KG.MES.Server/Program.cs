@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using KG.MES.Server.Data;
-using KG.MES.Server.Extensions;
-using KG.MES.Server.Hubs;
-using KG.MES.Server.Services;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Extensions;
+using KG.MES.Shared.Hubs;
+using KG.MES.Shared.Services;
+using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 

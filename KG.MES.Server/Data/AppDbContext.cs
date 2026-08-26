@@ -1,7 +1,7 @@
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Data;
+namespace KG.MES.Shared.Data;
 
 public class AppDbContext : DbContext
 {
