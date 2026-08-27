@@ -146,7 +146,7 @@ public class WorkplaceService : IWorkplaceService
 		var query = _context.OperationLogs
 			.Where(ol => ol.WorkplaceId == workplaceId)
 			.Join(_context.ProductionOrders, ol => ol.ProductionOrderId, po => po.Id, (ol, po) => new { ol, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new
+			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceHistoryDto
 			{
 				OperationTime = x.ol.OperationTime,
 				OperationType = x.ol.OperationType,
@@ -155,6 +155,10 @@ public class WorkplaceService : IWorkplaceService
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
 				PlateArea = o.PlateArea,
+				IsClaim = o.IsClaim,
+				IsEconom = o.IsEconom,
+				IsOnlyPaid = o.IsOnlyPaid,
+				IsTwoSidePaint = x.po.IsTwoSidePaint,
 				UserName = _context.Users.Where(u => u.Id == x.ol.UserId).Select(u => u.Name).FirstOrDefault(),
 				Notes = x.ol.Notes
 			});
