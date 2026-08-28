@@ -85,7 +85,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 			.Build(customFactory.Services);
 
 		// 2. Act (Выполняем запрос с параметрами пагинации и сортировки)
-		var url = "/api/orders?page=1&limit=50&sortBy=ready_date&sortOrder=asc";
+		var url = "/api/orders?page=1&limit=50&sortBy=ReadyDate&sortOrder=asc";
 		var response = await client.GetAsync(url);
 
 		// 3. Assert (Проверки)
@@ -126,7 +126,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		result.Pagination.Pages.Should().Be(1);
 
 		// Проверяем, что сортировка вернулась в ответе
-		result.Sort.By.Should().Be("ready_date");
+		result.Sort.By.Should().Be("ReadyDate");
 		result.Sort.Order.Should().Be("asc");
 	}
 
