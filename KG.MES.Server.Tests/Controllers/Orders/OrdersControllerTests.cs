@@ -92,7 +92,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderListItemDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -158,7 +158,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderListItemDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});

@@ -4,7 +4,7 @@ namespace KG.MES.Shared.Services.Interfaces;
 
 public interface IOrderService
 {
-	Task<PaginatedResponse<OrderListItemDto>> GetOrdersAsync(
+	Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
 
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
