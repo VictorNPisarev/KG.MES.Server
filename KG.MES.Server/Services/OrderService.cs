@@ -24,35 +24,6 @@ public partial class OrderService : IOrderService
 		_orderAttributeService = orderAttributeService;
 	}
 
-	// Вспомогательные методы для сортировки
-	private IOrderedQueryable<OrderListItemDto> OrderByOrderNumber(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.OrderNumber)
-			: query.OrderBy(o => o.OrderNumber);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByReadyDate(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.ReadyDate)
-			: query.OrderBy(o => o.ReadyDate);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByWindowCount(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.WindowCount)
-			: query.OrderBy(o => o.WindowCount);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByPlateCount(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.PlateCount)
-			: query.OrderBy(o => o.PlateCount);
-	}
-
 	private IQueryable<OrderDetailDto> GetOrderByIdentifierQuery()
 	{
 		return _context.Orders
@@ -82,12 +53,12 @@ public partial class OrderService : IOrderService
 	}
 
 	// Основной метод GetOrdersAsync
-	public async Task<PaginatedResponse<OrderListItemDto>> GetOrdersAsync(
+	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
 		var query = _context.Orders
 			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderListItemDto
+			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -121,26 +92,10 @@ public partial class OrderService : IOrderService
 		var total = await query.CountAsync();
 
 		// Применяем сортировку
-		IOrderedQueryable<OrderListItemDto> orderedQuery;
+		IOrderedQueryable<OrderDto> orderedQuery;
 
-		//orderedQuery = query.OrderByProperty(sortBy ?? "ready_date", sortOrder);
+		orderedQuery = query.OrderByProperty(sortBy, sortOrder);
 
-		switch (sortBy?.ToLower())
-		{
-			case "order_number":
-				orderedQuery = OrderByOrderNumber(query, sortOrder);
-				break;
-			case "window_count":
-				orderedQuery = OrderByWindowCount(query, sortOrder);
-				break;
-			case "plate_count":
-				orderedQuery = OrderByPlateCount(query, sortOrder);
-				break;
-			case "ready_date":
-			default:
-				orderedQuery = OrderByReadyDate(query, sortOrder);
-				break;
-		}
 
 		var items = await orderedQuery
 			.Skip((page - 1) * limit)
@@ -152,7 +107,7 @@ public partial class OrderService : IOrderService
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
-		return new PaginatedResponse<OrderListItemDto>
+		return new PaginatedResponse<OrderDto>
 		{
 			Data = items,
 			Pagination = new PaginationInfo

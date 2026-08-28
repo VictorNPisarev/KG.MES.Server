@@ -85,14 +85,14 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 			.Build(customFactory.Services);
 
 		// 2. Act (Выполняем запрос с параметрами пагинации и сортировки)
-		var url = "/api/orders?page=1&limit=50&sortBy=ready_date&sortOrder=asc";
+		var url = "/api/orders?page=1&limit=50&sortBy=ReadyDate&sortOrder=asc";
 		var response = await client.GetAsync(url);
 
 		// 3. Assert (Проверки)
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderListItemDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -126,7 +126,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		result.Pagination.Pages.Should().Be(1);
 
 		// Проверяем, что сортировка вернулась в ответе
-		result.Sort.By.Should().Be("ready_date");
+		result.Sort.By.Should().Be("ReadyDate");
 		result.Sort.Order.Should().Be("asc");
 	}
 
@@ -158,7 +158,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderListItemDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
