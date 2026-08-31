@@ -151,6 +151,7 @@ public class WorkplaceService : IWorkplaceService
 				OperationTime = x.ol.OperationTime,
 				OperationType = x.ol.OperationType,
 				OrderNumber = o.OrderNumber,
+				ReadyDate = o.ReadyDate,
 				WindowCount = o.WindowCount,
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
@@ -184,6 +185,11 @@ public class WorkplaceService : IWorkplaceService
 			PlateCount = h.PlateCount,
 			PlateArea = h.PlateArea,
 			UserName = h.UserName,
+			ReadyDate = h.ReadyDate,
+			IsClaim = h.IsClaim,
+			IsEconom = h.IsEconom,
+			IsOnlyPaid = h.IsOnlyPaid,
+			IsTwoSidePaint = h.IsTwoSidePaint,
 			Notes = h.Notes
 		}).ToList();
 	}
