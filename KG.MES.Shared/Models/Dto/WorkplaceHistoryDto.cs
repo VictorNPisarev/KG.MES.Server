@@ -13,6 +13,9 @@ public class WorkplaceHistoryDto
 	[JsonPropertyName("order_number")]
 	public string OrderNumber { get; set; } = string.Empty;
 
+	[JsonPropertyName("ready_date")]
+	public DateTime? ReadyDate { get; set; }
+
 	[JsonPropertyName("user_name")]
 	public string? UserName { get; set; }
 
