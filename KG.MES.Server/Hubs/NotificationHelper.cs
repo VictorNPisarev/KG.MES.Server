@@ -1,7 +1,7 @@
 // Hubs/NotificationHelper.cs
 using Microsoft.AspNetCore.SignalR;
 
-namespace KG.MES.Server.Hubs;
+namespace KG.MES.Shared.Hubs;
 
 public static class NotificationHelper
 {

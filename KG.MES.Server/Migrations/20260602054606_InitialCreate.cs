@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace KG.MES.Server.Migrations
+namespace KG.MES.Shared.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

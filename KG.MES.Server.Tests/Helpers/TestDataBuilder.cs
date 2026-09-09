@@ -1,9 +1,9 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace KG.MES.Server.Tests.Helpers;
+namespace KG.MES.Shared.Tests.Helpers;
 
 public class TestDataBuilder
 {
@@ -23,6 +23,7 @@ public class TestDataBuilder
 	private readonly List<License> _licenses = [];
 	private readonly List<Device> _devices = [];
 	private readonly List<RefreshToken> _refreshTokens = [];
+	private readonly List<OperationLog> _operationLogs = [];
 
 
 	public TestDataBuilder WithRole(Action<Role> configure)
@@ -271,6 +272,25 @@ public class TestDataBuilder
 	}
 
 
+	public TestDataBuilder WithOperationLog(Action<OperationLog> configure)
+	{
+		var log = new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = _productionOrders.LastOrDefault()?.Id ?? Guid.NewGuid(),
+			WorkplaceId = _workplaces.LastOrDefault()?.Id ?? Guid.NewGuid(),
+			UserId = null,
+			OperationType = "START",
+			OperationTime = DateTime.UtcNow,
+			Notes = "Test log",
+			Source = "Test",
+			CreatedAt = DateTime.UtcNow
+		};
+		configure(log);
+		_operationLogs.Add(log);
+		return this;
+	}
+
 
 	public void Build(IServiceProvider serviceProvider)
 	{
@@ -294,7 +314,8 @@ public class TestDataBuilder
 		db.Licenses.AddRange(_licenses);
 		db.Devices.AddRange(_devices);
 		db.RefreshTokens.AddRange(_refreshTokens);
-
+		db.OperationLogs.AddRange(_operationLogs);
+		
 		db.SaveChanges();
 	}
 }

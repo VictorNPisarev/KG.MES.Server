@@ -1,8 +1,8 @@
 // KG.MES.Server/Services/Interfaces/ISupplyService.cs
-using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Dto;
 
-namespace KG.MES.Server.Services.Interfaces;
+namespace KG.MES.Shared.Services.Interfaces;
 
 public interface ISupplyService
 {

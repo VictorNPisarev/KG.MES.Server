@@ -20,5 +20,5 @@ public class WorkplaceStatsDto
 	public int ActiveBlocks { get; set; }
 
 	[JsonPropertyName("active_orders")]
-	public List<ActiveOrderDto> ActiveOrders { get; set; } = new();
+	public List<ActiveOrderDto> ActiveOrders { get; set; } = [];
 }

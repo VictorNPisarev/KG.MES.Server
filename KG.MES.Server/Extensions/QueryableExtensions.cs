@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace KG.MES.Server.Extensions;
+namespace KG.MES.Shared.Extensions;
 
 public static class QueryableExtensions
 {
@@ -10,11 +10,11 @@ public static class QueryableExtensions
 	/// </summary>
 	public static IOrderedQueryable<T> OrderByProperty<T>(
 		this IQueryable<T> source,
-		string propertyName,
+		string? propertyName,
 		string? sortOrder = "asc")
 	{
 		if (string.IsNullOrEmpty(propertyName))
-			propertyName = "ready_date";
+			propertyName = "ReadyDate";
 
 		var type = typeof(T);
 		var property = type.GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);

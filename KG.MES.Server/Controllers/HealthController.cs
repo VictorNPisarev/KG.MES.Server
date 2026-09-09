@@ -1,8 +1,8 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Controllers;
+namespace KG.MES.Shared.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

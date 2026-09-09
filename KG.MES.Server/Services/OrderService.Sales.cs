@@ -1,9 +1,9 @@
-using KG.MES.Server.Extensions;
+using KG.MES.Shared.Extensions;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService
 {
@@ -99,6 +99,11 @@ public partial class OrderService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
 
 		return new PaginatedResponse<SalesOrderListItemDto>
 		{
@@ -205,6 +210,11 @@ public partial class OrderService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
 
 		return new PaginatedResponse<SalesOrderListItemDto>
 		{

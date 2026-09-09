@@ -1,4 +1,4 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
@@ -9,6 +9,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using KG.MES.Shared.Services;
+using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Shared.Tests.Helpers;
 
 namespace KG.MES.Server.Tests.Helpers;
 
@@ -17,7 +20,7 @@ namespace KG.MES.Server.Tests.Helpers;
 /// </summary>
 public abstract class TestBase : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
-	private readonly WebApplicationFactory<Program> _factory;
+	public readonly WebApplicationFactory<Program> _factory;
 	private WebApplicationFactory<Program>? _currentFactory;
 	private readonly string _dbName;
 	private bool _disposed;

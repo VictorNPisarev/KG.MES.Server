@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Server.Data;
-using KG.MES.Server.Models.Dto;
-using KG.MES.Server.Tests.Helpers;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +12,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
+using KG.MES.Server.Tests.Helpers;
 
-namespace KG.MES.Server.Tests.Controllers.Orders;
+namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
 public class OrderLifecycleControllerTests : TestBase

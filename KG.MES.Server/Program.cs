@@ -2,23 +2,29 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using KG.MES.Server.Data;
-using KG.MES.Server.Hubs;
-using KG.MES.Server.Services;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Extensions;
+using KG.MES.Shared.Hubs;
+using KG.MES.Shared.Services;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using KG.MES.Server.Services;
+using KG.MES.Server.Services.Interfaces;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Регистрируем DbContext
+// Регистрация DbContext
 ConfigureDatabase(builder.Services, builder.Configuration);
+
+// Инициализация часового пояса через конфиг
+DateTimeExtensions.Initialize(builder.Configuration);
 
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();

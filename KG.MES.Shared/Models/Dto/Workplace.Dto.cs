@@ -27,6 +27,9 @@ public class WorkplaceDto
 
 	[JsonPropertyName("plate_area")]
 	public decimal PlateArea { get; set; }
+
+	[JsonPropertyName("code")]
+	public string? Code { get; set; } = null;
 }
 
 public class WorkplaceBlockDto

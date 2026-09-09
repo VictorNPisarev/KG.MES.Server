@@ -1,13 +1,15 @@
 using System.Globalization;
-using KG.MES.Server.Constants;
-using KG.MES.Server.Data;
+using KG.MES.Shared.Constants;
+using KG.MES.Shared.Data;
+using KG.MES.Shared.Extensions;
+
 //using KG.MES.Server.Extensions;
-using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService : IOrderService
 {
@@ -20,35 +22,6 @@ public partial class OrderService : IOrderService
 		_context = context;
 		_logger = logger;
 		_orderAttributeService = orderAttributeService;
-	}
-
-	// Вспомогательные методы для сортировки
-	private IOrderedQueryable<OrderListItemDto> OrderByOrderNumber(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.OrderNumber)
-			: query.OrderBy(o => o.OrderNumber);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByReadyDate(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.ReadyDate)
-			: query.OrderBy(o => o.ReadyDate);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByWindowCount(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.WindowCount)
-			: query.OrderBy(o => o.WindowCount);
-	}
-
-	private IOrderedQueryable<OrderListItemDto> OrderByPlateCount(IQueryable<OrderListItemDto> query, string? sortOrder)
-	{
-		return sortOrder == "desc"
-			? query.OrderByDescending(o => o.PlateCount)
-			: query.OrderBy(o => o.PlateCount);
 	}
 
 	private IQueryable<OrderDetailDto> GetOrderByIdentifierQuery()
@@ -67,7 +40,7 @@ public partial class OrderService : IOrderService
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
-				CreatedAt = x.o.CreatedAt,
+				CreatedAt = x.o.CreatedAt.ToProductionTime(),
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,
@@ -80,12 +53,12 @@ public partial class OrderService : IOrderService
 	}
 
 	// Основной метод GetOrdersAsync
-	public async Task<PaginatedResponse<OrderListItemDto>> GetOrdersAsync(
+	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
 		var query = _context.Orders
 			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderListItemDto
+			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -123,33 +96,22 @@ public partial class OrderService : IOrderService
 		var total = await query.CountAsync();
 
 		// Применяем сортировку
-		IOrderedQueryable<OrderListItemDto> orderedQuery;
+		IOrderedQueryable<OrderDto> orderedQuery;
 
-		//orderedQuery = query.OrderByProperty(sortBy ?? "ready_date", sortOrder);
+		orderedQuery = query.OrderByProperty(sortBy, sortOrder);
 
-		switch (sortBy?.ToLower())
-		{
-			case "order_number":
-				orderedQuery = OrderByOrderNumber(query, sortOrder);
-				break;
-			case "window_count":
-				orderedQuery = OrderByWindowCount(query, sortOrder);
-				break;
-			case "plate_count":
-				orderedQuery = OrderByPlateCount(query, sortOrder);
-				break;
-			case "ready_date":
-			default:
-				orderedQuery = OrderByReadyDate(query, sortOrder);
-				break;
-		}
 
 		var items = await orderedQuery
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
 
-		return new PaginatedResponse<OrderListItemDto>
+		foreach (var item in items)
+		{
+			item.CreatedAt = item.CreatedAt.ToProductionTime();
+		}
+
+		return new PaginatedResponse<OrderDto>
 		{
 			Data = items,
 			Pagination = new PaginationInfo
@@ -185,12 +147,34 @@ public partial class OrderService : IOrderService
 		var productionOrder = await _context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
-		if (productionOrder != null)
+		if (productionOrder == null)
 		{
-			productionOrder.CurrentWorkplaceId = status.Id;
-			productionOrder.UpdatedAt = DateTime.UtcNow;
-			await _context.SaveChangesAsync();
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = $"Производственный заказ для OrderId '{orderId}' не найден"
+			};
 		}
+
+		var oldWorkplaceId = productionOrder.CurrentWorkplaceId;
+		productionOrder.CurrentWorkplaceId = status.Id;
+		productionOrder.UpdatedAt = DateTime.UtcNow;
+
+		var operationLog = new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = productionOrder.Id,
+			WorkplaceId = status.Id,
+			UserId = userId,
+			OperationType = "COMPLETE",
+			OperationTime = DateTime.UtcNow,
+			Notes = notes ?? $"Статус изменен на '{targetStatusName}'",
+			Source = "SetOrderStatusAsync",
+			CreatedAt = DateTime.UtcNow
+		};
+
+		_context.OperationLogs.Add(operationLog);
+		await _context.SaveChangesAsync();
 
 		return new SetOrderStatusResultDto
 		{

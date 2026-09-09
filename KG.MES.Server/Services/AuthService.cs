@@ -1,9 +1,10 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using KG.MES.Shared.Services.Interfaces;
 
 namespace KG.MES.Server.Services;
 

@@ -1,5 +1,5 @@
 // KG.MES.Shared/Models/Dto/SupplyTypeDto.cs
-namespace KG.MES.Server.Models.Dto;
+namespace KG.MES.Shared.Models.Dto;
 
 public class UpdateSupplyItemRequest
 {

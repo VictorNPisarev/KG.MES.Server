@@ -1,10 +1,11 @@
 using System.Globalization;
-using KG.MES.Server.Constants;
+using KG.MES.Shared.Constants;
+using KG.MES.Shared.Extensions;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService
 {
@@ -25,7 +26,7 @@ public partial class OrderService
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
-				CreatedAt = x.o.CreatedAt,
+				CreatedAt = x.o.CreatedAt.ToProductionTime(),
 				ProductionOrderId = x.po.Id,
 				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
 				CurrentStatus = w.Name,

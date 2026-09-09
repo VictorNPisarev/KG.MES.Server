@@ -1,8 +1,8 @@
-using KG.MES.Server.Data;
+using KG.MES.Shared.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace KG.MES.Server.Tests;
+namespace KG.MES.Shared.Tests;
 
 public static class TestStartup
 {

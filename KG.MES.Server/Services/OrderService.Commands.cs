@@ -1,12 +1,12 @@
-using KG.MES.Server.Constants;
-using KG.MES.Server.Controllers;
-using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Constants;
+using KG.MES.Shared.Controllers;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using KG.MES.Server.Hubs;
+using KG.MES.Shared.Hubs;
 
-namespace KG.MES.Server.Services;
+namespace KG.MES.Shared.Services;
 
 public partial class OrderService
 {
