@@ -8,6 +8,8 @@ using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
+using System.Linq.Expressions;
 
 namespace KG.MES.Shared.Services;
 
@@ -54,7 +56,8 @@ public partial class OrderService : IOrderService
 
 	// Основной метод GetOrdersAsync
 	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber,
+		List<FilterCondition>? filters = null)
 	{
 		var query = _context.Orders
 			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
@@ -88,6 +91,13 @@ public partial class OrderService : IOrderService
 		{
 			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
 		}
+
+		if (filters != null && filters.Any())
+		{
+			query = ApplyFilters(query, filters);
+		}
+
+
 
 		var total = await query.CountAsync();
 
@@ -360,5 +370,127 @@ public partial class OrderService : IOrderService
 		}
 
 		await _context.SaveChangesAsync();
+	}
+
+	//Вспомогательные методы
+	// KG.MES.Server/Services/OrderService.cs
+	private IQueryable<OrderDto> ApplyFilters(
+		IQueryable<OrderDto> query,
+		List<FilterCondition> filters)
+	{
+		foreach (var filter in filters)
+		{
+			query = ApplySingleFilter(query, filter);
+		}
+
+		return query;
+	}
+
+	private IQueryable<OrderDto> ApplySingleFilter(
+		IQueryable<OrderDto> query,
+		FilterCondition filter)
+	{
+		if (string.IsNullOrEmpty(filter.Field))
+			return query;
+
+		// Проверяем, что поле существует в OrderListItemDto
+		var property = typeof(OrderDto).GetProperty(
+			filter.Field,
+			BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+		if (property == null)
+			return query;
+
+		var parameter = Expression.Parameter(typeof(OrderDto), "x");
+		var propertyAccess = Expression.MakeMemberAccess(parameter, property);
+
+		// Определяем оператор
+		var op = filter.Operator?.ToLower() ?? FilterOperators.Equal;
+		Expression comparison = null!;
+
+		switch (op)
+		{
+			case FilterOperators.Equal:
+				if (filter.Value != null)
+				{
+					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
+					comparison = Expression.Equal(propertyAccess, Expression.Constant(converted));
+				}
+				break;
+
+			case FilterOperators.Contains:
+				if (property.PropertyType == typeof(string) && filter.Value is string strValue)
+				{
+					var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
+					comparison = Expression.Call(propertyAccess, containsMethod, Expression.Constant(strValue));
+				}
+				break;
+
+			case FilterOperators.In:
+				if (filter.Values != null && filter.Values.Any())
+				{
+					var typedValues = filter.Values
+						.Select(v => Convert.ChangeType(v, property.PropertyType))
+						.ToList();
+
+					var containsMethod = typeof(Enumerable)
+						.GetMethods()
+						.First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
+						.MakeGenericMethod(property.PropertyType);
+
+					var valuesList = Expression.Constant(typedValues);
+					comparison = Expression.Call(containsMethod, valuesList, propertyAccess);
+				}
+				break;
+
+			case FilterOperators.GreaterThan:
+				if (filter.Value != null)
+				{
+					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
+					comparison = Expression.GreaterThan(propertyAccess, Expression.Constant(converted));
+				}
+				break;
+
+			case FilterOperators.LessThan:
+				if (filter.Value != null)
+				{
+					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
+					comparison = Expression.LessThan(propertyAccess, Expression.Constant(converted));
+				}
+				break;
+
+			case FilterOperators.GreaterThanOrEqual:
+				if (filter.Value != null)
+				{
+					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
+					comparison = Expression.GreaterThanOrEqual(propertyAccess, Expression.Constant(converted));
+				}
+				break;
+
+			case FilterOperators.LessThanOrEqual:
+				if (filter.Value != null)
+				{
+					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
+					comparison = Expression.LessThanOrEqual(propertyAccess, Expression.Constant(converted));
+				}
+				break;
+
+			case FilterOperators.IsNull:
+				comparison = Expression.Equal(propertyAccess, Expression.Constant(null, property.PropertyType));
+				break;
+
+			case FilterOperators.IsNotNull:
+				comparison = Expression.NotEqual(propertyAccess, Expression.Constant(null, property.PropertyType));
+				break;
+
+			default:
+				return query;
+		}
+
+		if (comparison == null)
+			return query;
+
+		var lambda = Expression.Lambda<Func<OrderDto, bool>>(comparison, parameter);
+		return query.Where(lambda);
 	}
 }

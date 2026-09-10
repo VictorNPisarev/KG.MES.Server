@@ -60,8 +60,8 @@ public partial class OrderController : ControllerBase
 	[HttpGet("orders")]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
-			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
-		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
+			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null, [FromQuery] string? filters = null)
+		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds, filters);
 
 	// GET: api/orders/pending?workplaceId=...
 	[HttpGet("orders/pending")]
