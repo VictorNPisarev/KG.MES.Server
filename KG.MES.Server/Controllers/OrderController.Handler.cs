@@ -256,4 +256,13 @@ public partial class OrderController
 
 		return Ok(new { success = true, message = "Order deleted" });
 	}
+
+	public async Task<IActionResult> GetFilterFacetsHandler(FilterFacetsRequestDto request)
+	{
+		if (request?.Fields == null || !request.Fields.Any())
+			return BadRequest(new { error = "Fields are required" });
+
+		var result = await _orderService.GetFilterFacetsAsync(request);
+		return Ok(result);
+	}
 }

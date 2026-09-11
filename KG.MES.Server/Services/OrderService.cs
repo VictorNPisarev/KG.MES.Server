@@ -10,6 +10,7 @@ using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Linq.Expressions;
+using System.Text.Json;
 
 namespace KG.MES.Shared.Services;
 
@@ -59,28 +60,7 @@ public partial class OrderService : IOrderService
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber,
 		List<FilterCondition>? filters = null)
 	{
-		var query = _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
-			{
-				Id = x.o.Id,
-				OrderNumber = x.o.OrderNumber,
-				ReadyDate = x.o.ReadyDate,
-				WindowCount = x.o.WindowCount,
-				WindowArea = x.o.WindowArea,
-				PlateCount = x.o.PlateCount,
-				PlateArea = x.o.PlateArea,
-				IsEconom = x.o.IsEconom,
-				IsClaim = x.o.IsClaim,
-				IsOnlyPaid = x.o.IsOnlyPaid,
-				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				CreatedAt = x.o.CreatedAt,
-				ProductionOrderId = x.po.Id,
-				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
-				CurrentStatus = w.Name,
-				Machine = x.po.Machine,
-				RtmDate = x.o.RtmDate
-			});
+		var query = BuildBaseQuery();
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
@@ -372,8 +352,81 @@ public partial class OrderService : IOrderService
 		await _context.SaveChangesAsync();
 	}
 
+	public async Task<FilterFacetsResponseDto> GetFilterFacetsAsync(FilterFacetsRequestDto request)
+	{
+		var query = BuildBaseQuery();
+
+		if (request.AppliedFilters != null && request.AppliedFilters.Any())
+		{
+			foreach (var filter in request.AppliedFilters)
+			{
+				if (request.Fields.Contains(filter.Field, StringComparer.OrdinalIgnoreCase))
+					continue;
+				query = ApplySingleFilter(query, filter);
+			}
+		}
+
+		var response = new FilterFacetsResponseDto();
+
+		foreach (var fieldName in request.Fields)
+		{
+			var property = typeof(OrderDto).GetProperty(
+				fieldName,
+				BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+			if (property == null)
+			{
+				response.Facets[fieldName] = new List<FacetValueDto>();
+				continue;
+			}
+
+			// ✅ Строим типизированный GroupBy через Expression
+			var parameter = Expression.Parameter(typeof(OrderDto), "x");
+			var propertyAccess = Expression.MakeMemberAccess(parameter, property);
+			var lambda = Expression.Lambda(propertyAccess, parameter);
+
+			// Формируем query.GroupBy(x => x.Field).Select(g => new { Value = g.Key, Count = g.Count() })
+			var groupByMethod = typeof(Queryable).GetMethods()
+				.First(m => m.Name == "GroupBy" && m.GetParameters().Length == 2)
+				.MakeGenericMethod(typeof(OrderDto), property.PropertyType);
+
+			var grouped = groupByMethod.Invoke(null, new object[] { query, lambda });
+
+			// ... дальнейшая обработка через Reflection (сложно)
+			// Проще: используем сырой SQL или Dapper для фасетов
+		}
+
+		return response;
+	}
+
 	//Вспомогательные методы
-	// KG.MES.Server/Services/OrderService.cs
+
+	private IQueryable<OrderDto> BuildBaseQuery()
+	{
+		return _context.Orders
+			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+			{
+				Id = x.o.Id,
+				OrderNumber = x.o.OrderNumber,
+				ReadyDate = x.o.ReadyDate,
+				WindowCount = x.o.WindowCount,
+				WindowArea = x.o.WindowArea,
+				PlateCount = x.o.PlateCount,
+				PlateArea = x.o.PlateArea,
+				IsEconom = x.o.IsEconom,
+				IsClaim = x.o.IsClaim,
+				IsOnlyPaid = x.o.IsOnlyPaid,
+				IsTwoSidePaint = x.po.IsTwoSidePaint,
+				CreatedAt = x.o.CreatedAt,
+				ProductionOrderId = x.po.Id,
+				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
+				CurrentStatus = w.Name,
+				Machine = x.po.Machine,
+				RtmDate = x.o.RtmDate
+			});
+	}
+
 	private IQueryable<OrderDto> ApplyFilters(
 		IQueryable<OrderDto> query,
 		List<FilterCondition> filters)
@@ -390,107 +443,226 @@ public partial class OrderService : IOrderService
 		IQueryable<OrderDto> query,
 		FilterCondition filter)
 	{
-		if (string.IsNullOrEmpty(filter.Field))
-			return query;
-
-		// Проверяем, что поле существует в OrderListItemDto
-		var property = typeof(OrderDto).GetProperty(
-			filter.Field,
-			BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-
-		if (property == null)
-			return query;
-
-		var parameter = Expression.Parameter(typeof(OrderDto), "x");
-		var propertyAccess = Expression.MakeMemberAccess(parameter, property);
-
-		// Определяем оператор
-		var op = filter.Operator?.ToLower() ?? FilterOperators.Equal;
-		Expression comparison = null!;
-
-		switch (op)
+		try
 		{
-			case FilterOperators.Equal:
-				if (filter.Value != null)
-				{
-					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
-					comparison = Expression.Equal(propertyAccess, Expression.Constant(converted));
-				}
-				break;
-
-			case FilterOperators.Contains:
-				if (property.PropertyType == typeof(string) && filter.Value is string strValue)
-				{
-					var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
-					comparison = Expression.Call(propertyAccess, containsMethod, Expression.Constant(strValue));
-				}
-				break;
-
-			case FilterOperators.In:
-				if (filter.Values != null && filter.Values.Any())
-				{
-					var typedValues = filter.Values
-						.Select(v => Convert.ChangeType(v, property.PropertyType))
-						.ToList();
-
-					var containsMethod = typeof(Enumerable)
-						.GetMethods()
-						.First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
-						.MakeGenericMethod(property.PropertyType);
-
-					var valuesList = Expression.Constant(typedValues);
-					comparison = Expression.Call(containsMethod, valuesList, propertyAccess);
-				}
-				break;
-
-			case FilterOperators.GreaterThan:
-				if (filter.Value != null)
-				{
-					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
-					comparison = Expression.GreaterThan(propertyAccess, Expression.Constant(converted));
-				}
-				break;
-
-			case FilterOperators.LessThan:
-				if (filter.Value != null)
-				{
-					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
-					comparison = Expression.LessThan(propertyAccess, Expression.Constant(converted));
-				}
-				break;
-
-			case FilterOperators.GreaterThanOrEqual:
-				if (filter.Value != null)
-				{
-					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
-					comparison = Expression.GreaterThanOrEqual(propertyAccess, Expression.Constant(converted));
-				}
-				break;
-
-			case FilterOperators.LessThanOrEqual:
-				if (filter.Value != null)
-				{
-					var converted = Convert.ChangeType(filter.Value, property.PropertyType);
-					comparison = Expression.LessThanOrEqual(propertyAccess, Expression.Constant(converted));
-				}
-				break;
-
-			case FilterOperators.IsNull:
-				comparison = Expression.Equal(propertyAccess, Expression.Constant(null, property.PropertyType));
-				break;
-
-			case FilterOperators.IsNotNull:
-				comparison = Expression.NotEqual(propertyAccess, Expression.Constant(null, property.PropertyType));
-				break;
-
-			default:
+			if (string.IsNullOrEmpty(filter.Field))
 				return query;
+
+			// Проверяем, что поле существует в OrderListItemDto
+			var property = typeof(OrderDto).GetProperty(
+				filter.Field,
+				BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+			if (property == null)
+			{
+				Console.WriteLine($"FilterProperty not found");
+				return query;
+			}
+
+			Console.WriteLine("");
+			Console.WriteLine("");
+			Console.WriteLine($"FilterProperty {property.Name} :: type {property.PropertyType} :: value {filter.Value?.ToString()}");
+			Console.WriteLine("");
+
+			var parameter = Expression.Parameter(typeof(OrderDto), "x");
+			var propertyAccess = Expression.MakeMemberAccess(parameter, property);
+
+			// Определяем оператор
+			var op = filter.Operator?.ToLower() ?? FilterOperators.Equal;
+			Expression comparison = null!;
+
+			Console.WriteLine($"FilterOperators {filter.Operator}");
+			Console.WriteLine("");
+
+			switch (op)
+			{
+				case FilterOperators.Equal:
+					if (filter.Value != null)
+					{
+						var converted = Convert.ChangeType(filter.Value.ToString(), property.PropertyType);
+						comparison = Expression.Equal(propertyAccess, Expression.Constant(converted));
+					}
+					break;
+
+				case FilterOperators.Contains:
+					if (property.PropertyType == typeof(string))
+					{
+						var strValue = filter.Value?.ToString();
+						if (!string.IsNullOrEmpty(strValue))
+						{
+							var containsMethod = typeof(string).GetMethod("Contains", new[] { typeof(string) })!;
+							comparison = Expression.Call(propertyAccess, containsMethod, Expression.Constant(strValue));
+						}
+					}
+					break;
+
+				case FilterOperators.In:
+					if (filter.Values != null && filter.Values.Any())
+					{
+						// ✅ Создаем типизированный список List<T>
+						var listType = typeof(List<>).MakeGenericType(property.PropertyType);
+						var typedList = (System.Collections.IList)Activator.CreateInstance(listType)!;
+
+						foreach (var v in filter.Values)
+						{
+							var converted = ConvertFilterValue(v, property.PropertyType);
+							if (converted != null)
+								typedList.Add(converted);
+						}
+
+						if (typedList.Count > 0)
+						{
+							// ✅ Получаем метод Enumerable.Contains<T>
+							var containsMethod = typeof(Enumerable)
+								.GetMethods()
+								.First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
+								.MakeGenericMethod(property.PropertyType);
+
+							// ✅ Передаем типизированный список
+							var valuesList = Expression.Constant(typedList, listType);
+							comparison = Expression.Call(containsMethod, valuesList, propertyAccess);
+						}
+					}
+					break;
+
+				case FilterOperators.GreaterThan:
+					if (filter.Value != null)
+					{
+						var converted = Convert.ChangeType(filter.Value.ToString(), property.PropertyType);
+						comparison = Expression.GreaterThan(propertyAccess, Expression.Constant(converted));
+					}
+					break;
+
+				case FilterOperators.LessThan:
+					if (filter.Value != null)
+					{
+						var converted = Convert.ChangeType(filter.Value.ToString(), property.PropertyType);
+						comparison = Expression.LessThan(propertyAccess, Expression.Constant(converted));
+					}
+					break;
+
+				case FilterOperators.GreaterThanOrEqual:
+					if (filter.Value != null)
+					{
+						var converted = Convert.ChangeType(filter.Value.ToString(), property.PropertyType);
+						comparison = Expression.GreaterThanOrEqual(propertyAccess, Expression.Constant(converted));
+					}
+					break;
+
+				case FilterOperators.LessThanOrEqual:
+					if (filter.Value != null)
+					{
+						var converted = Convert.ChangeType(filter.Value.ToString(), property.PropertyType);
+						comparison = Expression.LessThanOrEqual(propertyAccess, Expression.Constant(converted));
+					}
+					break;
+
+				case FilterOperators.IsNull:
+					comparison = Expression.Equal(propertyAccess, Expression.Constant(null, property.PropertyType));
+					break;
+
+				case FilterOperators.IsNotNull:
+					comparison = Expression.NotEqual(propertyAccess, Expression.Constant(null, property.PropertyType));
+					break;
+
+				default:
+					return query;
+				
+			}
+
+			if (comparison == null)
+			{
+				Console.WriteLine($"comparison is null!!!");
+				return query;
+			}
+
+			var lambda = Expression.Lambda<Func<OrderDto, bool>>(comparison, parameter);
+
+			Console.WriteLine($"lambda {lambda}");
+			Console.WriteLine("");
+			Console.WriteLine("");
+
+			return query.Where(lambda);
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"Exception message: {e}");
+			throw;
+		}
+	}
+
+	private object? ConvertFilterValue(object? value, Type targetType)
+	{
+		if (value == null)
+			return null;
+
+		// JsonElement
+		if (value is JsonElement jsonElement)
+		{
+			return jsonElement.ValueKind switch
+			{
+				JsonValueKind.String => ConvertStringToType(jsonElement.GetString(), targetType),
+				JsonValueKind.Number => ConvertNumberToType(jsonElement, targetType),
+				JsonValueKind.True => true,
+				JsonValueKind.False => false,
+				JsonValueKind.Null => null,
+				_ => jsonElement.ToString()
+			};
 		}
 
-		if (comparison == null)
-			return query;
+		if (targetType.IsInstanceOfType(value))
+			return value;
 
-		var lambda = Expression.Lambda<Func<OrderDto, bool>>(comparison, parameter);
-		return query.Where(lambda);
+		try
+		{
+			return Convert.ChangeType(value, targetType);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private object? ConvertStringToType(string? value, Type targetType)
+	{
+		if (value == null) return null;
+		if (targetType == typeof(string)) return value;
+
+		var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+		if (underlyingType == typeof(Guid))
+			return Guid.TryParse(value, out var guid) ? guid : null;
+
+		if (underlyingType == typeof(DateTime))
+			return DateTime.TryParse(value, out var dt) ? dt : null;
+
+		if (underlyingType == typeof(bool))
+		{
+			if (value == "Да") return true;
+			if (value == "Нет") return false;
+			return bool.TryParse(value, out var b) ? b : null;
+		}
+
+		try
+		{
+			return Convert.ChangeType(value, underlyingType);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private object? ConvertNumberToType(JsonElement element, Type targetType)
+	{
+		var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+		if (underlyingType == typeof(int)) return element.GetInt32();
+		if (underlyingType == typeof(long)) return element.GetInt64();
+		if (underlyingType == typeof(decimal)) return element.GetDecimal();
+		if (underlyingType == typeof(double)) return element.GetDouble();
+		if (underlyingType == typeof(float)) return element.GetSingle();
+
+		return element.GetDecimal();
 	}
 }

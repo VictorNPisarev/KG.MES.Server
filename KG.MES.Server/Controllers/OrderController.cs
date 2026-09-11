@@ -1,5 +1,6 @@
 
 using KG.MES.Shared.Models.Dto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Shared.Controllers;
@@ -107,6 +108,11 @@ public partial class OrderController : ControllerBase
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 
+	// GET: api/orders/fasets
+	[HttpPost("orders/facets")]
+	[AllowAnonymous]
+	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
 
 
 	//-------------------------
