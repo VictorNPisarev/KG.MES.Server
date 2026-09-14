@@ -28,12 +28,12 @@ public interface IOrderService
 	Task<OrderCommercialDto?> GetOrderCommercialAsync(Guid orderId);
 	Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto);
 	Task<List<CustomerDto>> GetCustomersAsync(string? search = null);
-	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
-	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, string? orderNumber, string? customerName, Guid? managerId);
 	Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId);
 	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
 	Task<bool> DeleteOrderAsync(Guid orderId);
-	Task<FilterFacetsResponseDto> GetFilterFacetsAsync(FilterFacetsRequestDto request);
+	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
 }

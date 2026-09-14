@@ -262,7 +262,7 @@ public partial class OrderController
 		if (request?.Fields == null || !request.Fields.Any())
 			return BadRequest(new { error = "Fields are required" });
 
-		var result = await _orderService.GetFilterFacetsAsync(request);
+		var result = await _orderService.GetFilterFacetsAsync<OrderDto>(request);
 		return Ok(result);
 	}
 }

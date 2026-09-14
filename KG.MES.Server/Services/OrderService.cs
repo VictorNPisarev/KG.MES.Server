@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
+using System.Collections;
 
 namespace KG.MES.Shared.Services;
 
@@ -352,25 +353,23 @@ public partial class OrderService : IOrderService
 		await _context.SaveChangesAsync();
 	}
 
-	public async Task<FilterFacetsResponseDto> GetFilterFacetsAsync(FilterFacetsRequestDto request)
+	public async Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(
+		FilterFacetsRequestDto request)
+		where TDto : class
 	{
-		var query = BuildBaseQuery();
+		// Тип TDto известен
+		var dtoType = typeof(TDto);
 
-		if (request.AppliedFilters != null && request.AppliedFilters.Any())
-		{
-			foreach (var filter in request.AppliedFilters)
-			{
-				if (request.Fields.Contains(filter.Field, StringComparer.OrdinalIgnoreCase))
-					continue;
-				query = ApplySingleFilter(query, filter);
-			}
-		}
+		// Строим базовый query для конкретного типа
+		var query = BuildBaseQuery<TDto>(request);
 
 		var response = new FilterFacetsResponseDto();
 
 		foreach (var fieldName in request.Fields)
 		{
-			var property = typeof(OrderDto).GetProperty(
+			Console.WriteLine($"Field name {fieldName}");
+			
+			var property = dtoType.GetProperty(
 				fieldName,
 				BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
 
@@ -380,20 +379,8 @@ public partial class OrderService : IOrderService
 				continue;
 			}
 
-			// ✅ Строим типизированный GroupBy через Expression
-			var parameter = Expression.Parameter(typeof(OrderDto), "x");
-			var propertyAccess = Expression.MakeMemberAccess(parameter, property);
-			var lambda = Expression.Lambda(propertyAccess, parameter);
-
-			// Формируем query.GroupBy(x => x.Field).Select(g => new { Value = g.Key, Count = g.Count() })
-			var groupByMethod = typeof(Queryable).GetMethods()
-				.First(m => m.Name == "GroupBy" && m.GetParameters().Length == 2)
-				.MakeGenericMethod(typeof(OrderDto), property.PropertyType);
-
-			var grouped = groupByMethod.Invoke(null, new object[] { query, lambda });
-
-			// ... дальнейшая обработка через Reflection (сложно)
-			// Проще: используем сырой SQL или Dapper для фасетов
+			var values = await GetDistinctValuesAsync(query, property);
+			response.Facets[fieldName] = values;
 		}
 
 		return response;
@@ -425,6 +412,47 @@ public partial class OrderService : IOrderService
 				Machine = x.po.Machine,
 				RtmDate = x.o.RtmDate
 			});
+	}
+
+	private IQueryable<TDto> BuildBaseQuery<TDto>(FilterFacetsRequestDto request)
+	where TDto : class
+	{
+		// В зависимости от типа — свой базовый query
+		if (typeof(TDto) == typeof(OrderDto))
+		{
+			return (IQueryable<TDto>)_context.Orders
+				.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+				.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+				{
+					Id = x.o.Id,
+					OrderNumber = x.o.OrderNumber,
+					ReadyDate = x.o.ReadyDate,
+					WindowCount = x.o.WindowCount,
+					WindowArea = x.o.WindowArea,
+					PlateCount = x.o.PlateCount,
+					PlateArea = x.o.PlateArea,
+					IsEconom = x.o.IsEconom,
+					IsClaim = x.o.IsClaim,
+					IsOnlyPaid = x.o.IsOnlyPaid,
+					IsTwoSidePaint = x.po.IsTwoSidePaint,
+					CreatedAt = x.o.CreatedAt,
+					ProductionOrderId = x.po.Id,
+					CurrentWorkplaceId = x.po.CurrentWorkplaceId,
+					CurrentStatus = w.Name,
+					Machine = x.po.Machine,
+					RtmDate = x.o.RtmDate
+				});
+		}
+		else if (typeof(TDto) == typeof(SalesOrderDto))
+		{
+			// ... другой query для Sales
+		}
+		else if (typeof(TDto) == typeof(SupplyOrderDto))
+		{
+			// ... другой query для Supply
+		}
+
+		throw new NotSupportedException($"Тип {typeof(TDto).Name} не поддерживается для фасетов");
 	}
 
 	private IQueryable<OrderDto> ApplyFilters(
@@ -664,5 +692,27 @@ public partial class OrderService : IOrderService
 		if (underlyingType == typeof(float)) return element.GetSingle();
 
 		return element.GetDecimal();
+	}
+
+	private async Task<List<FacetValueDto>> GetDistinctValuesAsync<TDto>(
+		IQueryable<TDto> query,
+		PropertyInfo property)
+		where TDto : class
+	{
+		// ✅ Просто — грузим всё и делаем Distinct в памяти
+		var allItems = await query.ToListAsync();
+
+		return allItems
+			.Select(item => property.GetValue(item))
+			.Where(v => v != null)
+			.Select(v => v switch
+			{
+				bool b => b ? "Да" : "Нет",
+				_ => v?.ToString() ?? ""
+			})
+			.Distinct()
+			.OrderBy(v => v)
+			.Select(v => new FacetValueDto { Value = v })
+			.ToList();
 	}
 }
