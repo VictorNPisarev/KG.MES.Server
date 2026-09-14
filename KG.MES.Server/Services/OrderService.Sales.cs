@@ -29,7 +29,7 @@ public partial class OrderService
 	}
 
 	// Основной метод GetOrdersAsync
-	public async Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	public async Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
 		var orderQuery = _context.Orders.AsQueryable();
@@ -51,7 +51,7 @@ public partial class OrderService
 			.LeftJoin(_context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
 			.LeftJoin(_context.Users, x => x.s != null ? x.s.ManagerId : (Guid?)null, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
 			.LeftJoin(_context.Customers, x => x.s != null ? x.s.CustomerId : (Guid?)null, c => c.Id, (x, c) => 
-			new SalesOrderListItemDto
+			new SalesOrderDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -105,7 +105,7 @@ public partial class OrderService
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
-		return new PaginatedResponse<SalesOrderListItemDto>
+		return new PaginatedResponse<SalesOrderDto>
 		{
 			Data = items,
 			Pagination = new PaginationInfo
@@ -126,7 +126,7 @@ public partial class OrderService
 	/// <summary>
 	/// Получить список заказов с коммерческой информацией (для отдела продаж)
 	/// </summary>
-	public async Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	public async Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page,
 		int limit,
 		string? sortBy,
@@ -144,7 +144,7 @@ public partial class OrderService
 					from oc in ocGroup.DefaultIfEmpty()
 					join u in _context.Users on oc.ManagerId equals u.Id into uGroup
 					from u in uGroup.DefaultIfEmpty()
-					select new SalesOrderListItemDto
+					select new SalesOrderDto
 					{
 						Id = o.Id,
 						OrderNumber = o.OrderNumber,
@@ -179,7 +179,7 @@ public partial class OrderService
 		var total = await query.CountAsync();
 
 		// Сортировка
-		IOrderedQueryable<SalesOrderListItemDto> orderedQuery;
+		IOrderedQueryable<SalesOrderDto> orderedQuery;
 
 		switch (sortBy?.ToLower())
 		{
@@ -216,7 +216,7 @@ public partial class OrderService
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
-		return new PaginatedResponse<SalesOrderListItemDto>
+		return new PaginatedResponse<SalesOrderDto>
 		{
 			Data = items,
 			Pagination = new PaginationInfo
