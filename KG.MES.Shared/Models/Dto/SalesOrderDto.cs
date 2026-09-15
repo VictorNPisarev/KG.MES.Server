@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace KG.MES.Shared.Models.Dto;
 
-public class SalesOrderListItemDto
+public class SalesOrderDto
 {
 	[JsonPropertyName("id")]
 	public Guid Id { get; set; }

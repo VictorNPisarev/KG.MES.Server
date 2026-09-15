@@ -1,4 +1,5 @@
 using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,10 +8,14 @@ namespace KG.MES.Shared.Controllers;
 public partial class SupplyController
 {
 	private readonly ISupplyService _supplyService;
+
+	private readonly IOrderService _orderService;
+
 	private readonly ILogger<SupplyController> _logger;
 
-	public SupplyController(ISupplyService supplyService, ILogger<SupplyController> logger)
+	public SupplyController(IOrderService orderService, ISupplyService supplyService, ILogger<SupplyController> logger)
 	{
+		_orderService = orderService;
 		_supplyService = supplyService;
 		_logger = logger;
 	}
@@ -67,4 +72,14 @@ public partial class SupplyController
 		var result = await _supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
 		return Ok(result);
 	}
+
+	public async Task<IActionResult> GetFilterFacetsHandler(FilterFacetsRequestDto request)
+	{
+		if (request?.Fields == null || !request.Fields.Any())
+			return BadRequest(new { error = "Fields are required" });
+
+		var result = await _orderService.GetFilterFacetsAsync<SupplyOrderDto>(request);
+		return Ok(result);
+	}
+
 }

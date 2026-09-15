@@ -2,6 +2,7 @@
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KG.MES.Shared.Controllers;
 
@@ -60,6 +61,11 @@ public partial class SalesController : ControllerBase
 		//return Ok(customer);
 		return Ok();
 	}
+
+	// GET: api/sales/orders/fasets
+	[HttpPost("sales/orders/facets")]
+	public Task<IActionResult> GetSalesOrderFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
 
 	// POST: api/sales/customers
 	//[HttpPost("customers")]
