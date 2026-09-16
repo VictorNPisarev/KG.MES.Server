@@ -3,8 +3,6 @@ using KG.MES.Shared.Data;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
-using KG.MES.Shared.Hubs;
-using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 
 namespace KG.MES.Shared.Services;
@@ -198,12 +196,6 @@ public class SupplyService : ISupplyService
 			.Join(_context.SupplyItems, x => x.os.Id, si => si.OrderSupplyId, (x, si) => new { x.o, x.po, x.os, si })
 			.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, st })
 			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, x.os, x.si, x.st, w })
-			//var query = _context.SupplyItems
-			//	.Join(_context.OrderSupplies, si => si.OrderSupplyId, os => os.Id, (si, os) => new { si, os })
-			//	.Join(_context.Orders, x => x.os.OrderId, o => o.Id, (x, o) => new { x.si, x.os, o })
-			//	.Join(_context.ProductionOrders, x => x.o.Id, po => po.OrderId, (x, po) => new { x.si, x.os, x.o, po })
-			//	.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.si, x.os, x.o, x.po, w })
-			//	.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, x.w, st })
 			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.o.RtmDate, x.o.IsClaim, x.o.IsEconom, x.o.IsOnlyPaid, 
 								x.po.Machine, ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId, x.po.IsTwoSidePaint,
 								WorkplaceName = x.w.Name})
