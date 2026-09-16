@@ -78,27 +78,22 @@ public partial class OrderService
 		// Применяем сортировку
 		var orderedQuery = query.OrderBy(o => o.ReadyDate);
 
-		//switch (sortBy?.ToLower())
-		//{
-		//	case "order_number":
-		//		orderedQuery = OrderByOrderNumber(query, sortOrder);
-		//		break;
-		//	case "window_count":
-		//		orderedQuery = OrderByWindowCount(query, sortOrder);
-		//		break;
-		//	case "plate_count":
-		//		orderedQuery = OrderByPlateCount(query, sortOrder);
-		//		break;
-		//	case "ready_date":
-		//	default:
-				//orderedQuery = OrderByReadyDate(query, sortOrder);
-		//		break;
-		//}
-
 		var items = await orderedQuery
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		var totals = await query
+			.GroupBy(x => 1)
+			.Select(g => new OrderTotalsDto
+			{
+				WindowCountTotal = g.Sum(x => x.WindowCount),
+				WindowAreaTotal = g.Sum(x => x.WindowArea),
+				PlateCountTotal = g.Sum(x => x.PlateCount),
+				PlateAreaTotal = g.Sum(x => x.PlateArea)
+			})
+			.FirstOrDefaultAsync();
+
 
 		foreach (var item in items)
 		{
@@ -119,7 +114,8 @@ public partial class OrderService
 			{
 				By = sortBy ?? "ready_date",
 				Order = sortOrder ?? "asc"
-			}
+			},
+			Totals = totals
 		};
 	}
 

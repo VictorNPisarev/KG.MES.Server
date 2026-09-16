@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
+using KG.MES.Shared.Serialization;
 
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
@@ -94,6 +95,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
+			Converters = { new TotalsDtoConverter() },
 			PropertyNameCaseInsensitive = true
 		});
 
@@ -160,6 +162,7 @@ public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
+			Converters = { new TotalsDtoConverter() },
 			PropertyNameCaseInsensitive = true
 		});
 

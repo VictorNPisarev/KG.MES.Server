@@ -98,6 +98,17 @@ public partial class OrderService : IOrderService
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
+		var totals = await query
+			.GroupBy(x => 1)
+			.Select(g => new OrderTotalsDto
+			{
+				WindowCountTotal = g.Sum(x => x.WindowCount),
+				WindowAreaTotal = g.Sum(x => x.WindowArea),
+				PlateCountTotal = g.Sum(x => x.PlateCount),
+				PlateAreaTotal = g.Sum(x => x.PlateArea)
+			})
+			.FirstOrDefaultAsync();
+
 		return new PaginatedResponse<OrderDto>
 		{
 			Data = items,
@@ -112,7 +123,8 @@ public partial class OrderService : IOrderService
 			{
 				By = sortBy ?? "ready_date",
 				Order = sortOrder ?? "asc"
-			}
+			},
+			Totals = totals
 		};
 	}
 
