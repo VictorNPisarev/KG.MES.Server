@@ -248,7 +248,7 @@ public partial class OrderService
 
 			await _context.SaveChangesAsync();
 
-			if (userId.HasValue)
+			if (true || userId.HasValue) //TODO Убрать TRUE после внедрения аутентификации/авторизации
 			{
 				var operationLog = new OperationLog
 				{
@@ -256,9 +256,9 @@ public partial class OrderService
 					ProductionOrderId = productionOrderId,
 					WorkplaceId = workplaceId,
 					UserId = userId,
-					OperationType = "MANUAL_UPDATE",
+					OperationType = status,
 					OperationTime = DateTime.UtcNow,
-					Notes = $"Статус изменён с {oldStatus ?? "NULL"} на {status}. {notes}",
+					Notes = $"Статус изменён мастером. {notes}",
 					Source = "API"
 				};
 				_context.OperationLogs.Add(operationLog);

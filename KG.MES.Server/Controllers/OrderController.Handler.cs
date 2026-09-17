@@ -1,5 +1,6 @@
 
 using System.Text.Json;
+using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -120,9 +121,22 @@ public partial class OrderController
 	{
 		if (string.IsNullOrEmpty(request.Status))
 			return BadRequest(new { error = "status is required" });
-		var result = await _orderService.SetOrderFootprintStatusAsync(
-			productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
-		return Ok(result);
+		
+		switch (request.Status)
+		{
+			case OrderStatus.WorkplaceStatus.Completed: 
+				var completeResult = await _orderService.CompleteOrderWorkplaceAsync(
+					productionOrderId, workplaceId, request.UserId, request.Notes ?? " ", "SetOrderFootprintStatusHandler");
+				return Ok(completeResult);
+			case OrderStatus.WorkplaceStatus.Active:
+				var startResult = await _orderService.BeginOrderWorkplaceAsync(
+					productionOrderId, workplaceId, request.UserId, request.Notes ?? " ", "SetOrderFootprintStatusHandler");
+				return Ok(startResult);
+			default:
+				var result = await _orderService.SetOrderFootprintStatusAsync(
+					productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
+				return Ok(result);
+		}
 	}
 
 	public async Task<IActionResult> UpdateOrderFootprintBatchHandler(Guid productionOrderId, UpdateFootprintBatchRequest request)
