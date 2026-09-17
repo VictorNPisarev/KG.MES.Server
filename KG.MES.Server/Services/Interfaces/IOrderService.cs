@@ -5,7 +5,7 @@ namespace KG.MES.Shared.Services.Interfaces;
 public interface IOrderService
 {
 	Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, List<FilterCondition>? filters = null);
 
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
@@ -14,8 +14,8 @@ public interface IOrderService
 	Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<CreateOrderResultDto> CreateOrderAsync(OrderRequestDto request);
-	Task<OperationResultDto> BeginOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
-	Task<OperationResultDto> CompleteOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
+	Task<OperationResultDto> BeginOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source);
+	Task<OperationResultDto> CompleteOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source);
 	Task<SetFootprintResultDto> SetOrderFootprintStatusAsync(Guid productionOrderId, Guid workplaceId, string status, Guid? userId, string notes);
 	Task<BatchUpdateResultDto> UpdateOrderFootprintBatchAsync(Guid productionOrderId, List<FootprintItemDto> footprints, Guid? userId, string notes);
 	Task<List<OrderCommentDto>> GetOrderCommentsAsync(Guid orderId);
@@ -28,11 +28,12 @@ public interface IOrderService
 	Task<OrderCommercialDto?> GetOrderCommercialAsync(Guid orderId);
 	Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto);
 	Task<List<CustomerDto>> GetCustomersAsync(string? search = null);
-	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
-	Task<PaginatedResponse<SalesOrderListItemDto>> GetSalesOrdersAsync(
+	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, string? orderNumber, string? customerName, Guid? managerId);
 	Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId);
 	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
 	Task<bool> DeleteOrderAsync(Guid orderId);
+	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
 }

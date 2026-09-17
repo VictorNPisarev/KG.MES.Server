@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using KG.MES.Shared.Data;
 using KG.MES.Shared.Extensions;
 using KG.MES.Shared.Hubs;
+using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
@@ -68,6 +69,7 @@ builder.Services.AddControllers()
 	{
 		options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 		options.JsonSerializerOptions.WriteIndented = true;
+		options.JsonSerializerOptions.Converters.Add(new TotalsDtoConverter());
 	});
 
 builder.Services.AddHttpClient();

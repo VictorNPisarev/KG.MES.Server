@@ -10,22 +10,26 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
-using KG.MES.Server.Tests.Helpers;
+using KG.MES.Shared.Serialization;
 
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrdersControllerTests : TestBase
+public class OrdersControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
-	public OrdersControllerTests(WebApplicationFactory<Program> factory) : base(factory)
+	private readonly WebApplicationFactory<Program> _factory;
+
+	public OrdersControllerTests(WebApplicationFactory<Program> factory)
 	{
+		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetOrders_ShouldReturnPaginatedAndSortedData()
 	{
 		// 1. Arrange (Подготовка)
-		var client = CreateClient();
+		var customFactory = SetupTestFactory("TestDb_Orders");
+		var client = customFactory.CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var order1Id = Guid.NewGuid();
@@ -33,7 +37,7 @@ public class OrdersControllerTests : TestBase
 		var order3Id = Guid.NewGuid();
 
 		// Создаем тестовые данные через Builder
-		BuildTestData(builder => builder
+		new TestDataBuilder()
 			.WithWorkplace(w =>
 			{
 				w.Id = workplaceId;
@@ -78,7 +82,8 @@ public class OrdersControllerTests : TestBase
 			{
 				po.OrderId = order3Id;
 				po.CurrentWorkplaceId = workplaceId;
-			}));
+			})
+			.Build(customFactory.Services);
 
 		// 2. Act (Выполняем запрос с параметрами пагинации и сортировки)
 		var url = "/api/orders?page=1&limit=50&sortBy=ReadyDate&sortOrder=asc";
@@ -90,6 +95,7 @@ public class OrdersControllerTests : TestBase
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
+			Converters = { new TotalsDtoConverter() },
 			PropertyNameCaseInsensitive = true
 		});
 
@@ -130,20 +136,22 @@ public class OrdersControllerTests : TestBase
 	public async Task GetOrders_WithWorkplaceFilter_ShouldReturnFilteredData()
 	{
 		// Arrange
-		var client = CreateClient();
+		var customFactory = SetupTestFactory("TestDb_Orders_Filter");
+		var client = customFactory.CreateClient();
 
 		var workplace1Id = Guid.NewGuid();
 		var workplace2Id = Guid.NewGuid();
 		var order1Id = Guid.NewGuid();
 		var order2Id = Guid.NewGuid();
 
-		BuildTestData(builder => builder
+		new TestDataBuilder()
 			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Сборка"; })
 			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Покраска"; })
 			.WithOrder(o => { o.Id = order1Id; o.OrderNumber = "100"; })
 			.WithProductionOrder(po => { po.OrderId = order1Id; po.CurrentWorkplaceId = workplace1Id; })
 			.WithOrder(o => { o.Id = order2Id; o.OrderNumber = "200"; })
-			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplace2Id; }));
+			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplace2Id; })
+			.Build(customFactory.Services);
 
 		// Act - фильтруем по workplace1
 		var url = $"/api/orders?workplaceId={workplace1Id}";
@@ -154,6 +162,7 @@ public class OrdersControllerTests : TestBase
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content, new JsonSerializerOptions
 		{
+			Converters = { new TotalsDtoConverter() },
 			PropertyNameCaseInsensitive = true
 		});
 
@@ -161,5 +170,19 @@ public class OrdersControllerTests : TestBase
 		result!.Data.Should().HaveCount(1); // Только один заказ на workplace1
 		result.Data[0].Id.Should().Be(order1Id);
 		result.Data[0].CurrentWorkplaceId.Should().Be(workplace1Id);
+	}
+
+	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
+	{
+		return _factory.WithWebHostBuilder(builder =>
+		{
+			builder.ConfigureServices(services =>
+			{
+				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
+				services.RemoveAll<DbContextOptions<AppDbContext>>();
+				services.AddDbContext<AppDbContext>(options =>
+					options.UseInMemoryDatabase(dbName));
+			});
+		});
 	}
 }

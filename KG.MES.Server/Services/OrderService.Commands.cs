@@ -1,6 +1,4 @@
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Controllers;
-using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -162,7 +160,7 @@ public partial class OrderService
 	}
 
 	public async Task<OperationResultDto> BeginOrderWorkplaceAsync(
-		Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source)
+		Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source)
 	{
 		using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -231,7 +229,7 @@ public partial class OrderService
 	}
 
 	public async Task<OperationResultDto> CompleteOrderWorkplaceAsync(
-		Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source)
+		Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source)
 	{
 		using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -253,13 +251,13 @@ public partial class OrderService
 				};
 			}
 
+			// Завершаю текущий участок
 			await UpdateStatusAsync(productionOrder.Id, workplaceId, OrderStatus.WorkplaceStatus.Completed);
 
-			if(workplace?.Code == WorkplaceCodes.Packing)
-			{
-				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
-			}
+			// Автоматически завершаю все предыдущие
+			await AutoCompletePreviousWorkplacesAsync( productionOrderId, workplaceId, userId, source);
 
+			// Логирую текущее завершения
 			var operationLog = new OperationLog
 			{
 				Id = Guid.NewGuid(),
@@ -275,6 +273,13 @@ public partial class OrderService
 
 			_context.OperationLogs.Add(operationLog);
 			await _context.SaveChangesAsync();
+
+			// Если завершил участок упаковки — перевожу в "ГОТОВО"
+			if (workplace?.Code == WorkplaceCodes.Packing)
+			{
+				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
+			}
+
 			await transaction.CommitAsync();
 
 			//await NotificationHelper.OrderUpdated(productionOrderId, workplaceId, OrderStatus.WorkplaceStatus.Completed, userId);
@@ -533,5 +538,88 @@ public partial class OrderService
 			_logger.LogError(ex, "Error deleting order {OrderId}", orderId);
 			return false;
 		}
+	}
+
+	private async Task<bool> IsWorkplaceCompletedAsync(Guid productionOrderId, Guid workplaceId)
+	{
+		return await _context.OperationLogs
+			.AnyAsync(ol => ol.ProductionOrderId == productionOrderId
+							&& ol.WorkplaceId == workplaceId
+							&& ol.OperationType == "COMPLETE");
+	}
+
+	private async Task<List<Guid>> GetPreviousWorkplacesAsync(Guid workplaceId)
+	{
+		var result = new List<Guid>();
+		var visited = new HashSet<Guid>();
+		var queue = new Queue<Guid>();
+		queue.Enqueue(workplaceId);
+
+		while (queue.Count > 0)
+		{
+			var current = queue.Dequeue();
+			if (!visited.Add(current)) continue;
+
+			var previous = await _context.WorkplaceTransitions
+				.Where(wt => wt.ToWorkplaceId == current)
+				.Select(wt => wt.FromWorkplaceId)
+				.ToListAsync();
+
+			foreach (var prev in previous)
+			{
+				if (prev == Guid.Empty) continue;
+				result.Add(prev);
+				queue.Enqueue(prev);
+			}
+		}
+
+		return result.Distinct().ToList();
+	}
+
+	private async Task AutoCompletePreviousWorkplacesAsync(
+	Guid productionOrderId,
+	Guid workplaceId,
+	Guid? userId,
+	string source)
+	{
+		var previousWorkplaces = await GetPreviousWorkplacesAsync(workplaceId);
+		if (!previousWorkplaces.Any())
+			return;
+
+		var now = DateTime.UtcNow;
+
+		foreach (var prevWorkplaceId in previousWorkplaces)
+		{
+			// ✅ Пропускаем, если уже завершен
+			if (await IsWorkplaceCompletedAsync(productionOrderId, prevWorkplaceId))
+				continue;
+
+			// 1. Лог автозавершения
+			_context.OperationLogs.Add(new OperationLog
+			{
+				Id = Guid.NewGuid(),
+				ProductionOrderId = productionOrderId,
+				WorkplaceId = prevWorkplaceId,
+				UserId = userId,
+				OperationType = "COMPLETE",
+				OperationTime = now,
+				Notes = "Автоматическое завершение (не отмечен участком)",
+				Source = $"{source} (auto)",
+				CreatedAt = now
+			});
+
+			// 2. Обновляем след
+			var footprint = await _context.OrderFootprints
+				.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId
+										   && fp.WorkplaceId == prevWorkplaceId);
+
+			if (footprint != null && footprint.Status != OrderStatus.WorkplaceStatus.Completed)
+			{
+				footprint.Status = OrderStatus.WorkplaceStatus.Completed;
+				footprint.UpdatedAt = now;
+			}
+		}
+
+		await _context.SaveChangesAsync();
 	}
 }

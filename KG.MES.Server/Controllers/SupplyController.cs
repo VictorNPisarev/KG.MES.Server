@@ -37,4 +37,9 @@ public partial class SupplyController : ControllerBase
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
 		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
+
+	// GET: api/supply/orders/fasets
+	[HttpPost("supply/orders/facets")]
+	public Task<IActionResult> GetSupplyOrderFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
 }

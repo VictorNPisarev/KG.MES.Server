@@ -101,4 +101,13 @@ public partial class SalesController : ControllerBase
 		//return Ok(managers);
 		return Ok();
 	}
+
+	public async Task<IActionResult> GetFilterFacetsHandler(FilterFacetsRequestDto request)
+	{
+		if (request?.Fields == null || !request.Fields.Any())
+			return BadRequest(new { error = "Fields are required" });
+
+		var result = await _orderService.GetFilterFacetsAsync<SalesOrderDto>(request);
+		return Ok(result);
+	}
 }

@@ -65,8 +65,8 @@ public partial class OrderController : ControllerBase
 	[AllowAnonymous]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
-			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
-		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
+			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null, [FromQuery] string? filters = null)
+		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds, filters);
 
 	// GET: api/orders/pending?workplaceId=...
 	[HttpGet("orders/pending")]
@@ -114,6 +114,11 @@ public partial class OrderController : ControllerBase
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 
+	// GET: api/orders/fasets
+	[HttpPost("orders/facets")]
+	[AllowAnonymous]
+	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
 
 
 	//-------------------------

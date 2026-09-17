@@ -253,13 +253,13 @@ public class OrderLifecycleControllerTests : TestBase
 		var prodOrder = await db.ProductionOrders.FindAsync(productionOrderId);
 		prodOrder!.CurrentWorkplaceId.Should().Be(workplaceId);
 
-		// 3. Создан OperationLog с типом MANUAL_UPDATE
+		// 3. Создан OperationLog
 		var logs = await db.OperationLogs
-			.Where(l => l.ProductionOrderId == productionOrderId && l.OperationType == "MANUAL_UPDATE")
+			.Where(l => l.ProductionOrderId == productionOrderId && l.OperationType == "START")
 			.ToListAsync();
 
 		logs.Should().HaveCount(1);
-		logs[0].Notes.Should().Contain("Статус изменён с NULL на active");
+		logs[0].Notes.Should().Contain("Ручное изменение");
 	}
 
 	[Fact]

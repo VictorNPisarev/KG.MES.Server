@@ -546,6 +546,196 @@ public class OrdersWorkplaceControllerTests : TestBase
 		footprints.Should().BeEmpty();
 	}
 
+	[Fact]
+	public async Task CompleteOrderWorkplace_ShouldAutoCompletePreviousWorkplaces()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_AutoComplete");
+		var client = customFactory.CreateClient();
+
+		var userId = Guid.NewGuid();
+
+		// Участки
+		var workplace1Id = Guid.NewGuid(); // Торцовка
+		var workplace2Id = Guid.NewGuid(); // Профилирование
+		var workplace3Id = Guid.NewGuid(); // Сборка
+		var workplace4Id = Guid.NewGuid(); // Упаковка (текущая)
+
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+
+		new TestDataBuilder()
+			// Участки
+			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Торцовка"; w.IsWorkplace = true; w.Level = 10; })
+			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Профилирование"; w.IsWorkplace = true; w.Level = 20; })
+			.WithWorkplace(w => { w.Id = workplace3Id; w.Name = "Сборка"; w.IsWorkplace = true; w.Level = 30; })
+			.WithWorkplace(w => { w.Id = workplace4Id; w.Name = "Упаковка"; w.Code = "PACKING"; w.IsWorkplace = true; w.Level = 40; })
+
+			// Связи между участками
+			.WithWorkplaceTransition(t => { t.FromWorkplaceId = workplace1Id; t.ToWorkplaceId = workplace2Id; })
+			.WithWorkplaceTransition(t => { t.FromWorkplaceId = workplace2Id; t.ToWorkplaceId = workplace3Id; })
+			.WithWorkplaceTransition(t => { t.FromWorkplaceId = workplace3Id; t.ToWorkplaceId = workplace4Id; })
+
+			// Заказ
+			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "AUTO-001"; })
+			.WithProductionOrder(po =>
+			{
+				po.Id = productionOrderId;
+				po.OrderId = orderId;
+				po.CurrentWorkplaceId = workplace4Id;
+			})
+
+			// Футпринты для всех участков
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace1Id; fp.Status = "planned"; })
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace2Id; fp.Status = "pending"; })
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace3Id; fp.Status = "active"; })
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace4Id; fp.Status = "active"; })
+
+			// Лог только для Сборки (workplace3) — START
+			.WithOperationLog(ol =>
+			{
+				ol.ProductionOrderId = productionOrderId;
+				ol.WorkplaceId = workplace3Id;
+				ol.UserId = userId;
+				ol.OperationType = "START";
+				ol.OperationTime = DateTime.UtcNow.AddHours(-1);
+				ol.Notes = "Начало работы на Сборке";
+				ol.Source = "Test";
+			})
+
+			.Build(customFactory.Services);
+
+		// Act — завершаем Упаковку (workplace4)
+		var request = new CompleteWorkplaceRequestDto
+		{
+			ProductionOrderId = productionOrderId,
+			WorkplaceId = workplace4Id,
+			UserId = userId,
+			Notes = "Упаковка завершена",
+			Source = "API"
+		};
+
+		var response = await client.PostAsJsonAsync("/api/orders/operations/complete", request);
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		using var scope = customFactory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+		// 1. Проверяем логи
+		var logs = await db.OperationLogs
+			.Where(ol => ol.ProductionOrderId == productionOrderId)
+			.OrderBy(ol => ol.OperationTime)
+			.ToListAsync();
+
+		// Ожидаем:
+		// - START на Сборке (был изначально)
+		// - COMPLETE на Торцовке (авто)
+		// - COMPLETE на Профилировании (авто)
+		// - COMPLETE на Сборке (авто)
+		// - COMPLETE на Упаковке (ручное)
+		// - COMPLETE на ГОТОВО (автоматически через SetOrderCompleteAsync)
+		logs.Should().HaveCount(5);
+
+		// Автозавершение на предыдущих участках
+		var autoCompleteLogs = logs
+			.Where(ol => ol.Source != null && ol.Source.Contains("auto"))
+			.ToList();
+		autoCompleteLogs.Should().HaveCount(3);
+
+		var autoWorkplaces = autoCompleteLogs.Select(ol => ol.WorkplaceId).ToList();
+		autoWorkplaces.Should().Contain(workplace1Id);
+		autoWorkplaces.Should().Contain(workplace2Id);
+		autoWorkplaces.Should().Contain(workplace3Id);
+
+		// Все с типом COMPLETE
+		autoCompleteLogs.All(ol => ol.OperationType == "COMPLETE").Should().BeTrue();
+
+		// С пометкой "Автоматическое завершение"
+		autoCompleteLogs.All(ol => ol.Notes != null && ol.Notes.Contains("Автоматическое завершение")).Should().BeTrue();
+
+		// 2. Проверяем футпринты — все должны быть completed
+		var footprints = await db.OrderFootprints
+			.Where(fp => fp.ProductionOrderId == productionOrderId)
+			.ToListAsync();
+
+		footprints.Should().HaveCount(4);
+		footprints.All(fp => fp.Status == "completed").Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task CompleteOrderWorkplace_WhenAllPreviousAlreadyCompleted_ShouldNotCreateDuplicates()
+	{
+		// Arrange
+		var customFactory = SetupTestFactory("TestDb_AutoComplete_NoDuplicates");
+		var client = customFactory.CreateClient();
+
+		var userId = Guid.NewGuid();
+
+		var workplace1Id = Guid.NewGuid();
+		var workplace2Id = Guid.NewGuid();
+
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+
+		new TestDataBuilder()
+			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Торцовка"; w.IsWorkplace = true; w.Level = 10; })
+			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Упаковка"; w.Code = "PACKING"; w.IsWorkplace = true; w.Level = 20; })
+			.WithWorkplaceTransition(t => { t.FromWorkplaceId = workplace1Id; t.ToWorkplaceId = workplace2Id; })
+			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "AUTO-002"; })
+			.WithProductionOrder(po =>
+			{
+				po.Id = productionOrderId;
+				po.OrderId = orderId;
+				po.CurrentWorkplaceId = workplace2Id;
+			})
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace1Id; fp.Status = "completed"; })
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplace2Id; fp.Status = "active"; })
+
+			// Торцовка уже завершена
+			.WithOperationLog(ol =>
+			{
+				ol.ProductionOrderId = productionOrderId;
+				ol.WorkplaceId = workplace1Id;
+				ol.UserId = userId;
+				ol.OperationType = "COMPLETE";
+				ol.OperationTime = DateTime.UtcNow.AddHours(-2);
+				ol.Notes = "Завершено ранее";
+				ol.Source = "Test";
+			})
+
+			.Build(customFactory.Services);
+
+		// Act — завершаем Упаковку
+		var request = new CompleteWorkplaceRequestDto
+		{
+			ProductionOrderId = productionOrderId,
+			WorkplaceId = workplace2Id,
+			UserId = userId,
+			Notes = "Упаковка завершена",
+			Source = "API"
+		};
+
+		var response = await client.PostAsJsonAsync("/api/orders/operations/complete", request);
+
+		// Assert
+		response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+		using var scope = customFactory.Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+		// Проверяем, что для Торцовки только ОДИН лог COMPLETE
+		var torcovkaLogs = await db.OperationLogs
+			.Where(ol => ol.ProductionOrderId == productionOrderId
+						 && ol.WorkplaceId == workplace1Id
+						 && ol.OperationType == "COMPLETE")
+			.ToListAsync();
+
+		torcovkaLogs.Should().HaveCount(1);
+		torcovkaLogs[0].Source.Should().Be("Test"); // ← не "auto"
+	}
+
 	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
 	{
 		return _factory.WithWebHostBuilder(builder =>

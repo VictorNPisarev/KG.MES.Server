@@ -1,4 +1,6 @@
 
+using System.Text.Json;
+using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +23,8 @@ public partial class OrderController
 
 
 	public async Task<IActionResult> GetOrdersHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
-		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid> ? workplaceIds = null)
+		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid> ? workplaceIds = null,
+		string? filters = null)
 	{
 		if (workplaceId.HasValue)
 		{
@@ -29,7 +32,23 @@ public partial class OrderController
 			workplaceIds.Add(workplaceId.Value);
 		}
 
-		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+		List<FilterCondition>? filterConditions = null;
+		if (!string.IsNullOrEmpty(filters))
+		{
+			try
+			{
+				filterConditions = JsonSerializer.Deserialize<List<FilterCondition>>(filters, new JsonSerializerOptions
+				{
+					PropertyNameCaseInsensitive = true
+				});
+			}
+			catch
+			{
+				filterConditions = null;
+			}
+		}
+
+		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber, filterConditions);
 
 		return Ok(result);
 	}
@@ -102,9 +121,22 @@ public partial class OrderController
 	{
 		if (string.IsNullOrEmpty(request.Status))
 			return BadRequest(new { error = "status is required" });
-		var result = await orderService.SetOrderFootprintStatusAsync(
-			productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
-		return Ok(result);
+		
+		switch (request.Status)
+		{
+			case OrderStatus.WorkplaceStatus.Completed: 
+				var completeResult = await orderService.CompleteOrderWorkplaceAsync(
+					productionOrderId, workplaceId, request.UserId, request.Notes ?? " ", "SetOrderFootprintStatusHandler");
+				return Ok(completeResult);
+			case OrderStatus.WorkplaceStatus.Active:
+				var startResult = await orderService.BeginOrderWorkplaceAsync(
+					productionOrderId, workplaceId, request.UserId, request.Notes ?? " ", "SetOrderFootprintStatusHandler");
+				return Ok(startResult);
+			default:
+				var result = await orderService.SetOrderFootprintStatusAsync(
+					productionOrderId, workplaceId, request.Status, request.UserId, request.Notes ?? " ");
+				return Ok(result);
+		}
 	}
 
 	public async Task<IActionResult> UpdateOrderFootprintBatchHandler(Guid productionOrderId, UpdateFootprintBatchRequest request)
@@ -237,5 +269,14 @@ public partial class OrderController
 			return NotFound(new { error = "Order not found or delete failed" });
 
 		return Ok(new { success = true, message = "Order deleted" });
+	}
+
+	public async Task<IActionResult> GetFilterFacetsHandler(FilterFacetsRequestDto request)
+	{
+		if (request?.Fields == null || !request.Fields.Any())
+			return BadRequest(new { error = "Fields are required" });
+
+		var result = await orderService.GetFilterFacetsAsync<OrderDto>(request);
+		return Ok(result);
 	}
 }
