@@ -14,8 +14,8 @@ public interface IOrderService
 	Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId);
 	Task<CreateOrderResultDto> CreateOrderAsync(OrderRequestDto request);
-	Task<OperationResultDto> BeginOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
-	Task<OperationResultDto> CompleteOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid userId, string notes, string source);
+	Task<OperationResultDto> BeginOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source);
+	Task<OperationResultDto> CompleteOrderWorkplaceAsync(Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source);
 	Task<SetFootprintResultDto> SetOrderFootprintStatusAsync(Guid productionOrderId, Guid workplaceId, string status, Guid? userId, string notes);
 	Task<BatchUpdateResultDto> UpdateOrderFootprintBatchAsync(Guid productionOrderId, List<FootprintItemDto> footprints, Guid? userId, string notes);
 	Task<List<OrderCommentDto>> GetOrderCommentsAsync(Guid orderId);
