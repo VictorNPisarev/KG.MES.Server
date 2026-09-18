@@ -1,0 +1,82 @@
+.trace-title
+{
+	margin-bottom: 0.5rem;
+	color: #000000;
+	font-size: 0.9rem;
+}
+
+.trace-panel
+{
+	background: #fffbf3;
+	border-radius: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid rgba(0, 0, 0, .06);
+	margin: 0rem;
+	display: inline-block;
+}
+
+.trace-table
+{
+	width: auto;
+	border-collapse: collapse;
+}
+
+.trace-table td
+{
+	padding: 0.5rem 0.5rem;
+	vertical-align: middle;
+}
+
+.trace-table tr+tr td {
+	border-top: 1px solid rgba(0, 0, 0, .05);
+}
+
+.trace-workplace {
+	font-size: 0.85rem;
+	color: #000000;
+	white-space: nowrap;
+}
+
+.trace-status {
+	white-space: nowrap;
+}
+
+.btn-outline-complete {
+	--bs-btn-color: #198754;
+	--bs-btn-border-color: #198754;
+	--bs-btn-hover-color: #fff;
+	--bs-btn-hover-bg: #198754;
+	--bs-btn-hover-border-color: #198754;
+	--bs-btn-active-color: #fff;
+	--bs-btn-active-bg: #157347;
+	--bs-btn-active-border-color: #146c43;
+	color: #fff;
+	background-color: #198754;
+	border-color: #198754;
+}
+
+.btn-outline-complete:hover {
+	color: #fff;
+	background-color: #157347;
+	border-color: #146c43;
+}
+
+.btn-outline-departure {
+	--bs-btn-color: #212529;
+	--bs-btn-border-color: #212529;
+	--bs-btn-hover-color: #fff;
+	--bs-btn-hover-bg: #212529;
+	--bs-btn-hover-border-color: #212529;
+	--bs-btn-active-color: #fff;
+	--bs-btn-active-bg: #1a1e21;
+	--bs-btn-active-border-color: #191c1f;
+	color: #fff;
+	background-color: #212529;
+	border-color: #212529;
+}
+
+.btn-outline-departure:hover {
+	color: #fff;
+	background-color: #1a1e21;
+	border-color: #191c1f;
+}

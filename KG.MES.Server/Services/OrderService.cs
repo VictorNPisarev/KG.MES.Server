@@ -1,7 +1,7 @@
 using System.Globalization;
 using KG.MES.Shared.Constants;
 using KG.MES.Shared.Data;
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 
 //using KG.MES.Server.Extensions;
 using KG.MES.Shared.Services.Interfaces;
@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
-using System.Collections;
+using KG.MES.Shared.Extensions;
 
 namespace KG.MES.Shared.Services;
 
@@ -471,7 +471,7 @@ public partial class OrderService : IOrderService
 		{
 			// ... другой query для Sales
 		}
-		else if (typeof(TDto) == typeof(SupplyOrderDto))
+		else if (typeof(TDto) == typeof(OrderSupplyDto))
 		{
 			// ... другой query для Supply
 		}

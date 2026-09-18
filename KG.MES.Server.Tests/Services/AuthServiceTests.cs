@@ -17,7 +17,7 @@ namespace KG.MES.Server.Tests.Services;
 public class AuthServiceTests : IDisposable
 {
 	private readonly AppDbContext _context;
-	private readonly AuthService _service;
+	private readonly ServerAuthService _service;
 	private readonly Mock<IUserService> _userServiceMock;
 	private readonly Mock<ILicenseService> _licenseServiceMock;
 	private readonly Mock<IJwtService> _jwtServiceMock;
@@ -39,7 +39,7 @@ public class AuthServiceTests : IDisposable
 		_userDeviceServiceMock = new Mock<IUserDeviceService>();
 		_loggerMock = new Mock<ILogger<AuthController>>();
 
-		_service = new AuthService(
+		_service = new ServerAuthService(
 			_context,
 			_userServiceMock.Object,
 			_licenseServiceMock.Object,

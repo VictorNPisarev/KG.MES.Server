@@ -1,0 +1,84 @@
+@inject ProductionApiService ApiService
+
+<div class="stats-panel">
+	<div class="d-flex justify-content-between align-items-center mb-3">
+		<h6 class="trace-title"><i class="bi bi-bar-chart"></i> Статистика участков</h6>
+		<select class="form-select form-select-sm" style="width: auto;" @bind="selectedWorkplaceId"
+			@bind:after="LoadStats">
+			<option value="">Выберите участок</option>
+			@foreach (var wp in workplaces)
+			{
+				<option value="@wp.Id">@wp.Name</option>
+			}
+		</select>
+	</div>
+
+	@if (selectedWorkplaceId != null && stats != null)
+	{
+		<div class="row g-2 mb-3">
+			<div class="col-3">
+				<div class="stat-card bg-warning bg-opacity-10">
+					<div class="stat-number">@stats.PendingCount</div>
+					<div class="stat-label">Ожидают</div>
+				</div>
+			</div>
+			<div class="col-3">
+				<div class="stat-card bg-info bg-opacity-10">
+					<div class="stat-number">@stats.JoineryCount</div>
+					<div class="stat-label">Столярка</div>
+				</div>
+			</div>
+			<div class="col-3">
+				<div class="stat-card bg-primary bg-opacity-10">
+					<div class="stat-number">@stats.ActiveCount</div>
+					<div class="stat-label">В работе</div>
+				</div>
+			</div>
+			<div class="col-3">
+				<div class="stat-card bg-success bg-opacity-10">
+					<div class="stat-number">@stats.CompletedCount</div>
+					<div class="stat-label">Завершено</div>
+				</div>
+			</div>
+		</div>
+
+		@if (blocks.Any())
+		{
+			<h6 class="small text-muted">Заблокированные заказы</h6>
+			<div class="blocks-list mb-3">
+				@foreach (var b in blocks)
+				{
+					<div class="block-item">
+						<span class="fw-bold">@b.OrderNumber</span>
+						<span class="text-muted ms-2">@b.Reason</span>
+						<small class="text-muted ms-auto">@b.BlockedAt.ToString("dd.MM HH:mm")</small>
+					</div>
+				}
+			</div>
+		}
+
+		@if (history.Any())
+		{
+			<h6 class="small text-muted">Последние операции</h6>
+			<div class="history-list">
+				@foreach (var h in history)
+				{
+					<div class="history-item">
+						<span
+							class="badge @(h.OperationType switch { "COMPLETE" => "bg-success", "START" => "bg-primary", _ => "bg-secondary" })">
+							@(h.OperationType switch { "COMPLETE" => "Готово", "START" => "Взято", _ => h.OperationType })
+						</span>
+						<span class="fw-bold ms-2">@h.OrderNumber</span>
+						<span class="text-muted ms-2">@h.UserName</span>
+						<small class="text-muted ms-auto">@h.OperationTime.ToString("dd.MM HH:mm")</small>
+					</div>
+				}
+			</div>
+		}
+	}
+	else
+	{
+		<p class="text-muted small">Выберите участок для просмотра статистики</p>
+	}
+</div>
+

@@ -12,8 +12,8 @@ namespace KG.MES.Server.Tests.Services;
 public class LicenseServiceTests : IDisposable
 {
 	private readonly AppDbContext context;
-	private readonly LicenseService service;
-	private readonly Mock<ILogger<LicenseService>> loggerMock;
+	private readonly ServerLicenseService service;
+	private readonly Mock<ILogger<ServerLicenseService>> loggerMock;
 
 	public LicenseServiceTests()
 	{
@@ -23,8 +23,8 @@ public class LicenseServiceTests : IDisposable
 			.Options;
 
 		context = new AppDbContext(options);
-		loggerMock = new Mock<ILogger<LicenseService>>();
-		service = new LicenseService(context, loggerMock.Object);
+		loggerMock = new Mock<ILogger<ServerLicenseService>>();
+		service = new ServerLicenseService(context, loggerMock.Object);
 	}
 
 	public void Dispose()

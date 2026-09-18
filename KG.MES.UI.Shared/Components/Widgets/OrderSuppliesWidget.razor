@@ -1,0 +1,142 @@
+@using KG.MES.Shared.Helpers
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Services
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+
+@if (isLoading)
+{
+	<div class="text-center py-3">
+		<div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+	</div>
+}
+else
+{
+	@if (supplies.Any())
+	{
+		<div class="supplies-panel">
+			<div class="d-flex justify-content-between align-items-center mb-2">
+				<h6 class="trace-title"><i class="bi bi-box-seam"></i> Снабжение</h6>
+				<div class="d-flex gap-1">
+					@if (EditMode)
+					{
+						<button class="btn btn-sm btn-link text-secondary p-0" @onclick="SaveChanges">
+							<i class="bi bi-check-lg"></i>
+						</button>
+						<button class="btn btn-sm btn-link text-secondary p-0" @onclick="CancelEdit">
+							<i class="bi bi-x-lg"></i>
+						</button>
+					}
+					else if (CanEdit)
+					{
+						<button class="btn btn-sm btn-link text-secondary p-0" @onclick="EnterEditMode">
+							<i class="bi bi-pencil"></i>
+						</button>
+					}
+				</div>
+			</div>
+			<table class="supplies-table">
+				<tbody>
+					@foreach (var s in supplies)
+					{
+						<tr>
+							<td class="supplies-material">@s.SupplyTypeName</td>
+							<td class="supplies-status">
+								<div class="d-flex align-items-center gap-1">
+									@if (EditMode)
+									{
+										<div class="dropdown" style="position: relative; display: inline-block;">
+											<span
+												class="badge @(BadgeHelper.GetBadgeClass(s.SupplyConditionCode) ?? "bg-light text-dark")"
+												style="cursor: pointer;" @onclick="() => ToggleDropdown(s.SupplyTypeId)">
+												@(s.SupplyConditionName ?? "—")
+												<i class="bi bi-chevron-down ms-1 small"></i>
+											</span>
+
+											@if (openDropdowns.GetValueOrDefault(s.SupplyTypeId))
+											{
+												<ul class="dropdown-menu show" style="position: absolute; z-index: 1000;">
+													@foreach (var c in conditions)
+													{
+														<li>
+															<a class="dropdown-item"
+																@onclick="() => { SelectCondition(s, c); CloseDropdown(s.SupplyTypeId); }"
+																@onclick:preventDefault>
+																<span
+																	class="badge @BadgeHelper.GetBadgeClass(c.ConditionCode)">@c.DisplayName()</span>
+															</a>
+														</li>
+													}
+												</ul>
+
+												<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999;"
+													@onclick="() => CloseDropdown(s.SupplyTypeId)"></div>
+											}
+										</div>
+									}
+									else if (s.SupplyConditionId != null)
+									{
+										<span class="badge @BadgeHelper.GetBadgeClass(s.SupplyConditionCode)">
+											@s.SupplyConditionName
+										</span>
+									}
+									else
+									{
+										<span class="text-muted">—</span>
+									}
+
+									@* Кнопка комментария *@
+									@if (EditMode || !string.IsNullOrEmpty(s.Comment))
+									{
+										if (showComments.GetValueOrDefault(s.SupplyTypeId))
+										{
+											<button class="btn btn-sm btn-link text-secondary p-0" 
+													@onclick="() => ToggleComment(s)" title="Свернуть">
+												<i class="bi bi-chevron-up"></i>
+											</button>
+										}
+										else
+										{
+											<button class="btn btn-sm btn-link p-0 @(string.IsNullOrEmpty(s.Comment) ? "text-secondary" : "text-primary")"
+													@onclick="() => ToggleComment(s)" title="Комментарий">
+												<i class="bi bi-chat-left-text"></i>
+												@if (!string.IsNullOrEmpty(s.Comment))
+												{
+													<small class="ms-1 text-primary" style="font-size: 0.7rem;">
+														@(s.Comment!.Length > 10 ? s.Comment[..10] + "…" : s.Comment)
+													</small>
+												}
+											</button>
+										}
+									}
+								</div>
+							</td>
+						</tr>
+						@* Поле комментария на всю ширину *@
+						@if (showComments.GetValueOrDefault(s.SupplyTypeId))
+						{
+							<tr>
+								<td colspan="2" class="p-1">
+									@if (EditMode)
+									{
+										<textarea class="form-control form-control-sm auto-grow" @bind="s.Comment" rows="1"
+											placeholder="Примечание" style="width: 100%; resize: none; overflow: hidden;"></textarea>
+									}
+									else
+									{
+										<div class="p-2 bg-white rounded border" style="white-space: pre-wrap;">@s.Comment</div>
+									}
+								</td>
+							</tr>
+						}
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<p class="text-muted small mb-0">Нет данных о снабжении</p>
+	}
+}

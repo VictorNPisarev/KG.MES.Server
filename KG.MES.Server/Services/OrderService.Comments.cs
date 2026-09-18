@@ -1,5 +1,5 @@
 // KG.MES.Server/Services/OrderService.Comments.cs
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -36,8 +36,8 @@ public partial class OrderService
 		{
 			Id = c.Id,
 			Content = c.Content,
-			CreatedAt = c.CreatedAt.ToProductionTime(),
-			UpdatedAt = c.UpdatedAt.ToProductionTime(),
+			CreatedAt = c.CreatedAt?.ToProductionTime(),
+			UpdatedAt = c.UpdatedAt?.ToProductionTime(),
 			UserName = c.UserName
 		}).ToList();
 	}

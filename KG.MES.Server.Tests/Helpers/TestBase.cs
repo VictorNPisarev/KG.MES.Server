@@ -55,11 +55,11 @@ public abstract class TestBase : IClassFixture<WebApplicationFactory<Program>>, 
 				//Сервисы для тестов
 				services.AddScoped<IUserService, UserService>();
 				services.AddScoped<IOrderService, OrderService>();
-				services.AddScoped<ISupplyService, SupplyService>();
+				services.AddScoped<ISupplyService, ServerSupplyService>();
 				services.AddScoped<IWorkplaceService, WorkplaceService>();
-				services.AddScoped<IAuthService, AuthService>();
+				services.AddScoped<IAuthService, ServerAuthService>();
 				services.AddScoped<IJwtService, JwtService>();
-				services.AddScoped<ILicenseService, LicenseService>();
+				services.AddScoped<ILicenseService, ServerLicenseService>();
 				services.AddScoped<IUserDeviceService, UserDeviceService>();
 				services.AddScoped<OrderAttributeService>();
 				services.AddScoped<LeadTimeCalculationService>();

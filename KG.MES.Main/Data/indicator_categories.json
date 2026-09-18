@@ -1,0 +1,94 @@
+{
+	"categories": [
+		{
+			"categoryKey": "PanelProducts",
+			"name": "Щитовые изделия",
+			"description": "Подоконники, откосы, наличники и другие щитовые изделия",
+			"indicators": ["P"]
+		},
+		{
+			"categoryKey": "GlassProducts",
+			"name": "Стеклопакеты",
+			"description": "Стеклопакеты и стеклянные изделия",
+			"indicators": ["G"]
+		},
+		{
+			"categoryKey": "Hardware",
+			"name": "Фурнитура",
+			"description": "Петли, ручки, замки, доводчики, приводы",
+			"indicators": ["p", "R", "v", "D", "M", "E"]
+		},
+		{
+			"categoryKey": "FinishingMaterials",
+			"name": "Материалы для отделки",
+			"description": "Лакокрасочные материалы, герметики, клеи, уплотнители",
+			"indicators": ["L", "S", "U", "l"]
+		},
+		{
+			"categoryKey": "AluminumProfiles",
+			"name": "Алюминиевые профили",
+			"description": "Алюминиевые профили и комплектующие",
+			"indicators": ["A", "a"]
+		},
+		{
+			"categoryKey": "Packaging",
+			"name": "Упаковка",
+			"description": "Упаковочные материалы",
+			"indicators": ["u", "x"]
+		},
+		{
+			"categoryKey": "MosquitoNets",
+			"name": "Москитные сетки",
+			"description": "Москитные сетки и комплектующие",
+			"indicators": ["m", "s"]
+		},
+		{
+			"categoryKey": "Ventilation",
+			"name": "Вентиляция",
+			"description": "Вентиляционные элементы",
+			"indicators": ["V"]
+		},
+		{
+			"categoryKey": "WindowSills",
+			"name": "Подоконники",
+			"description": "Подоконники различных типов",
+			"indicators": ["P"]
+		},
+		{
+			"categoryKey": "Slopes",
+			"name": "Откосы",
+			"description": "Откосы горизонтальные и вертикальные",
+			"indicators": []
+		},
+		{
+			"categoryKey": "Casings",
+			"name": "Наличники",
+			"description": "Декоративные наличники",
+			"indicators": []
+		},
+		{
+			"categoryKey": "Consumables",
+			"name": "Расходные материалы",
+			"description": "Расходники для производства",
+			"indicators": ["0"]
+		},
+		{
+			"categoryKey": "Caps",
+			"name": "Заглушки",
+			"description": "Заглушки различных типов",
+			"indicators": ["1", "Z"]
+		},
+		{
+			"categoryKey": "Sealants",
+			"name": "Герметики и клеи",
+			"description": "Герметики, клеи, силиконы",
+			"indicators": ["S"]
+		},
+		{
+			"categoryKey": "Seals",
+			"name": "Уплотнители",
+			"description": "Уплотнители для окон и дверей",
+			"indicators": ["U"]
+		}
+	]
+}

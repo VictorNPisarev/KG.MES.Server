@@ -1,0 +1,111 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">
+            <i class="bi bi-window"></i> XML Order Reader
+        </a>
+    </div>
+</div>
+
+<div class="nav-scrollable">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <i class="bi bi-clipboard-check me-2"></i> Заказы в производстве
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="upload">
+                <i class="bi bi-upload me-2"></i> Загрузить XML
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="create-order">
+                <i class="bi bi-plus-square me-2"></i> Новый заказ
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="workplace-stats">
+                <i class="bi bi-bar-chart me-2"></i> Статистика участков
+            </NavLink>
+        </div>
+>>>>>>> Stashed changes
+    </nav>
+</div>
+
+<style>
+    .page {
+        display: flex;
+        height: 100vh;
+        background: #f5f6f8;
+    }
+
+    .sidebar {
+        width: 260px;
+        background: #1a1d23;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        color: #b0b5c0;
+    }
+
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.5rem 1.25rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .sidebar-brand i {
+        font-size: 1.4rem;
+        color: #4f8ff7;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 1rem 0.75rem;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 0.5rem;
+        color: #9095a0;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.15s;
+    }
+
+    .nav-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: #d0d4dc;
+    }
+
+    .nav-item.active {
+        background: rgba(79, 143, 247, 0.12);
+        color: #4f8ff7;
+    }
+
+    .nav-item i {
+        font-size: 1.15rem;
+        width: 24px;
+        text-align: center;
+    }
+
+    main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .sidebar-logo {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+    }
+</style>

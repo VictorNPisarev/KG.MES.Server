@@ -1,0 +1,11 @@
+{
+	"listEndpoint": "sales/orders",
+	"cardEndpoint": "orders",
+	"title": "Заказы (Отдел продаж)",
+	"showActions": false,
+	"canEdit": false,
+	"showTrace": true,
+	"editTrace": false,
+	"showSupply": false,
+	"editSupply": false
+}

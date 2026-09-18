@@ -1,0 +1,333 @@
+@using KG.MES.Shared.Helpers
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.UI.Shared.Enums
+@typeparam TListItem
+@typeparam TCardItem
+
+
+<PageTitle>@Title</PageTitle>
+
+<div class="container-fluid py-4" @ref="pageContainer" style="max-height: calc(100vh - 50px); overflow-y: auto;">
+	<!-- Sticky заголовок -->
+	<div class="sticky-header">
+		<div class="container-fluid">
+			<div class="row align-items-center">
+				<div class="col">
+					<h1 class="display-6 mb-1">
+						<i class="bi bi-clipboard-check"></i> @Title
+					</h1>
+				</div>
+				@if (ShowActions)
+				{
+					<div class="col-auto">
+						@HeaderActions
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+
+	<!-- Фильтры -->
+	<div class="row mt-4 g-2">
+		<div class="col-md-2">
+			<div style="position: relative;">
+				<button class="form-control text-start d-flex justify-content-between align-items-center"
+					@onclick="ToggleDropdown" type="button">
+					@if (selectedWorkplaceIds.Length == 0)
+					{
+						<span class="text-muted">Все участки</span>
+					}
+					else
+					{
+						<span class="text-truncate">@string.Join(", ", workplaces.Where(w =>
+														selectedWorkplaceIds.Contains(w.Id)).Select(w => w.Name))</span>
+											}
+					<i class="bi @(dropdownOpen ? "bi-chevron-up" : "bi-chevron-down") ms-2"></i>
+				</button>
+
+				@if (dropdownOpen)
+				{
+					<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999; background: transparent;"
+						@onclick="CloseDropdown"></div>
+
+					<div class="position-absolute top-100 start-0 w-100 bg-white border rounded shadow-sm p-2"
+						style="max-height: 250px; overflow-y: auto; z-index: 1000;">
+						@foreach (var workplace in workplaces)
+						{
+							<div class="form-check d-flex align-items-center gap-2 py-1">
+								<input type="checkbox" class="form-check-input m-0" id="wp-@workplace.Id"
+									checked="@selectedWorkplaceIds.Contains(workplace.Id)"
+									@onchange="(e) => ToggleWorkplace(workplace.Id, (bool)(e.Value ?? false))" />
+								<label class="form-check-label w-100 m-0" style="cursor: pointer;" for="wp-@workplace.Id">
+									@workplace.Name
+								</label>
+							</div>
+						}
+					</div>
+				}
+			</div>
+		</div>
+		<div class="col-md-2">
+			<input class="form-control"
+				   type="text"
+				   placeholder="Номер заказа"
+				   @bind="searchNumber"
+				   @onkeyup="OnSearchKeyUp" />
+		</div>
+		<div class="col-md-2 d-flex gap-2">
+			<button class="btn btn-primary w-100 btn-nowrap" @onclick="ApplyFilters">
+				<i class="bi bi-search"></i>
+				<span class="btn-text">Найти</span>
+			</button>
+			@* Кнопка Сброс/Восстановить *@
+			@if (savedFilter != null && !IsFilterSaved())
+			{
+				<button class="btn btn-outline-secondary" @onclick="RestoreFilter" title="Восстановить фильтр">
+					<i class="bi bi-arrow-counterclockwise"></i>
+				</button>
+			}
+			else
+			{
+				<button class="btn btn-outline-secondary" @onclick="ClearFilter" title="Сбросить фильтр">
+					<i class="bi bi-x-lg"></i>
+				</button>
+			}
+			@* Кнопка Сохранить: активна если фильтр изменён *@
+			<button class="btn btn-outline-secondary @(IsFilterSaved() ? "disabled" : "")" @onclick="SaveFilter"
+				title="Сохранить фильтр" disabled="@IsFilterSaved()">
+				<i class="bi bi-floppy"></i>
+			</button>
+
+		@* Фильтр по полям *@
+			<div class="position-relative">
+				<button class="btn btn-outline-secondary"
+						@onclick="ToggleAdvancedFilter" title="Расширенный фильтр" type="button">
+					<i class=@(HasAdvancedFilters ? "bi bi-funnel-fill filter-icon-active" : "bi bi-funnel")></i>
+					@*@if (HasAdvancedFilters)
+					{
+						<i class="bi bi-check-lg text-success ms-1"></i>
+					}*@
+				</button>
+
+				@if (showAdvancedFilter)
+				{
+					<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999; background: transparent;" @onclick="CloseAdvancedFilter"></div>
+
+					<div class="advanced-filter-panel position-absolute top-100 start-0 bg-white border rounded shadow-sm p-2"
+						style="min-width: 250px; max-height: 600px; overflow-y: auto; z-index: 1000;">
+						@foreach (var group in advancedFilterGroups)
+						{
+							<div class="filter-group-header mb-2 w-100">
+								<button class="btn p-1 filter-group-header d-flex align-items-center gap-1 w-100"
+									@onclick="() => ToggleAdvancedGroup(group.Key)">
+									<i class="bi @(expandedGroups.Contains(group.Key) ? "bi-dash" : "bi-plus")"></i>
+									<span>@group.Key</span>
+								</button>
+
+								@if (expandedGroups.Contains(group.Key))
+								{
+									<div class="ms-3 mt-1">
+										@foreach (var facet in group.Value)
+										{
+											<div class="form-check d-flex align-items-center gap-2">
+												<input type="checkbox" class="form-check-input m-0" id="adv-@group.Key-@facet.Value"
+													checked="@IsAdvancedFilterSelected(group.Key, facet.Value)"
+													@onchange="(e) => ToggleAdvancedFilterValue(group.Key, facet.Value, (bool)(e.Value ?? false))" />
+												<label class="form-check-label flex-grow-1" for="adv-@group.Key-@facet.Value">
+													@facet.Value
+												</label>
+												@*<small class="text-muted">@facet.Count</small>*@
+											</div>
+										}
+									</div>
+								}
+							</div>
+						}
+
+						@if (HasAdvancedFilters)
+						{
+							<hr />
+							<button class="btn btn-sm btn-outline-secondary w-100" @onclick="ClearAdvancedFilters">
+								<i class="bi bi-x-circle me-1"></i> Сбросить
+							</button>
+						}
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+
+	<!-- Таблица -->
+	@if (isLoading)
+	{
+		<div class="text-center py-5">
+			<div class="spinner-border text-primary" role="status">
+				<span class="visually-hidden">Загрузка...</span>
+			</div>
+			<p class="text-muted mt-2">Загружаем заказы...</p>
+		</div>
+	}
+	else if (orders.Data.Any())
+	@*else if (FilteredItems.Any())*@
+	{
+		var visibleData = BuildVisibleColumns();
+		<div class="row g-0 d-flex w-100" style="flex-wrap: nowrap;">
+			<div class="@(useSplitView && selectedOrder != null ? "resizable-panel" : "table-responsive mt-3")"
+					id="split-panel" style="@(useSplitView && selectedOrder != null ? "width: " + savedPanelWidth : "width: 100%")">
+				@*<DynamicTable TListItem="TListItem" Items="FilteredItems" ColumnInfos="columnInfos"*@
+				<DynamicTable TListItem="TListItem" Items="orders.Data" ColumnInfos="columnInfos"
+					ColumnSettings="columnSettings" TableKey="@tableKey" ShowActions="true"
+					OnSortChanged="HandleSortChanged" AllowSorting="true" Totals="totals" ShowTotal="true" CalculateTotal="false">
+					<RowActions>
+						<div class="text-muted me-auto">
+							@if (orders.Data.Any())
+							{
+								<span>Показано @((orders.Page - 1) * orders.Limit + 1)-@(Math.Min(orders.Page * orders.Limit,
+																orders.Total)) из @orders.Total</span>
+							}
+						</div>
+						<button class="btn btn-sm btn-outline-secondary" @onclick="ToggleViewMode"
+							title="@(useSplitView ? "Модальное окно" : "Разделённый вид")">
+							<i class="bi @(useSplitView ? "bi-window" : "bi-layout-split")"></i>
+						</button>
+					</RowActions>
+					<RowTemplate>
+						<div class="d-flex flex-row gap-2">
+							<button class="btn btn-sm btn-outline-primary"
+									@onclick="() => OpenOrder(context!)">
+								<i class="bi bi-eye"></i>
+							</button>
+							@if (Settings.CanEdit)
+							{
+								<button class="btn btn-sm btn-outline-success" @onclick="() => EditOrder(context!)"
+									title="Редактировать">
+									<i class="bi bi-pencil"></i>
+								</button>
+							}
+							@if (Settings.CanDelete)
+							{
+								<button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteOrder(context!)"
+									title="Удалить">
+									<i class="bi bi-trash"></i>
+								</button>
+							}
+						</div>
+					</RowTemplate>
+				</DynamicTable>
+
+			</div>
+			@if (useSplitView && selectedOrder != null)
+			{
+				<div class="sticky-panel" style="flex: 1; min-width: 0; max-height: calc(100vh - 200px); overflow-y: auto;">
+					<div class="p-3">
+						<div/>
+						<div class="d-flex justify-content-between align-items-center mb-3">
+							<h5>
+								Заказ №@GetOrderNumber(selectedOrder!)
+								@{
+									var icons = ColumnHelper.GetIcons(selectedOrder, typeof(TListItem), "OrderFlags");
+									foreach (var icon in icons)
+									{
+										<i class="@icon.Class @icon.Css fs-4 ms-2" title="@icon.Title"></i>
+									}
+								}
+							</h5>
+							<button class="btn-close" @onclick="CloseOrder"></button>
+						</div>
+						<OrderDashboard @ref="dashboardRef" TOrder="TCardItem" LoadItem="LoadItem" OrderId="@GetOrderId(selectedOrder!)" 
+							Settings="@Settings" OnClose="CloseOrder" ViewMode="DashboardViewMode.Tabs" @key="@GetOrderId(selectedOrder)" />
+					</div>
+				</div>
+			}
+		</div>
+		<!-- Пагинация -->
+		<div class="d-flex justify-content-between align-items-center mt-3">
+			<div class="d-flex align-items-center gap-2">
+				<select class="form-select form-select-sm" style="width: auto;" @bind="pageSize"
+					@bind:after="OnPageSizeChanged">
+					<option value="20">20</option>
+					<option value="50">50</option>
+					<option value="100">100</option>
+				</select>
+				<span class="text-muted">записей на странице</span>
+			</div>
+
+			<div class="text-muted">
+				Показано @((orders.Page - 1) * orders.Limit + 1)-@(Math.Min(orders.Page * orders.Limit, orders.Total)) из
+				@orders.Total
+			</div>
+
+			<nav>
+				<ul class="pagination mb-0">
+					<li class="page-item @(orders.HasPreviousPage ? "" : "disabled")">
+						<button class="page-link" @onclick="() => GoToPage(1)"
+								disabled="@(!orders.HasPreviousPage)">
+							<i class="bi bi-chevron-double-left"></i>
+						</button>
+					</li>
+					<li class="page-item @(orders.HasPreviousPage ? "" : "disabled")">
+						<button class="page-link" @onclick="() => GoToPage(orders.Page - 1)"
+								disabled="@(!orders.HasPreviousPage)">
+							<i class="bi bi-chevron-left"></i>
+						</button>
+					</li>
+
+					@foreach (var pageNum in GetPageNumbers())
+					{
+						<li class="page-item @(pageNum == orders.Page ? "active" : "")">
+							<button class="page-link" @onclick="() => GoToPage(pageNum)">@pageNum</button>
+						</li>
+					}
+
+					<li class="page-item @(orders.HasNextPage ? "" : "disabled")">
+						<button class="page-link" @onclick="() => GoToPage(orders.Page + 1)"
+								disabled="@(!orders.HasNextPage)">
+							<i class="bi bi-chevron-right"></i>
+						</button>
+					</li>
+					<li class="page-item @(orders.HasNextPage ? "" : "disabled")">
+						<button class="page-link" @onclick="() => GoToPage(orders.TotalPages)"
+								disabled="@(!orders.HasNextPage)">
+							<i class="bi bi-chevron-double-right"></i>
+						</button>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	}
+	else
+	{
+		<div class="text-center py-5">
+			<i class="bi bi-inbox display-1 text-muted"></i>
+			<p class="text-muted mt-3">Нет заказов</p>
+		</div>
+	}
+</div>
+<!-- Модальное окно с карточкой заказа -->
+@if (!useSplitView && isModalOpen && selectedOrder != null)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog modal-xl">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">
+						Заказ №@GetOrderNumber(selectedOrder!)
+						@{
+							var icons = ColumnHelper.GetIcons(selectedOrder, typeof(TListItem), "OrderFlags");
+							foreach (var icon in icons)
+							{
+								<i class="@icon.Class @icon.Css fs-4 ms-2" title="@icon.Title"></i>
+							}
+						}
+					</h5>
+					<button type="button" class="btn-close" @onclick="() => dashboardRef!.CloseOrder()"></button>
+				</div>
+				<div class="modal-body">
+					<OrderDashboard @ref="dashboardRef" TOrder="TCardItem" LoadItem="LoadItem"
+						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" />
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show" @onclick="() => dashboardRef!.CloseOrder()"></div>
+}

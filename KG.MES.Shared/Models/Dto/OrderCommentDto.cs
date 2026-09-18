@@ -8,13 +8,13 @@ public class OrderCommentDto
 	public Guid Id { get; set; }
 
 	[JsonPropertyName("content")]
-	public string Content { get; set; } = string.Empty;
+	public string? Content { get; set; } = string.Empty;
 
 	[JsonPropertyName("created_at")]
-	public DateTime CreatedAt { get; set; }
+	public DateTime? CreatedAt { get; set; }
 
 	[JsonPropertyName("updated_at")]
-	public DateTime UpdatedAt { get; set; }
+	public DateTime? UpdatedAt { get; set; }
 
 	[JsonPropertyName("user_name")]
 	public string? UserName { get; set; }

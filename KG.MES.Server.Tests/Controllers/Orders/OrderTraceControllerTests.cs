@@ -90,19 +90,19 @@ public class OrderTraceControllerTests : TestBase
 		trace.OrderNumber.Should().Be("1014");
 		trace.ReadyDate.Should().Be(DateTime.Parse("2026-06-21T21:00:00.000Z"));
 
-		trace.Workplaces.Should().HaveCount(3);
+		trace.WorkplaceTraces.Should().HaveCount(3);
 
-		trace.Workplaces[0].WorkplaceId.Should().Be(workplace1Id);
-		trace.Workplaces[0].WorkplaceName.Should().Be("Торцовка");
-		trace.Workplaces[0].Status.Should().Be("completed");
+		trace.WorkplaceTraces[0].WorkplaceId.Should().Be(workplace1Id);
+		trace.WorkplaceTraces[0].WorkplaceName.Should().Be("Торцовка");
+		trace.WorkplaceTraces[0].Status.Should().Be("completed");
 
-		trace.Workplaces[1].WorkplaceId.Should().Be(workplace2Id);
-		trace.Workplaces[1].WorkplaceName.Should().Be("Профилирование");
-		trace.Workplaces[1].Status.Should().Be("pending");
+		trace.WorkplaceTraces[1].WorkplaceId.Should().Be(workplace2Id);
+		trace.WorkplaceTraces[1].WorkplaceName.Should().Be("Профилирование");
+		trace.WorkplaceTraces[1].Status.Should().Be("pending");
 
-		trace.Workplaces[2].WorkplaceId.Should().Be(workplace3Id);
-		trace.Workplaces[2].WorkplaceName.Should().Be("Сборка");
-		trace.Workplaces[2].Status.Should().Be("planned");
+		trace.WorkplaceTraces[2].WorkplaceId.Should().Be(workplace3Id);
+		trace.WorkplaceTraces[2].WorkplaceName.Should().Be("Сборка");
+		trace.WorkplaceTraces[2].Status.Should().Be("planned");
 	}
 
 	[Fact]
@@ -153,9 +153,9 @@ public class OrderTraceControllerTests : TestBase
 		var trace = result.Orders[0];
 		trace.OrderId.Should().Be(orderId);
 		trace.OrderNumber.Should().Be("2025");
-		trace.Workplaces.Should().HaveCount(1);
-		trace.Workplaces[0].WorkplaceName.Should().Be("Покраска");
-		trace.Workplaces[0].Status.Should().Be("pending");
+		trace.WorkplaceTraces.Should().HaveCount(1);
+		trace.WorkplaceTraces[0].WorkplaceName.Should().Be("Покраска");
+		trace.WorkplaceTraces[0].Status.Should().Be("pending");
 	}
 
 	[Fact]

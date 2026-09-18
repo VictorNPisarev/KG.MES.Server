@@ -1,6 +1,4 @@
-using System.Globalization;
-using KG.MES.Shared.Constants;
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -90,7 +88,7 @@ public partial class OrderService
 					OrderNumber = order.OrderNumber,
 					ReadyDate = order.ReadyDate,
 					Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
-					Workplaces = footprints
+					WorkplaceTraces = footprints
 				});
 			}
 			else
@@ -149,7 +147,7 @@ public partial class OrderService
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
 				Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
-				Workplaces = workplaces
+				WorkplaceTraces = workplaces
 			};
 	}
 }

@@ -1,0 +1,25 @@
+.order-icon-claim {
+	color: #dc3545 !important;
+}
+
+.order-icon-econom {
+	color: #6c757d !important;
+}
+
+.order-icon-paid {
+	color: #198754 !important;
+}
+
+.order-icon-plate {
+	color: #fd7e14 !important;
+}
+
+.icon-transfer-start {
+	color: #0066ff;
+	font-size: 1.25rem !important;
+}
+
+.icon-transfer-complete {
+	color: #009242;
+	font-size: 1.25rem !important;
+}

@@ -84,7 +84,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -143,7 +143,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -208,7 +208,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -243,7 +243,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});

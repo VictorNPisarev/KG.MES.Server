@@ -1,0 +1,45 @@
+.supplies-title
+{
+	margin-bottom: 0.5rem;
+	color: #000000;
+	font-size: 0.9rem;
+}
+
+.supplies-panel
+{
+	background: #f8f9fa;
+	border-radius: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid rgba(0, 0, 0, .06);
+	margin: 0rem;
+	display: inline-block;
+}
+
+.supplies-table
+{
+	width: auto;
+	border-collapse: collapse;
+}
+
+.supplies-table td
+{
+	padding: 0.5rem 0.5rem;
+	vertical-align: middle;
+}
+
+.supplies-table tr+tr td
+{
+	border-top: 1px solid rgba(0, 0, 0, .05);
+}
+
+.supplies-material_type
+{
+	font-size: 0.85rem;
+	color: #000000;
+	white-space: nowrap;
+}
+
+.supplies-status
+{
+	white-space: nowrap;
+}

@@ -1,4 +1,4 @@
-using KG.MES.Shared.Attributes;
+using KG.MES.Shared.Common.Attributes;
 
 namespace KG.MES.Shared.Models.Enums;
 

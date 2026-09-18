@@ -11,7 +11,7 @@ public class OrderAttributeService(AppDbContext context, ILogger<OrderAttributeS
 	
 	public async Task<Dictionary<Guid, List<OrderAttributeDto>>> GetAttributesForWorkplace(
 		Guid workplaceId,
-		List<OrderWorkplaceDto> orderWorkplaceDtos)
+		List<WorkplaceOrderDto> orderWorkplaceDtos)
 	{
 		var result = new Dictionary<Guid, List<OrderAttributeDto>>();
 

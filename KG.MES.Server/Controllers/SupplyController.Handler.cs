@@ -78,7 +78,7 @@ public partial class SupplyController
 		if (request?.Fields == null || !request.Fields.Any())
 			return BadRequest(new { error = "Fields are required" });
 
-		var result = await _orderService.GetFilterFacetsAsync<SupplyOrderDto>(request);
+		var result = await _orderService.GetFilterFacetsAsync<OrderSupplyDto>(request);
 		return Ok(result);
 	}
 

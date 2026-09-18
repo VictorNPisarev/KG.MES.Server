@@ -1,0 +1,107 @@
+{
+	"types": {
+		"Lumber": {"description": "Пиломатериалы", "icon": "bi-tree-fill", "color": "success", "defaultUnit": "м"},
+		"Paint": {"description": "Лакокрасочные материалы", "icon": "bi-palette-fill", "color": "primary", "defaultUnit": "Литры"},
+		"Fitting": {"description": "Фурнитура", "icon": "bi-gear-fill", "color": "warning", "defaultUnit": "шт"},
+		"Glass": {"description": "Стеклопакеты", "icon": "bi-window", "color": "info", "defaultUnit": "м²"},
+		"Accessory": {"description": "Аксессуары", "icon": "bi-box-seam", "color": "secondary", "defaultUnit": "шт"},
+		"Packaging": {"description": "Упаковка", "defaultUnit": "м"},
+		"Seal": {"description": "Уплотнители", "icon": "bi-droplet-fill", "color": "info", "defaultUnit": "м"},
+		"Fastener": {"description": "Крепеж", "icon": "bi-screwdriver", "color": "dark", "defaultUnit": "шт"},
+		"AdhesiveSealant": {"description": "Клеи и герметики", "icon": "bi-droplet", "color": "info", "defaultUnit": "кг"},
+		"Composite": {"description": "Композитные материалы", "icon": "bi-layers", "color": "info", "defaultUnit": "м²"},
+		"Other": {"description": "Прочее", "icon": "bi-tag", "color": "secondary", "defaultUnit": "шт"},
+		"Aluminium": {"description": "Алюминиевый профиль", "icon": "bi-droplet-fill", "color": "info", "defaultUnit": "м"}
+	},
+	"rules": [
+		{
+			"type": "Lumber",
+			"xmlSource": "XmlWoodProfile"
+		},
+		{
+			"type": "Paint",
+			"xmlSource": "XmlPaint",
+			"skip": true
+		},
+		{
+			"type": "Fitting",
+			"xmlSource": "XmlFitting",
+			"unit": "шт"
+		},
+		{
+			"type": "Glass",
+			"xmlSource": "XmlGlassProduct",
+			"unit": "м2"
+		},
+		{
+			"type": "Accessory",
+			"xmlSource": "XmlAccessory"
+		},
+		{
+			"type": "Packaging",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["картон", "028737"],
+			"descriptionKeywords": ["картон", "пленка защитная"]
+		},
+		{
+			"type": "Packaging",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"unit": "кг",
+			"articleKeywords": ["стрейч", "пленк"],
+			"descriptionKeywords": ["стрейч", "пленка"]
+		},
+		{
+			"type": "Seal",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["deventer", "s7503", "s6867", "us1", "us2", "usht"],
+			"descriptionKeywords": ["уплотнитель", "упл"]
+		},
+		{
+			"type": "Fastener",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["шкант", "штифт", "шуруп", "винт", "саморез"],
+			"descriptionKeywords": ["шкант", "штифт", "шуруп", "винт", "саморез", "креп"]
+		},
+		{
+			"type": "AdhesiveSealant",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["rakol", "klei","sil"],
+			"descriptionKeywords": ["клей", "герметик", "заполн","силикон"]
+		},
+		{
+			"type": "Composite",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["композит", "wpc"],
+			"descriptionKeywords": ["дпк", "дерево-полимер"]
+		},
+		{
+			"type": "Paint",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["GW", "DW"],
+			"descriptionKeywords": ["Лак", "Грунт"]
+		},
+		{
+			"type": "AdhesiveSealant",
+			"xmlSource": "XmlTechArticle",
+			"priority": 11,
+			"articleKeywords": ["sil"],
+			"descriptionKeywords": ["силикон"],
+			"coefficient": 0.034
+		},
+		{
+			"type": "Aluminium",
+			"xmlSource": "XmlTechArticle",
+			"priority": 10,
+			"articleKeywords": ["AVD"],
+			"descriptionKeywords": ["Регеншина", "Профиль покрытия створки"]
+		}
+
+	]
+}

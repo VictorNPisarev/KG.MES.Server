@@ -1,0 +1,227 @@
+@using KG.MES.Main.Models
+@using KG.MES.Shared.Common.Extensions
+
+@if (Item != null)
+{
+	<div class="technical-data mt-3">
+		<h6><i class="bi bi-gear"></i> Технические данные</h6>
+		
+		<div class="row">
+			<div class="col-md-6">
+				<table class="table table-sm table-borderless">
+					<tbody>
+						<tr>
+							<td><strong>Модуль:</strong></td>
+							<td>@Item.ModuleName</td>
+						</tr>
+						<tr>
+							<td><strong>Секция:</strong></td>
+							<td>@Item.ModuleSection</td>
+						</tr>
+						<tr>
+							<td><strong>ID элемента:</strong></td>
+							<td>@Item.ItemId</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<!-- Материалы -->
+		@if (Item.MaterialList != null)
+		{
+			<div class="mt-3">
+				<h6>Материалы и комплектующие</h6>
+				
+				<!-- Краски -->
+				@if (Item.MaterialList.Paints.Any())
+				{
+					<div class="mb-3">
+						<strong>Краски:</strong>
+						<div class="table-responsive">
+							<table class="table table-sm table-striped">
+								<thead>
+									<tr>
+										<th>Номер</th>
+										<th>Количество (м²)</th>
+										<th>Количество (м)</th>
+										<th>Цена</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var paint in Item.MaterialList.Paints)
+									{
+										<tr>
+											<td>@paint.PaintNumber</td>
+											<td>@paint.QuantitySqm.ToString("F4")</td>
+											<td>@paint.QuantityM.ToString("F4")</td>
+											<td>@paint.Price.ToString("C")</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+
+				<!--Дерево-->
+				@if (Item.MaterialList.WoodProfiles.Any())
+				{
+					<div class="mb-3">
+						<strong>Дерево:</strong>
+						<div class="table-responsive">
+							<table class="table table-sm table-striped">
+								<thead>
+									<tr>
+										<th>Компонент</th>
+										<th>Вид дерева</th>
+										<th>Брус</th>
+										<th>Длина финишная</th>
+										<th>Кол-во</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var wood in Item.MaterialList.Lumbers)
+									{
+										<tr>
+											<td>@wood.WoodProfile?.Description</td>
+											<td>@wood.TimberKind</td>
+											<td>@wood.SquareTimberKind</td>
+											<td>@Math.Round(wood.FinishedLength)</td>
+											<td>@wood.Piece</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+
+				<!-- Фурнитура -->
+				@if (Item.MaterialList.Fittings.Any())
+				{
+					<div class="mb-3">
+						@{
+							var fittings = Item.MaterialList.Fittings.ToList();
+						}
+						<strong>Фурнитура (@fittings.Count шт.):</strong>
+						<div class="table-responsive">
+							<table class="table table-sm table-striped">
+								<thead>
+									<tr>
+										<th>Номер</th>
+										<th>Описание</th>
+										<th>Кол-во</th>
+										<th>Цена</th>
+									</tr>
+								</thead>
+								<tbody>
+									@for (int i = 0; i < Math.Min(fittings.Count, 100); i++)
+									{
+										var fitting = fittings[i];
+										<tr>
+											<td>@fitting.FittingNumber</td>
+											<td>@fitting.Description</td>
+											<td>@fitting.Piece</td>
+											<td>@fitting.Price.ToString("C")</td>
+										</tr>
+									}
+									@if (fittings.Count > 100)
+									{
+										<tr>
+											<td colspan="4" class="text-center text-muted">
+												... и еще @(fittings.Count - 100) позиций
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+
+				<!-- Стеклопакеты -->
+				@if (Item.MaterialList.GlassProducts.Any())
+				{
+					<div class="mb-3">
+						<strong>Стеклопакеты:</strong>
+						<div class="table-responsive">
+							<table class="table table-sm table-striped">
+								<thead>
+									<tr>
+										<th>Профиль</th>
+										<th>Элемент</th>
+										<th>Размер</th>
+										<th>Площадь</th>
+										<th>Тип</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var glass in Item.MaterialList.GlassProducts)
+									{
+										<tr>
+											<td>@glass.ProfileGroup</td>
+											<td>@glass.ElementNumber</td>
+											<td>@glass.GlassWidth × @glass.GlassHeight мм</td>
+											<td>@glass.GlassArea.ToString("F3") м²</td>
+											<td>@glass.GlassProductType</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+
+				<!-- Принадлежности и аксессуары -->
+				@if (Item.AllAdditionalMaterials?.Any() == true)
+				{
+					<div class="mb-3">                        
+						<strong>Принадлежности и аксессуары (@Item.AllAdditionalMaterials.Count шт.):</strong>
+						@*<small class="text-muted ms-2">
+							(статьи: @techCount, аксессуары: @accessoryCount)
+						</small>*@
+						
+						<div class="table-responsive">
+							<table class="table table-sm table-striped">
+								<thead>
+									<tr>
+										<th>Тип</th>
+										<th>Артикул</th>
+										<th>Описание</th>
+										<th>Индекс</th>
+										<th>Кол-во</th>
+										<th>Ед. изм.</th>
+										<th>Цена</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var item in Item.AllAdditionalMaterials)
+									{
+										<tr>
+											<td>
+												<span class="badge @(item.Type == AccessoryType.ArtTech ? "bg-info" : "bg-warning")">
+													@item.Type.GetDescription()
+												</span>
+											</td>
+											<td>@item.ArticleNumber</td>
+											<td>@item.Description</td>
+											<td>@item.TotalQuantity</td>
+											<td>@item.Unit</td>
+											<td>@item.Price.ToString("C")</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	</div>
+}
+
+@code {
+	[Parameter]
+	public DocumentItem? Item { get; set; }
+}

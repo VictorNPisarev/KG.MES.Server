@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using KG.MES.Shared.Data;
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
@@ -30,15 +30,15 @@ DateTimeExtensions.Initialize(builder.Configuration);
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ISupplyService, SupplyService>();
+builder.Services.AddScoped<ISupplyService, ServerSupplyService>();
 builder.Services.AddScoped<IWorkplaceService, WorkplaceService>();
 builder.Services.AddScoped<OrderAttributeService>();
 builder.Services.AddScoped<LeadTimeCalculationService>();
 builder.Services.AddScoped<IUserDeviceService, UserDeviceService>();
-builder.Services.AddScoped<ILicenseService, LicenseService>();
+builder.Services.AddScoped<ILicenseService, ServerLicenseService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAuthService, ServerAuthService>();
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";

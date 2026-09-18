@@ -1,0 +1,79 @@
+@using KG.MES.Main.Models
+@using KG.MES.Main.Models.Enums
+@using KG.MES.Main.Common.Extensions
+
+@if (MaterialItems == null || !MaterialItems.Any())
+{
+	<div class="alert alert-info mt-2">Нет материалов для отображения</div>
+}
+else
+{
+	<div class="accordion mt-2" id="accordionMaterials">
+		@{
+			int accordionIndex = 0;
+			foreach (var group in MaterialItems)
+			{
+				var materialType = group.Key;
+				var displayName = materialType.Description;
+				//var icon = GetIconForMaterialType(group.Key);
+				var totalCount = group.Value.Count;
+				var totalPrice = group.Value.Sum(m => m.TotalPrice);
+				var accordionId = $"accordionMaterial{_uniqueId}_{accordionIndex}";
+				var headingId = $"headingMaterial{_uniqueId}_{accordionIndex}";
+				
+				<div class="accordion-item">
+					<h2 class="accordion-header" id="@headingId">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+								data-bs-target="#@accordionId" aria-expanded="false" aria-controls="@accordionId">
+							<!--<i class="@icon me-2"></i>-->
+							<span>@displayName</span>
+							<span class="badge bg-primary ms-2">@totalCount шт.</span>
+							<span class="badge bg-secondary ms-2">@totalPrice.ToString("C")</span>
+						</button>
+					</h2>
+					<div id="@accordionId" class="accordion-collapse collapse" aria-labelledby="@headingId">
+						<div class="accordion-body p-0">
+							<table class="table table-sm table-hover mb-0">
+								<thead class="table-light">
+									<tr>
+										<th>Наименование</th>
+										<th>Артикул</th>
+										<th>Количество</th>
+										<th class="text-end">Цена</th>
+										<th class="text-end">Сумма</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var material in group.Value)
+									{
+										<tr>
+											<td>@material.Description</td>
+											<td>@material.ArticleNumber</td>
+											<td>@material.QuantityDisplay</td>
+											<td class="text-end">@material.UnitPrice.ToString("C")</td>
+											<td class="text-end fw-bold">@material.TotalPrice.ToString("C")</td>
+										</tr>
+									}
+								</tbody>
+								<tfoot class="table-light">
+									<tr>
+										<td colspan="4" class="text-end fw-bold">Итого по группе:</td>
+										<td class="text-end fw-bold text-primary">@totalPrice.ToString("C")</td>
+									</tr>
+								</tfoot>
+							</table>
+						</div>
+					</div>
+				</div>
+				
+				accordionIndex++;
+			}
+		}
+	</div>
+}
+
+@code {
+	[Parameter]
+	public Dictionary<MaterialType, List<Material>>? MaterialItems { get; set; }
+	private string _uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+}

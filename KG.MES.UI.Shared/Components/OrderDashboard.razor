@@ -1,0 +1,117 @@
+@typeparam TOrder
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Models.Config
+@using KG.MES.Shared.Models.Enums
+@using KG.MES.Shared.Models.ViewModels
+@using KG.MES.Shared.Services
+@using KG.MES.Shared.Helpers
+@using KG.MES.UI.Shared.Components.Widgets
+@using KG.MES.UI.Shared.Interfaces
+@using Mapster
+@using Microsoft.JSInterop
+@using System.Text.Json
+
+@if (isLoading)
+{
+	<div class="text-center py-5">
+		<div class="spinner-border text-primary" role="status"></div>
+	</div>
+}
+else if (order != null)
+{
+	@* Панель вкладок *@
+	<div class="dashboard-tabs">
+		<button class="dashboard-tab @(activeTab == "main" ? "active" : "")"
+				@onclick="ActivateMainTab">
+			<i class="bi bi-grid"></i> Обзор
+		</button>
+		@foreach (var widget in tabbedWidgets)
+		{
+			<button class="dashboard-tab @(activeTab == widget.WidgetId.ToString() ? "active" : "")"
+					@onclick="() => ActivateTab(widget.WidgetId.ToString())"
+					draggable="true"
+					data-widget-id="@widget.WidgetId"
+					data-tab="true">
+				@widget.Title
+			</button>
+		}
+	</div>
+
+	@* Основная область *@
+	@if (activeTab == "main")
+	{
+		<div class="dashboard-grid">
+			@foreach (var widget in gridWidgets)
+			{
+				<div class="dashboard-widget @GetWidgetClass(widget)"
+					draggable="true"
+					data-widget-id="@widget.WidgetId"
+					style='@(widget.CustomWidth != null ? $"width: {widget.CustomWidth};" : "")''>
+					@switch (widget.WidgetId)
+					{
+						case WidgetType.Main:
+							<div class="card">
+								<div class="card-body">
+									<OrderFieldsWidget @ref="fieldsWidget" TOrder="TOrder" Order="@order" Settings="@Settings" />
+									@*<OrderFieldsWidget @ref="fieldsWidget" TOrder="OrderDto" Order="@orderDto" Settings="@Settings" />*@
+								</div>
+							</div>
+							break;
+						case WidgetType.Trace:
+							<div class="card">
+								<div class="card-body">
+									<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId" CanEdit="@Settings.EditTrace"/>
+								</div>
+							</div>
+							break;
+						case WidgetType.Supplies:
+							<div class="card">
+								<div class="card-body">
+									<OrderSuppliesWidget @ref="suppliesWidget" OrderId="@OrderId" CanEdit="@Settings.EditSupply"/>
+								</div>
+							</div>
+							break;
+						case WidgetType.Comments:
+							<div class="card">
+								<div class="card-body">
+									<OrderCommentsWidget @ref="commentsWidget" OrderId="@OrderId" />
+								</div>
+							</div>
+							break;
+					}
+				</div>
+			}
+		</div>
+	}
+	else
+	{
+		var activeWidget = dashboardSettings.Widgets.FirstOrDefault(w => w.WidgetId.ToString() == activeTab);
+		if (activeWidget != null)
+		{
+			<div class="card h-100">
+				<div class="card-body">
+					@switch (activeWidget.WidgetId)
+					{
+						case WidgetType.Main:
+							<OrderFieldsWidget @ref="fieldsWidget" TOrder="TOrder" Order="@order" Settings="@Settings" />
+							@*<OrderFieldsWidget @ref="fieldsWidget" TOrder="OrderDto" Order="@orderDto" Settings="@Settings" />*@
+							break;
+						case WidgetType.Trace:
+							<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId"  CanEdit="@Settings.EditTrace" />
+							break;
+						case WidgetType.Supplies:
+							<OrderSuppliesWidget @ref="suppliesWidget" OrderId="@OrderId" CanEdit="@Settings.EditSupply" />
+							break;
+						case WidgetType.Comments:
+							<OrderCommentsWidget @ref="commentsWidget" OrderId="@OrderId" />
+							break;
+					}
+				</div>
+			</div>
+		}
+	}
+}
+else
+{
+	<div class="alert alert-warning">Заказ не найден</div>
+}
