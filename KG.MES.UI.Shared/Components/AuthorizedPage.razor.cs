@@ -1,10 +1,5 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 namespace KG.MES.UI.Shared.Components;
+
 public partial class AuthorizedPage
 {
 	[Parameter] public RenderFragment? ChildContent { get; set; }
@@ -14,7 +9,7 @@ public partial class AuthorizedPage
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] private AuthService AuthService { get; set; } = null!;
 
-	private bool? _isAuthorized;
+	private bool? isAuthorized;
 
 	#region отладочные данные
 	private DebugInfo? _debugInfo;
@@ -66,7 +61,9 @@ public partial class AuthorizedPage
 		// 1. Если сессия уже в памяти (только что залогинились, без F5)
 		if (Session.IsAuthenticated)
 		{
-			_isAuthorized = true;
+			if (!await CheckPasswordSetAsync()) return; 
+			
+			isAuthorized = true;
 			StateHasChanged();
 			return;
 		}
@@ -79,7 +76,7 @@ public partial class AuthorizedPage
 		//if (string.IsNullOrEmpty(sessionJson))
 		if (string.IsNullOrEmpty(Session.AccessToken))
 		{
-			_isAuthorized = false;
+			isAuthorized = false;
 			NavManager.NavigateTo($"{NavManager.BaseUri}login");
 			return;
 		}
@@ -121,9 +118,9 @@ public partial class AuthorizedPage
 			_remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
 			_timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
 
-		// 3. Access token ещё жив — восстанавливаем сессию в память
-		//if (data.ExpiresAt > DateTime.UtcNow)
-		//{
+			// 3. Access token ещё жив — восстанавливаем сессию в память
+			//if (data.ExpiresAt > DateTime.UtcNow)
+			//{
 			//Session.SetSession(
 			//	new LoginResponseDto
 			//	{
@@ -136,7 +133,9 @@ public partial class AuthorizedPage
 			//	deviceId
 			//);
 
-			_isAuthorized = true;
+			if (!await CheckPasswordSetAsync()) return;
+
+			isAuthorized = true;
 			StateHasChanged();
 			return;
 		}
@@ -145,7 +144,7 @@ public partial class AuthorizedPage
 
 		if (string.IsNullOrEmpty(Session.RefreshToken))
 		{
-			_isAuthorized = false;
+			isAuthorized = false;
 			NavManager.NavigateTo($"{NavManager.BaseUri}login");
 			return;
 		}
@@ -191,15 +190,27 @@ public partial class AuthorizedPage
 			}
 			await Session.PersistAsync(JSRuntime);
 
-			_isAuthorized = true;
+			if (!await CheckPasswordSetAsync()) return;
+
+			isAuthorized = true;
 			StateHasChanged();
 			return;
 		}
 
 		// 5. Refresh не сработал — чистим и на логин
 		await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
-		_isAuthorized = false;
+		isAuthorized = false;
 		NavManager.NavigateTo($"{NavManager.BaseUri}login");
+	}
+
+	private async Task<bool> CheckPasswordSetAsync()
+	{
+		if (Session.User?.IsPasswordSet == false)
+		{
+			NavManager.NavigateTo($"{NavManager.BaseUri}set-password");
+			return false;
+		}
+		return true;
 	}
 
 	private class SessionData

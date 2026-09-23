@@ -9,27 +9,27 @@ namespace KG.MES.Shared.Services;
 
 public class UserService : IUserService
 {
-	private readonly AppDbContext _context;
-	private readonly IPasswordHasher<User> _passwordHasher;
-	private readonly ILogger<UserService> _logger;
+	private readonly AppDbContext context;
+	private readonly IPasswordHasher<User> passwordHasher;
+	private readonly ILogger<UserService> logger;
 
 	public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, ILogger<UserService> logger)
 	{
-		_context = context;
-		_passwordHasher = passwordHasher;
-		_logger = logger;
+		this.context = context;
+		this.passwordHasher = passwordHasher;
+		this.logger = logger;
 	}
 
 	public async Task<User?> AuthenticateAsync(string email, string password)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
 
 		if (user == null || string.IsNullOrEmpty(user.PasswordHash))
 			return null;
 
-		var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+		var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
 
 		if (result == PasswordVerificationResult.Success)
 			return user;
@@ -37,8 +37,8 @@ public class UserService : IUserService
 		// Если хэш устарел (например, обновили алгоритм) — пересохраняем
 		if (result == PasswordVerificationResult.SuccessRehashNeeded)
 		{
-			user.PasswordHash = _passwordHasher.HashPassword(user, password);
-			await _context.SaveChangesAsync();
+			user.PasswordHash = passwordHasher.HashPassword(user, password);
+			await context.SaveChangesAsync();
 		}
 
 		return null;
@@ -46,20 +46,20 @@ public class UserService : IUserService
 
 	public async Task<bool> SetPasswordAsync(Guid userId, string newPassword)
 	{
-		var user = await _context.Users.FindAsync(userId);
+		var user = await context.Users.FindAsync(userId);
 		if (user == null)
 			return false;
 
-		user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
 		user.IsPasswordSet = true;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
 		return true;
 	}
 
 	public async Task<UserDto?> GetUserByEmailAsync(string email)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Email == email);
 
@@ -80,7 +80,7 @@ public class UserService : IUserService
 
 	public async Task<UserDto?> GetUserByIdAsync(Guid userId)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -101,7 +101,7 @@ public class UserService : IUserService
 
 	public async Task<List<UserWorkplaceDto>> GetUserWorkplacesAsync(Guid userId)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -112,16 +112,16 @@ public class UserService : IUserService
 
 		if (user.Role?.Level >= 40)
 		{
-			query = _context.Workplaces.Where(w => w.IsWorkplace);
+			query = context.Workplaces.Where(w => w.IsWorkplace);
 		}
 		else
 		{
-			var workplaceIds = await _context.UserWorkplaces
+			var workplaceIds = await context.UserWorkplaces
 				.Where(uw => uw.UserId == userId)
 				.Select(uw => uw.WorkplaceId)
 				.ToListAsync();
 
-			query = _context.Workplaces.Where(w => workplaceIds.Contains(w.Id) && w.IsWorkplace);
+			query = context.Workplaces.Where(w => workplaceIds.Contains(w.Id) && w.IsWorkplace);
 		}
 
 		return await query
@@ -144,7 +144,7 @@ public class UserService : IUserService
 		int limit,
 		string? search)
 	{
-		var query = _context.Users
+		var query = context.Users
 			.Include(u => u.Role)
 			.AsQueryable();
 
@@ -193,7 +193,7 @@ public class UserService : IUserService
 	/// </summary>
 	public async Task<UserAdminDetailsDto?> GetUserDetailsAsync(Guid userId)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.Include(u => u.UserWorkplaces!)
 				.ThenInclude(uw => uw.Workplace)
@@ -229,7 +229,7 @@ public class UserService : IUserService
 	public async Task<CreateUserResultDto> CreateUserAsync(CreateUserRequestDto request)
 	{
 		// Проверяем, не существует ли уже пользователь с таким email
-		var existingUser = await _context.Users
+		var existingUser = await context.Users
 			.FirstOrDefaultAsync(u => u.Email == request.Email);
 
 		if (existingUser != null)
@@ -245,14 +245,14 @@ public class UserService : IUserService
 		Role? role = null;
 		if (!string.IsNullOrEmpty(request.RoleName))
 		{
-			role = await _context.Roles
+			role = await context.Roles
 				.FirstOrDefaultAsync(r => r.Name == request.RoleName);
 		}
 
 		// Если роль не найдена — используем дефолтную
 		if (role == null)
 		{
-			role = await _context.Roles
+			role = await context.Roles
 				.FirstOrDefaultAsync(r => r.Name == "User")
 				?? new Role { Id = Guid.NewGuid(), Name = "User", Level = 10 };
 		}
@@ -271,14 +271,14 @@ public class UserService : IUserService
 		// Если пароль передан — хешируем
 		if (!string.IsNullOrEmpty(request.Password))
 		{
-			user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+			user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 			user.IsPasswordSet = true;
 		}
 
-		_context.Users.Add(user);
-		await _context.SaveChangesAsync();
+		context.Users.Add(user);
+		await context.SaveChangesAsync();
 
-		_logger.LogInformation("User {Email} created by admin", user.Email);
+		logger.LogInformation("User {Email} created by admin", user.Email);
 
 		return new CreateUserResultDto
 		{
@@ -301,14 +301,14 @@ public class UserService : IUserService
 	/// </summary>
 	public async Task<bool> BlockUserAsync(Guid userId)
 	{
-		var user = await _context.Users.FindAsync(userId);
+		var user = await context.Users.FindAsync(userId);
 		if (user == null)
 			return false;
 
 		user.IsActive = false;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
-		_logger.LogInformation("User {Email} blocked by admin", user.Email);
+		logger.LogInformation("User {Email} blocked by admin", user.Email);
 		return true;
 	}
 
@@ -317,14 +317,14 @@ public class UserService : IUserService
 	/// </summary>
 	public async Task<bool> UnblockUserAsync(Guid userId)
 	{
-		var user = await _context.Users.FindAsync(userId);
+		var user = await context.Users.FindAsync(userId);
 		if (user == null)
 			return false;
 
 		user.IsActive = true;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
-		_logger.LogInformation("User {Email} unblocked by admin", user.Email);
+		logger.LogInformation("User {Email} unblocked by admin", user.Email);
 		return true;
 	}
 
@@ -333,7 +333,7 @@ public class UserService : IUserService
 	/// </summary>
 	public async Task<ResetPasswordResultDto> ResetPasswordAsync(Guid userId)
 	{
-		var user = await _context.Users.FindAsync(userId);
+		var user = await context.Users.FindAsync(userId);
 		if (user == null)
 		{
 			return new ResetPasswordResultDto
@@ -344,11 +344,11 @@ public class UserService : IUserService
 		}
 
 		var newPassword = GenerateRandomPassword();
-		user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
 		user.IsPasswordSet = true;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
-		_logger.LogInformation("Password reset for user {Email}", user.Email);
+		logger.LogInformation("Password reset for user {Email}", user.Email);
 
 		return new ResetPasswordResultDto
 		{
@@ -363,7 +363,7 @@ public class UserService : IUserService
 	/// <returns></returns>
 	public async Task<List<RoleDto>> GetAllRolesAsync()
 	{
-		return await _context.Roles
+		return await context.Roles
 			.OrderBy(r => r.Level)
 			.Select(r => new RoleDto
 			{
@@ -379,19 +379,37 @@ public class UserService : IUserService
 	/// </summary>
 	public async Task<bool> SetUserRoleAsync(Guid userId, string roleName)
 	{
-		var user = await _context.Users.FindAsync(userId);
+		var user = await context.Users.FindAsync(userId);
 		if (user == null)
 			return false;
 
-		var role = await _context.Roles
+		var role = await context.Roles
 			.FirstOrDefaultAsync(r => r.Name == roleName);
 		if (role == null)
 			return false;
 
 		user.RoleId = role.Id;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
-		_logger.LogInformation("User {Email} role changed to {Role}", user.Email, roleName);
+		logger.LogInformation("User {Email} role changed to {Role}", user.Email, roleName);
+		return true;
+	}
+
+	public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+			return false;
+
+		var verify = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+		if (verify == PasswordVerificationResult.Failed)
+			return false;
+
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("Password changed for user {Email}", user.Email);
 		return true;
 	}
 

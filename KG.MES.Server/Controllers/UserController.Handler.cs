@@ -54,4 +54,24 @@ public partial class UsersController
 		var result = await _userService.GetUserWorkplacesAsync(userId);
 		return Ok(result);
 	}
+
+	public async Task<IActionResult> ChangePasswordHandler(ChangePasswordRequestDto request)
+	{
+		var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		
+		if (!Guid.TryParse(userIdClaim, out var userId))
+			return Unauthorized(new { error = "Invalid user" });
+
+		if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
+			return BadRequest(new { error = "Current and new passwords are required" });
+
+		if (request.NewPassword.Length < 6)
+			return BadRequest(new { error = "Password must be at least 6 characters" });
+
+		var result = await _userService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+		if (!result)
+			return BadRequest(new { error = "Current password is incorrect" });
+
+		return Ok(new { message = "Password changed successfully" });
+	}
 }

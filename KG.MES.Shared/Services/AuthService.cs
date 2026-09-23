@@ -73,4 +73,27 @@ public class AuthService
 			return null;
 		}
 	}
+
+	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword)
+	{
+		try
+		{
+			var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/users/me/change-password",
+				new { currentPassword, newPassword });
+
+			if (response.IsSuccessStatusCode)
+				return (true, null);
+
+			var errorContent = await response.Content.ReadAsStringAsync();
+			var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			return (false, error?.Error ?? "Не удалось изменить пароль");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error changing password");
+			return (false, "Ошибка соединения");
+		}
+	}
 }
