@@ -395,6 +395,24 @@ public class UserService : IUserService
 		return true;
 	}
 
+	public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+	{
+		var user = await _context.Users.FindAsync(userId);
+		if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+			return false;
+
+		var verify = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+		if (verify == PasswordVerificationResult.Failed)
+			return false;
+
+		user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
+		await _context.SaveChangesAsync();
+
+		_logger.LogInformation("Password changed for user {Email}", user.Email);
+		return true;
+	}
+
 	/// <summary>
 	/// Генерация случайного пароля
 	/// </summary>

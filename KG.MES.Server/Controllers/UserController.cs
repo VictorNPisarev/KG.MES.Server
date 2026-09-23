@@ -1,6 +1,7 @@
 using KG.MES.Server.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using KG.MES.Shared.Models.Dto;
 
 namespace KG.MES.Server.Controllers;
 
@@ -19,4 +20,8 @@ public partial class UsersController : ControllerBase
 
 	[HttpGet("users/{userId}/workplaces")]
 	public Task<IActionResult> GetUserWorkplaces(Guid userId) => GetUserWorkplacesHandler(userId);
+
+	[HttpPost("users/me/change-password")]
+	public Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+	=> ChangePasswordHandler(request);
 }
