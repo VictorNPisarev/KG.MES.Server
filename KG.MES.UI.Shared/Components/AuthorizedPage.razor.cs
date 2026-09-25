@@ -1,3 +1,9 @@
+using System.Text.Json.Serialization;
+using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Services;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+
 namespace KG.MES.UI.Shared.Components;
 
 public partial class AuthorizedPage
@@ -10,11 +16,14 @@ public partial class AuthorizedPage
 	[Inject] private AuthService AuthService { get; set; } = null!;
 
 	private bool? isAuthorized;
+	private bool userMenuOpen;
+	private bool showChangePassword;
 
 	#region отладочные данные
-	private DebugInfo? _debugInfo;
-	private int _remainingSeconds;
-	private Timer? _timer;
+	private DebugInfo? debugInfo;
+	private int remainingSeconds;
+	private Timer? timer;
+
 	private class DebugInfo
 	{
 		public string? AccessToken { get; set; } = "";
@@ -26,9 +35,9 @@ public partial class AuthorizedPage
 
 	private async Task UpdateTimer()
 	{
-		if (_debugInfo == null || _debugInfo.ExpiresAt == null) return;
-		_remainingSeconds = (int)((TimeSpan)(_debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-		if (_remainingSeconds <= 0) _remainingSeconds = 0;
+		if (debugInfo == null || debugInfo.ExpiresAt == null) return;
+		remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+		if (remainingSeconds <= 0) remainingSeconds = 0;
 		await InvokeAsync(StateHasChanged);
 	}
 
@@ -43,7 +52,7 @@ public partial class AuthorizedPage
 
 	public void Dispose()
 	{
-		_timer?.Dispose();
+		timer?.Dispose();
 	}
 	#endregion
 
@@ -61,8 +70,20 @@ public partial class AuthorizedPage
 		// 1. Если сессия уже в памяти (только что залогинились, без F5)
 		if (Session.IsAuthenticated)
 		{
-			if (!await CheckPasswordSetAsync()) return; 
-			
+			if (!await CheckPasswordSetAsync()) return;
+
+			debugInfo = new DebugInfo
+			{
+				AccessToken = Session.AccessToken,
+				RefreshToken = Session.RefreshToken,
+				LicenseKey = Session.LicenseKey,
+				DeviceId = Session.DeviceId,
+				ExpiresAt = Session.ExpiresAt
+			};
+			remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+			timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
+
+
 			isAuthorized = true;
 			StateHasChanged();
 			return;
@@ -71,7 +92,7 @@ public partial class AuthorizedPage
 		// 2. Пробуем восстановить из localStorage
 		//var sessionJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "session_data");
 
-		await Session.RestoreAsync(JSRuntime);
+		await Session.RestoreAsync();
 
 		//if (string.IsNullOrEmpty(sessionJson))
 		if (string.IsNullOrEmpty(Session.AccessToken))
@@ -100,14 +121,17 @@ public partial class AuthorizedPage
 		//}
 
 		//// Debug info
-		var licenseKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
+		var licenseKey = Session?.LicenseKey 
+							?? await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") 
+							?? (await LicenseService.LoadLicenseAsync())?.LicenseKey 
+							?? "";
 		var deviceId = await LicenseService.GetDeviceIdAsync();
 
 
-		if (Session.ExpiresAt > DateTime.UtcNow)
+		if (Session?.ExpiresAt > DateTime.UtcNow)
 		{
 
-			_debugInfo = new DebugInfo
+			debugInfo = new DebugInfo
 			{
 				AccessToken = Session.AccessToken,
 				RefreshToken = Session.RefreshToken,
@@ -115,8 +139,8 @@ public partial class AuthorizedPage
 				DeviceId = Session.DeviceId,
 				ExpiresAt = Session.ExpiresAt
 			};
-			_remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-			_timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
+			remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+			timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
 
 			// 3. Access token ещё жив — восстанавливаем сессию в память
 			//if (data.ExpiresAt > DateTime.UtcNow)
@@ -142,7 +166,7 @@ public partial class AuthorizedPage
 
 		// 4. Токен протух — пробуем refresh
 
-		if (string.IsNullOrEmpty(Session.RefreshToken))
+		if (string.IsNullOrEmpty(Session?.RefreshToken))
 		{
 			isAuthorized = false;
 			NavManager.NavigateTo($"{NavManager.BaseUri}login");
@@ -174,7 +198,7 @@ public partial class AuthorizedPage
 			// ← ВОТ ЭТОГО НЕ ХВАТАЛО: восстанавливаем сессию в память
 			Session.SetSession(response, licenseKey, deviceId);
 
-			_debugInfo = new DebugInfo
+			debugInfo = new DebugInfo
 			{
 				AccessToken = Session.AccessToken,
 				RefreshToken = Session.RefreshToken,
@@ -183,12 +207,12 @@ public partial class AuthorizedPage
 				ExpiresAt = Session.ExpiresAt
 			};
 
-			if(_debugInfo.ExpiresAt != null)
+			if(debugInfo.ExpiresAt != null)
 			{
-				_remainingSeconds = (int)((TimeSpan)(_debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-				_timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
+				remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+				timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
 			}
-			await Session.PersistAsync(JSRuntime);
+			await Session.PersistAsync();
 
 			if (!await CheckPasswordSetAsync()) return;
 
@@ -211,6 +235,18 @@ public partial class AuthorizedPage
 			return false;
 		}
 		return true;
+	}
+
+	private void OpenChangePassword()
+	{
+		userMenuOpen = false;
+		showChangePassword = true;
+	}
+
+	private async Task Logout()
+	{
+		userMenuOpen = false;
+		await ClearSession();
 	}
 
 	private class SessionData

@@ -13,34 +13,13 @@ public partial class UserLogin : ComponentBase
 	[Inject] private LicenseService LicenseService { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	
-	private string _email = "";
-	private string _password = "";
-	private string _error = "";
-	private string _licenseKey = "";
-	private string _licenseKeyHandle = "";
-	private bool _isLoading;
-	private bool _isAuthorized;
-
-	//protected override async Task OnInitializedAsync()
-	//{
-	//	var license = await LicenseService.LoadLicenseAsync();
-		
-	//	if (license != null)
-	//	{
-	//		_licenseKey = license.LicenseKey;
-	//		_licenseKeyHandle = "";
-	//	}
-	//	else
-	//	{
-	//		// 2. Файла нет — пробую из localStorage
-	//		_licenseKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
-	//		if (!string.IsNullOrEmpty(_licenseKey))
-	//		{
-	//			_licenseKeyHandle = ""; // ключ уже есть
-	//		}
-	//		// Если и там пусто — покажем поле ввода
-	//	}
-	//}
+	private string email = "";
+	private string password = "";
+	private string error = "";
+	private string licenseKey = "";
+	private string licenseKeyHandle = "";
+	private bool isLoading;
+	private bool isAuthorized;
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -51,15 +30,15 @@ public partial class UserLogin : ComponentBase
 
 		if (license != null)
 		{
-			_licenseKey = license.LicenseKey;
-			_licenseKeyHandle = "";
+			licenseKey = license.LicenseKey;
+			licenseKeyHandle = "";
 		}
 		else
 		{
-			_licenseKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
-			if (!string.IsNullOrEmpty(_licenseKey))
+			licenseKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
+			if (!string.IsNullOrEmpty(licenseKey))
 			{
-				_licenseKeyHandle = "";
+				licenseKeyHandle = "";
 			}
 		}
 
@@ -68,31 +47,32 @@ public partial class UserLogin : ComponentBase
 
 	private async Task Login()
 	{
-		_licenseKey = !string.IsNullOrEmpty(_licenseKeyHandle) ? _licenseKeyHandle : _licenseKey;
-		if (string.IsNullOrEmpty(_email) || string.IsNullOrEmpty(_password))
+		licenseKey = !string.IsNullOrEmpty(licenseKeyHandle) ? licenseKeyHandle : licenseKey;
+
+		if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
 		{
-			_error = "Заполните все поля";
+			error = "Заполните все поля";
 			return;
 		}
 
 		// Если ключ не найден — запрашиваем у пользователя
-		if (string.IsNullOrEmpty(_licenseKey))
+		if (string.IsNullOrEmpty(licenseKey))
 		{
-			_error = "Введите лицензионный ключ";
+			error = "Введите лицензионный ключ";
 			return;
 		}
 
-		_isLoading = true;
-		_error = "";
+		isLoading = true;
+		error = "";
 		StateHasChanged();
 
 		try
 		{
 			var request = new LoginRequestDto
 			{
-				Email = _email,
-				Password = _password,
-				LicenseKey = _licenseKey,
+				Email = email,
+				Password = password,
+				LicenseKey = licenseKey,
 				DeviceHardwareId = await LicenseService.GetDeviceIdAsync(),
 				DeviceName = "Browser"
 			};
@@ -102,37 +82,37 @@ public partial class UserLogin : ComponentBase
 			if (response != null)
 			{
 				var deviceId = await LicenseService.GetDeviceIdAsync();
-				Session.SetSession(response, _licenseKey, deviceId);
+				Session.SetSession(response, licenseKey, deviceId);
 
 				// Сохраняем в localStorage через сервис
-				await Session.PersistAsync(JSRuntime);
+				await Session.PersistAsync();
 
 				// Лицензию тоже сохраняем, если нужно
-				if (!string.IsNullOrEmpty(_licenseKeyHandle))
-					await JSRuntime.InvokeVoidAsync("localStorage.setItem", "license_key", _licenseKey);
+				if (!string.IsNullOrEmpty(licenseKey))
+					await JSRuntime.InvokeVoidAsync("localStorage.setItem", "license_key", licenseKey);
 
 				NavManager.NavigateTo(NavManager.BaseUri);
 			}
 			else
 			{
 
-				_error = AuthService.LastError ?? "Authorisation error. Server response = null";
+				error = AuthService.LastError ?? "Authorisation error. Server response = null";
 
-				if (_error.ToLower().Contains("license"))
+				if (error.ToLower().Contains("license"))
 				{
 					await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "license_key");
-					_licenseKey = string.Empty;
+					licenseKey = string.Empty;
 					//_licenseKeyHandle = string.Empty;
 				}
 			}
 		}
 		catch (Exception ex)
 		{
-			_error = $"Ошибка: {ex.Message}";
+			error = $"Ошибка: {ex.Message}";
 		}
 		finally
 		{
-			_isLoading = false;
+			isLoading = false;
 			StateHasChanged();
 		}
 	}

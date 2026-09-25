@@ -1,5 +1,6 @@
 
 using KG.MES.Shared.Services;
+using Microsoft.AspNetCore.Components;
 
 
 namespace KG.MES.UI.Shared.Components;
@@ -16,7 +17,7 @@ public partial class ChangePassword
 	private string _success = "";
 	private bool _isLoading;
 
-	private async Task ChangePassword()
+	private async Task ChangePasswordAsync()
 	{
 		_error = "";
 		_success = "";

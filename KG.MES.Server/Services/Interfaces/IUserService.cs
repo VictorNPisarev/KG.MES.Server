@@ -28,4 +28,6 @@ public interface IUserService
 	Task<bool> SetUserRoleAsync(Guid userId, string roleName);
 
 	Task<List<RoleDto>> GetAllRolesAsync();
+
+	Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
 }

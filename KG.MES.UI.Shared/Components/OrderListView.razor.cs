@@ -222,7 +222,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 		try
 		{
-			ApiService.Session = Session;
+			//ApiService.Session = Session;
 
 			var filters = BuildFilterConditionsForIn();
 

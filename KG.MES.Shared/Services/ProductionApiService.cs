@@ -11,11 +11,10 @@ using System.Threading.Tasks;
 
 namespace KG.MES.Shared.Services;
 
-public class ProductionApiService
+public class ProductionApiService : AuthorizedApiService
 {
-	private readonly HttpClient _httpClient;
-	private readonly ILogger<ProductionApiService> _logger;
-	private readonly IConfiguration _configuration;
+	private readonly ILogger<ProductionApiService> logger;
+	private readonly IConfiguration configuration;
 
 	private static readonly JsonSerializerOptions jsonOptions = new()
 	{
@@ -23,51 +22,19 @@ public class ProductionApiService
 		PropertyNameCaseInsensitive = true
 	};
 
-	private UserSessionService _session;
-	public UserSessionService Session 
-	{
-		get 
-		{
-			return _session;
-		}
-		set
-		{
-			_session = value;
-		}
-	}
-	private string BaseUrl => _configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.179:3031/api";
-	private int TimeoutSeconds => _configuration.GetValue<int>("ProductionApi:TimeoutSeconds", 30);
-	private int RetryCount => _configuration.GetValue<int>("ProductionApi:RetryCount", 3);
+	private string BaseUrl => configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.179:3031/api";
+	private int TimeoutSeconds => configuration.GetValue<int>("ProductionApi:TimeoutSeconds", 30);
+	private int RetryCount => configuration.GetValue<int>("ProductionApi:RetryCount", 3);
 
 
 	public ProductionApiService(
 		HttpClient httpClient,
 		ILogger<ProductionApiService> logger,
 		IConfiguration configuration,
-		UserSessionService session)
+		UserSessionService session) : base(httpClient, session)
 	{
-		_httpClient = httpClient;
-		_logger = logger;
-		_configuration = configuration;
-		_session = session;
-	}
-
-	/// <summary>
-	/// Проставляет/сбрасывает Authorization-заголовок из текущей сессии.
-	/// </summary>
-	private async Task EnsureAuthorization()
-	{
-		await _session.RestoreAsync();
-
-		if (!string.IsNullOrEmpty(_session.AccessToken))
-		{
-			_httpClient.DefaultRequestHeaders.Authorization =
-				new AuthenticationHeaderValue("Bearer", _session.AccessToken);
-		}
-		else
-		{
-			_httpClient.DefaultRequestHeaders.Authorization = null;
-		}
+		this.configuration = configuration;
+		this.logger = logger;
 	}
 
 	/// <summary>
@@ -78,7 +45,7 @@ public class ProductionApiService
 	/// <returns></returns>
 	public async Task<bool> ExportToProductionAsync(ProductionOrderExportDto dto)
 	{
-		await EnsureAuthorization();
+		EnsureAuthorization();
 
 		var retries = 0;
 
@@ -95,26 +62,26 @@ public class ProductionApiService
 
 				var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-				var response = await _httpClient.PostAsync($"{BaseUrl}/orders/create", content, cts.Token);
+				var response = await httpClient.PostAsync($"{BaseUrl}/orders/create", content, cts.Token);
 
 				if (response.IsSuccessStatusCode)
 				{
-					_logger.LogInformation("Order {OrderNumber} sent to production successfully", dto.OrderNumber);
+					logger.LogInformation("Order {OrderNumber} sent to production successfully", dto.OrderNumber);
 					return true;
 				}
 
 				var error = await response.Content.ReadAsStringAsync(cts.Token);
-				_logger.LogWarning("Attempt {Retry}/{RetryCount} failed: {StatusCode} - {Error}",
+				logger.LogWarning("Attempt {Retry}/{RetryCount} failed: {StatusCode} - {Error}",
 					retries + 1, RetryCount, response.StatusCode, error);
 			}
 			catch (TaskCanceledException)
 			{
-				_logger.LogWarning("Attempt {Retry}/{RetryCount} timeout after {Timeout} seconds",
+				logger.LogWarning("Attempt {Retry}/{RetryCount} timeout after {Timeout} seconds",
 					retries + 1, RetryCount, TimeoutSeconds);
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "Attempt {Retry}/{RetryCount} failed", retries + 1, RetryCount);
+				logger.LogWarning(ex, "Attempt {Retry}/{RetryCount} failed", retries + 1, RetryCount);
 			}
 
 			retries++;
@@ -125,7 +92,7 @@ public class ProductionApiService
 			}
 		}
 
-		_logger.LogError("Failed to send order {OrderNumber} to production after {RetryCount} attempts",
+		logger.LogError("Failed to send order {OrderNumber} to production after {RetryCount} attempts",
 			dto.OrderNumber, RetryCount);
 
 		return false;
@@ -151,13 +118,13 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			// Поиск по номеру
 			if (!string.IsNullOrEmpty(number))
 			{
 				var orderUrl = $"{BaseUrl}/orders/{Uri.EscapeDataString(number)}";
-				var order = await _httpClient.GetFromJsonAsync<OrderDto>(orderUrl);
+				var order = await httpClient.GetFromJsonAsync<OrderDto>(orderUrl);
 
 				return new PaginatedResponse<OrderDto>
 				{
@@ -186,14 +153,14 @@ public class ProductionApiService
 
 			var listUrl = $"{BaseUrl}/{endpoint}?" + string.Join("&", queryParams);
 
-			_logger.LogInformation("Fetching orders: {Url}", listUrl);
+			logger.LogInformation("Fetching orders: {Url}", listUrl);
 
-			var response = await _httpClient.GetFromJsonAsync<PaginatedResponse<OrderDto>>(listUrl);
+			var response = await httpClient.GetFromJsonAsync<PaginatedResponse<OrderDto>>(listUrl);
 			return response ?? new PaginatedResponse<OrderDto>();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching orders from API");
+			logger.LogError(ex, "Error fetching orders from API");
 			return new PaginatedResponse<OrderDto>();
 		}
 	}
@@ -202,10 +169,10 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-			var response = await _httpClient.GetAsync($"{BaseUrl}/health", cts.Token);
+			var response = await httpClient.GetAsync($"{BaseUrl}/health", cts.Token);
 			return response.IsSuccessStatusCode;
 		}
 		catch
@@ -224,7 +191,7 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var queryParams = new Dictionary<string, string>
 			{
@@ -255,14 +222,14 @@ public class ProductionApiService
 			var query = string.Join("&", queryParams.Select(kv => $"{kv.Key}={kv.Value}"));
 			var listUrl = $"{BaseUrl}/{endpoint}?" + query;//string.Join("&", queryParams);
 
-			_logger.LogInformation("Fetching orders: {Url}", listUrl);
+			logger.LogInformation("Fetching orders: {Url}", listUrl);
 
-			var response = await _httpClient.GetFromJsonAsync<PaginatedResponse<OrderDto>>(listUrl);
+			var response = await httpClient.GetFromJsonAsync<PaginatedResponse<OrderDto>>(listUrl);
 			return response ?? new PaginatedResponse<OrderDto>();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching orders");
+			logger.LogError(ex, "Error fetching orders");
 			return new PaginatedResponse<OrderDto>();
 		}
 	}
@@ -282,7 +249,7 @@ public class ProductionApiService
 		var queryUrl = string.Empty;
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var queryParams = new Dictionary<string, string>
 				{
@@ -323,14 +290,14 @@ public class ProductionApiService
 
 			queryUrl = url;
 
-			var result = await _httpClient.GetFromJsonAsync<PaginatedResponse<T>>(url, jsonOptions)
+			var result = await httpClient.GetFromJsonAsync<PaginatedResponse<T>>(url, jsonOptions)
 				?? new PaginatedResponse<T>();
 
 			return result;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error method GetOrdersAsync<T>");
+			logger.LogError(ex, "Error method GetOrdersAsync<T>");
 			return new PaginatedResponse<T>();
 		}
 	}
@@ -339,13 +306,13 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			return await _httpClient.GetFromJsonAsync<OrderDto>($"{BaseUrl}/orders/{id}");
+			return await httpClient.GetFromJsonAsync<OrderDto>($"{BaseUrl}/orders/{id}");
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching order {Id}", id);
+			logger.LogError(ex, "Error fetching order {Id}", id);
 			return null;
 		}
 	}
@@ -354,14 +321,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.GetFromJsonAsync<List<WorkplaceDto>>($"{BaseUrl}/workplaces/active");
+			var response = await httpClient.GetFromJsonAsync<List<WorkplaceDto>>($"{BaseUrl}/workplaces/active");
 			return response ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching active workplaces");
+			logger.LogError(ex, "Error fetching active workplaces");
 			return [];
 		}
 	}
@@ -371,14 +338,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.GetFromJsonAsync<List<WorkplaceDto>>($"{BaseUrl}/workplaces/all");
+			var response = await httpClient.GetFromJsonAsync<List<WorkplaceDto>>($"{BaseUrl}/workplaces/all");
 			return response ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching all workplaces");
+			logger.LogError(ex, "Error fetching all workplaces");
 			return [];
 		}
 	}
@@ -388,13 +355,13 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			return await _httpClient.GetFromJsonAsync<WorkplaceDto>($"{BaseUrl}/workplaces/{id}");
+			return await httpClient.GetFromJsonAsync<WorkplaceDto>($"{BaseUrl}/workplaces/{id}");
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching workplace {Id}", id);
+			logger.LogError(ex, "Error fetching workplace {Id}", id);
 			return null;
 		}
 	}
@@ -403,16 +370,16 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.PutAsJsonAsync(
+			var response = await httpClient.PutAsJsonAsync(
 				$"{BaseUrl}/orders/{id}/status",
 				new { status });
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error updating status for order {Id}", id);
+			logger.LogError(ex, "Error updating status for order {Id}", id);
 			return false;
 		}
 	}
@@ -421,16 +388,16 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.PutAsJsonAsync(
+			var response = await httpClient.PutAsJsonAsync(
 				$"{BaseUrl}/orders/{id}/notes",
 				new { masterNotes = notes });
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error updating notes for order {Id}", id);
+			logger.LogError(ex, "Error updating notes for order {Id}", id);
 			return false;
 		}
 	}
@@ -447,14 +414,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/{endpoint}/{id}";
-			return await _httpClient.GetFromJsonAsync<T>(url);
+			return await httpClient.GetFromJsonAsync<T>(url);
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching order {Id}", id);
+			logger.LogError(ex, "Error fetching order {Id}", id);
 			return default;
 		}
 	}
@@ -468,15 +435,15 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/{orderId}/trace";
-			var response = await _httpClient.GetFromJsonAsync<OrderTraceResponse>(url);
+			var response = await httpClient.GetFromJsonAsync<OrderTraceResponse>(url);
 			return response?.OrderTraces?.FirstOrDefault();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching trace for order {Id}", orderId);
+			logger.LogError(ex, "Error fetching trace for order {Id}", orderId);
 			return null;
 		}
 	}
@@ -490,17 +457,17 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/{orderId}/supplies";
-			var supplies = await _httpClient.GetFromJsonAsync<List<OrderSupplyDto>>(url)
+			var supplies = await httpClient.GetFromJsonAsync<List<OrderSupplyDto>>(url)
 							?? [];
 
 			return supplies;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching supplies for order {Id}", orderId);
+			logger.LogError(ex, "Error fetching supplies for order {Id}", orderId);
 			return [];
 		}
 	}
@@ -509,18 +476,18 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/{orderId}/supplies";
 			Console.WriteLine($"UpdateOrderSuppliesAsync url: {url}");
 			var body = new { supplies };
 			
-			var response = await _httpClient.PutAsJsonAsync(url, body);
+			var response = await httpClient.PutAsJsonAsync(url, body);
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error updating supplies for order {Id}", orderId);
+			logger.LogError(ex, "Error updating supplies for order {Id}", orderId);
 			return false;
 		}
 	}
@@ -529,15 +496,15 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/supplies/conditions";
-			return await _httpClient.GetFromJsonAsync<List<SupplyConditionDto>>(url)
+			return await httpClient.GetFromJsonAsync<List<SupplyConditionDto>>(url)
 					?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching supply conditions");
+			logger.LogError(ex, "Error fetching supply conditions");
 			return [];
 		}
 	}
@@ -546,15 +513,15 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/supplies/types";
-			return await _httpClient.GetFromJsonAsync<List<SupplyTypeDto>>(url)
+			return await httpClient.GetFromJsonAsync<List<SupplyTypeDto>>(url)
 					?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching supply types");
+			logger.LogError(ex, "Error fetching supply types");
 			return [];
 		}
 	}
@@ -563,15 +530,15 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/{orderId}/comments";
-			return await _httpClient.GetFromJsonAsync<List<OrderCommentDto>>(url)
+			return await httpClient.GetFromJsonAsync<List<OrderCommentDto>>(url)
 					?? new List<OrderCommentDto>();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching comments for order {Id}", orderId);
+			logger.LogError(ex, "Error fetching comments for order {Id}", orderId);
 			return new List<OrderCommentDto>();
 		}
 	}
@@ -580,14 +547,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			Console.WriteLine($"SaveCommentAsync orderId:{orderId}");
 			HttpResponseMessage response;
 			if (comment.IsNew)
 			{
 				// POST /api/orders/{orderId}/comments
-				response = await _httpClient.PostAsJsonAsync(
+				response = await httpClient.PostAsJsonAsync(
 					$"{BaseUrl}/orders/{orderId}/OrderSupplyComments",
 					new { content = comment.Content });
 
@@ -601,7 +568,7 @@ public class ProductionApiService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
+			logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
 			return false;
 		}
 	}
@@ -610,14 +577,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			Console.WriteLine($"SaveCommentAsync orderId:{orderId}");
 			HttpResponseMessage response;
 			if (comment.IsNew)
 			{
 				// POST /api/orders/{orderId}/comments
-				response = await _httpClient.PostAsJsonAsync(
+				response = await httpClient.PostAsJsonAsync(
 					$"{BaseUrl}/orders/{orderId}/productionOrderComments",
 					new { content = comment.Content });
 
@@ -631,7 +598,7 @@ public class ProductionApiService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
+			logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
 			return false;
 		}
 	}
@@ -640,14 +607,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			Console.WriteLine($"SaveCommentAsync orderId:{orderId}");
 			HttpResponseMessage response;
 			if (comment.IsNew)
 			{
 				// POST /api/orders/{orderId}/comments
-				response = await _httpClient.PostAsJsonAsync(
+				response = await httpClient.PostAsJsonAsync(
 					$"{BaseUrl}/orders/{orderId}/comments",
 					new { content = comment.Content });
 
@@ -661,7 +628,7 @@ public class ProductionApiService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
+			logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
 			return false;
 		}
 	}
@@ -670,13 +637,13 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			Console.WriteLine($"SaveCommentAsync orderId:{orderId}");
 			HttpResponseMessage response;
 
 			// PUT /api/orders/{orderId}/comments/{commentId}
-			response = await _httpClient.PutAsJsonAsync(
+			response = await httpClient.PutAsJsonAsync(
 				$"{BaseUrl}/orders/{orderId}/comments/{comment.Id}",
 				new { content = comment.Content });
 
@@ -684,7 +651,7 @@ public class ProductionApiService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
+			logger.LogError(ex, "Error saving comment for order {OrderId}", orderId);
 			return false;
 		}
 	}
@@ -693,15 +660,15 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.DeleteAsync(
+			var response = await httpClient.DeleteAsync(
 				$"{BaseUrl}/orders/{orderId}/comments/{commentId}");
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error deleting comment {CommentId}", commentId);
+			logger.LogError(ex, "Error deleting comment {CommentId}", commentId);
 			return false;
 		}
 	}
@@ -710,19 +677,19 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/workplaces";
 			if (!string.IsNullOrEmpty(type))
 				url += $"?type={type}";
 
-			_logger.LogInformation("GetWorkplacesAsync: {url}", url);
+			logger.LogInformation("GetWorkplacesAsync: {url}", url);
 
-			return await _httpClient.GetFromJsonAsync<List<WorkplaceDto>>(url) ?? [];
+			return await httpClient.GetFromJsonAsync<List<WorkplaceDto>>(url) ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching workplaces");
+			logger.LogError(ex, "Error fetching workplaces");
 			return [];
 		}
 	}
@@ -731,17 +698,17 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/workplaces/{workplaceId}/stats";
 
-			_logger.LogInformation("GetWorkplaceStatsAsync: {url}", url);
+			logger.LogInformation("GetWorkplaceStatsAsync: {url}", url);
 
-			return await _httpClient.GetFromJsonAsync<WorkplaceStatsDto>(url);
+			return await httpClient.GetFromJsonAsync<WorkplaceStatsDto>(url);
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching stats for workplace {Id}", workplaceId);
+			logger.LogError(ex, "Error fetching stats for workplace {Id}", workplaceId);
 			return null;
 		}
 	}
@@ -750,17 +717,17 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/workplaces/{workplaceId}/blocks";
 
-			_logger.LogInformation("GetWorkplaceBlocksAsync: {url}", url);
+			logger.LogInformation("GetWorkplaceBlocksAsync: {url}", url);
 
-			return await _httpClient.GetFromJsonAsync<List<BlockedOrderDto>>(url) ?? [];
+			return await httpClient.GetFromJsonAsync<List<BlockedOrderDto>>(url) ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching blocks for workplace {Id}", workplaceId);
+			logger.LogError(ex, "Error fetching blocks for workplace {Id}", workplaceId);
 			return [];
 		}
 	}
@@ -770,17 +737,17 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/workplaces/{workplaceId}/history?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&limit={limit}";
 
-			_logger.LogInformation("GetWorkplaceHistoryAsync: {url}", url);
+			logger.LogInformation("GetWorkplaceHistoryAsync: {url}", url);
 
-			return await _httpClient.GetFromJsonAsync<List<WorkplaceHistoryDto>>(url) ?? [];
+			return await httpClient.GetFromJsonAsync<List<WorkplaceHistoryDto>>(url) ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching history for workplace {Id}", workplaceId);
+			logger.LogError(ex, "Error fetching history for workplace {Id}", workplaceId);
 			return [];
 		}
 	}
@@ -789,16 +756,16 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var body = new { workplaces = updates };
-			var response = await _httpClient.PutAsJsonAsync(
+			var response = await httpClient.PutAsJsonAsync(
 				$"{BaseUrl}/traces/{orderId}/workplace", body);
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error updating trace for order {Id}", orderId);
+			logger.LogError(ex, "Error updating trace for order {Id}", orderId);
 			return false;
 		}
 	}
@@ -807,18 +774,18 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/traces/{productionOrderId}/workplace/{workplaceId}";
 			//var body = new { status, userId, notes };
 			var body = new {status};
 
-			var response = await _httpClient.PutAsJsonAsync(url, body);
+			var response = await httpClient.PutAsJsonAsync(url, body);
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error updating trace for order {OrderId}, workplace {WorkplaceId}", productionOrderId, workplaceId);
+			logger.LogError(ex, "Error updating trace for order {OrderId}, workplace {WorkplaceId}", productionOrderId, workplaceId);
 			return false;
 		}
 	}
@@ -835,7 +802,7 @@ public class ProductionApiService
 
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/ProductionCalendar/calculate";
 
@@ -845,7 +812,7 @@ public class ProductionApiService
 				workingDays = workingDays
 			};
 
-			var response = await _httpClient.PostAsJsonAsync(url, body);
+			var response = await httpClient.PostAsJsonAsync(url, body);
 
 			if (!response.IsSuccessStatusCode)
 			{
@@ -868,14 +835,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.PostAsync($"{BaseUrl}/orders/{orderId}/complete", null);
+			var response = await httpClient.PostAsync($"{BaseUrl}/orders/{orderId}/complete", null);
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error completing order {Id}", orderId);
+			logger.LogError(ex, "Error completing order {Id}", orderId);
 			return false;
 		}
 	}
@@ -884,14 +851,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
-			var response = await _httpClient.PostAsync($"{BaseUrl}/orders/{orderId}/departure", null);
+			var response = await httpClient.PostAsync($"{BaseUrl}/orders/{orderId}/departure", null);
 			return response.IsSuccessStatusCode;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error departing order {Id}", orderId);
+			logger.LogError(ex, "Error departing order {Id}", orderId);
 			return false;
 		}
 	}
@@ -900,38 +867,38 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/{orderId}/commerce";
-			return await _httpClient.GetFromJsonAsync<CommerceOrderDto>(url);
+			return await httpClient.GetFromJsonAsync<CommerceOrderDto>(url);
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching commerce data for order {Id}", orderId);
+			logger.LogError(ex, "Error fetching commerce data for order {Id}", orderId);
 			return null;
 		}
 	}
 
 	public async Task<bool> DeleteOrderAsync(Guid orderId)
 	{
-		await EnsureAuthorization();
+		EnsureAuthorization();
 
-		var response = await _httpClient.DeleteAsync($"{BaseUrl}/orders/{orderId}");
+		var response = await httpClient.DeleteAsync($"{BaseUrl}/orders/{orderId}");
 		return response.IsSuccessStatusCode;
 	}
 
 	public async Task<ProductionOrderExportDto?> GetOrderForEditAsync(Guid orderId)
 	{
-		await EnsureAuthorization();
+		EnsureAuthorization();
 
-		return await _httpClient.GetFromJsonAsync<ProductionOrderExportDto>($"{BaseUrl}/orders/{orderId}/edit");
+		return await httpClient.GetFromJsonAsync<ProductionOrderExportDto>($"{BaseUrl}/orders/{orderId}/edit");
 	}
 
 	public async Task<bool> UpdateOrderAsync(Guid orderId, ProductionOrderExportDto dto)
 	{
-		await EnsureAuthorization();
+		EnsureAuthorization();
 
-		var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/orders/{orderId}", dto);
+		var response = await httpClient.PutAsJsonAsync($"{BaseUrl}/orders/{orderId}", dto);
 		return response.IsSuccessStatusCode;
 	}
 
@@ -939,14 +906,14 @@ public class ProductionApiService
 	{
 		try
 		{
-			await EnsureAuthorization();
+			EnsureAuthorization();
 
 			var url = $"{BaseUrl}/orders/workplaces/{workplaceId}/in-work";
-			return await _httpClient.GetFromJsonAsync<List<WorkplaceOrderDto>>(url) ?? [];
+			return await httpClient.GetFromJsonAsync<List<WorkplaceOrderDto>>(url) ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching orders for workplace {Id}", workplaceId);
+			logger.LogError(ex, "Error fetching orders for workplace {Id}", workplaceId);
 			return [];
 		}
 	}
@@ -957,7 +924,7 @@ public class ProductionApiService
 		try
 		{
 			var url = $"{BaseUrl}/orders/facets";
-			var response = await _httpClient.PostAsJsonAsync(url, request);
+			var response = await httpClient.PostAsJsonAsync(url, request);
 
 			if (!response.IsSuccessStatusCode) return null;
 
@@ -965,7 +932,7 @@ public class ProductionApiService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error fetching filter facets");
+			logger.LogError(ex, "Error fetching filter facets");
 			return null;
 		}
 	}
@@ -982,7 +949,7 @@ public class ProductionApiService
 		//};
 
 		var url = $"{BaseUrl}/{endpoint}/facets";
-		var response = await _httpClient.PostAsJsonAsync(url, request);
+		var response = await httpClient.PostAsJsonAsync(url, request);
 
 		if (!response.IsSuccessStatusCode)
 			return null;

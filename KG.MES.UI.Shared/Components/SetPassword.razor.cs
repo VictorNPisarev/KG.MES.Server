@@ -1,4 +1,6 @@
 using KG.MES.Shared.Services;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace KG.MES.UI.Shared.Components;
 
@@ -6,7 +8,7 @@ public partial class SetPassword
 {
 	[Inject] private AuthService AuthService { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
-	[Inject] private NavigationManager NavManager { get; set; } = null;
+	[Inject] private NavigationManager NavManager { get; set; } = null!;
 	[Inject] private IJSRuntime JSRuntime { get; set; } = null!;
 
 
@@ -15,7 +17,7 @@ public partial class SetPassword
 	private string _error = "";
 	private bool _isLoading;
 
-	private async Task SetPassword()
+	private async Task SetPasswordAsync()
 	{
 		_error = "";
 
@@ -53,7 +55,7 @@ public partial class SetPassword
 		{
 			// Обновляем состояние сессии
 			Session.User.IsPasswordSet = true;
-			await Session.PersistAsync(JSRuntime);
+			await Session.PersistAsync();
 
 			NavManager.NavigateTo(NavManager.BaseUri, true);
 		}

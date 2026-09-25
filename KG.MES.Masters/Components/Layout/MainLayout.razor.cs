@@ -12,7 +12,7 @@ public partial class MainLayout
 	{
 		if (firstRender)
 		{
-			await Session.RestoreAsync(JSRuntime);
+			await Session.RestoreAsync();
 			StateHasChanged(); // перерисовать UI, если IsAuthenticated изменилось
 		}
 	}

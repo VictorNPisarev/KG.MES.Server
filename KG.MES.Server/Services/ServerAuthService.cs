@@ -116,7 +116,8 @@ public class ServerAuthService : IAuthService
 				Name = user.Name,
 				RoleId = user.RoleId,
 				RoleName = user.Role?.Name,
-				RoleLevel = user.Role?.Level ?? 10
+				RoleLevel = user.Role?.Level ?? 10,
+				IsPasswordSet = user.IsPasswordSet
 			}
 		};
 
@@ -181,7 +182,8 @@ public class ServerAuthService : IAuthService
 				Name = user.Name,
 				RoleId = user.RoleId,
 				RoleName = user.Role?.Name,
-				RoleLevel = user.Role?.Level ?? 10
+				RoleLevel = user.Role?.Level ?? 10,
+				IsPasswordSet = user.IsPasswordSet
 			}
 		};
 

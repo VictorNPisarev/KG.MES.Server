@@ -30,6 +30,8 @@ builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 //builder.Services.AddScoped<ISocketService, SocketService>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddHttpClient<AuthService>();
+builder.Services.AddScoped<UserSessionService>();
+builder.Services.AddScoped<LicenseService>();
 
 var app = builder.Build();
 
