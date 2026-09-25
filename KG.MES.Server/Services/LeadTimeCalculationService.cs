@@ -48,7 +48,7 @@ public class LeadTimeCalculationService
 
 		foreach (var day in calendarDays)
 		{
-			if (day.IsWorkingDay)
+			if (day.IsWorkingDay || day.IsShortenedDay)
 			{
 				daysAdded++;
 				currentDate = day.CalendarDate;
