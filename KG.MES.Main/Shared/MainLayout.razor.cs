@@ -2,12 +2,13 @@ using KG.MES.Shared.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
-namespace KG.MES.Masters.Components.Layout;
+namespace KG.MES.Main.Shared;
+
 public partial class MainLayout
 {
+	[Inject] NavigationManager NavManager { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] IJSRuntime JSRuntime { get; set; } = null!;
-	[Inject] NavigationManager NavManager { get; set; } = null!;
 
 	private bool userMenuOpen;
 	private bool showChangePassword;
@@ -32,7 +33,6 @@ public partial class MainLayout
 	{
 		userMenuOpen = false;
 		NavManager.NavigateTo($"{NavManager.BaseUri}login");
-
 	}
 
 }

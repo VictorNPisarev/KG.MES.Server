@@ -6,7 +6,13 @@ namespace KG.MES.Shared.Services;
 public abstract class AuthorizedApiService
 {
 	protected readonly HttpClient httpClient;
-	protected readonly UserSessionService session;
+	protected UserSessionService session;
+
+	public UserSessionService Session
+	{
+		get { return session; }
+		set { session = value; }
+	}
 
 	protected AuthorizedApiService(HttpClient httpClient, UserSessionService session)
 	{

@@ -7,6 +7,9 @@ namespace KG.MES.UI.Shared.Components.Widgets;
 
 public partial class WorkplaceStatsWidget : ComponentBase, ISavableWidget
 {
+	[Inject] private ProductionApiService ApiService { get; set; } = null!;
+	[Inject] private UserSessionService Session { get; set; } = null!;
+
 	private List<WorkplaceDto> workplaces = new();
 	private WorkplaceStatsDto? stats;
 	private List<BlockedOrderDto> blocks = new();

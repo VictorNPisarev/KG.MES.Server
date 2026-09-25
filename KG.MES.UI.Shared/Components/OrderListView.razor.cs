@@ -362,7 +362,6 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 				// Сбрасываем переменную, чтобы не скроллить при обычных рендерах
 				scrollYBeforeModal = null;
 			}
-
 		}
 	}
 

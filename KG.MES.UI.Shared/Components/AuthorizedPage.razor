@@ -8,46 +8,6 @@
 }
 else if (isAuthorized == true)
 {
-	@if (Session.User != null)
-	{
-		<div style="position: fixed; top: 10px; right: 20px; z-index: 1000;">
-			<div class="dropdown">
-				<button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2"
-						@onclick="() => userMenuOpen = !userMenuOpen">
-					<i class="bi bi-person-circle"></i>
-					<span>@Session.User.Name</span>
-					<i class="bi @(userMenuOpen ? "bi-chevron-up" : "bi-chevron-down") small"></i>
-				</button>
-
-				@if (userMenuOpen)
-				{
-					<div class="position-absolute bg-white border rounded shadow-sm mt-1"
-						style="right: 0; min-width: 220px; z-index: 1000;">
-						<div class="p-3 border-bottom">
-							<div class="fw-bold">@Session.User.Name</div>
-							<small class="text-muted">@Session.User.Email</small>
-							<div><span class="badge bg-secondary mt-1">@Session.User.RoleName</span></div>
-						</div>
-						<div class="p-2">
-							<button class="btn btn-sm btn-outline-primary w-100 mb-1" @onclick="OpenChangePassword">
-								<i class="bi bi-key me-1"></i> Сменить пароль
-							</button>
-							<button class="btn btn-sm btn-outline-danger w-100" @onclick="Logout">
-								<i class="bi bi-box-arrow-right me-1"></i> Выйти
-							</button>
-						</div>
-					</div>
-					<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999;"
-						@onclick="() => userMenuOpen = false"></div>
-				}
-			</div>
-		</div>
-	}
-
-	@if (showChangePassword)
-	{
-		<ChangePasswordDialog OnClose="() => showChangePassword = false" />
-	}
 	@ChildContent
 }
 else

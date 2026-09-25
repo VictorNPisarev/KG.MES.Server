@@ -16,8 +16,6 @@ public partial class AuthorizedPage
 	[Inject] private AuthService AuthService { get; set; } = null!;
 
 	private bool? isAuthorized;
-	private bool userMenuOpen;
-	private bool showChangePassword;
 
 	#region отладочные данные
 	private DebugInfo? debugInfo;
@@ -67,69 +65,24 @@ public partial class AuthorizedPage
 		//if (!firstRender)
 		//	return;
 
-		// 1. Если сессия уже в памяти (только что залогинились, без F5)
-		if (Session.IsAuthenticated)
+		// если AccessToken пуст, восстанавливаю сессию из хранилища
+		if (!Session.IsAuthenticated)
 		{
-			if (!await CheckPasswordSetAsync()) return;
-
-			debugInfo = new DebugInfo
-			{
-				AccessToken = Session.AccessToken,
-				RefreshToken = Session.RefreshToken,
-				LicenseKey = Session.LicenseKey,
-				DeviceId = Session.DeviceId,
-				ExpiresAt = Session.ExpiresAt
-			};
-			remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-			timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
-
-
-			isAuthorized = true;
-			StateHasChanged();
-			return;
+			await Session.RestoreAsync();
 		}
 
-		// 2. Пробуем восстановить из localStorage
-		//var sessionJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "session_data");
-
-		await Session.RestoreAsync();
-
-		//if (string.IsNullOrEmpty(sessionJson))
-		if (string.IsNullOrEmpty(Session.AccessToken))
+		// если AccessToken все еще пуст - перевожу на страницу входа
+		if (!Session.IsAuthenticated)
 		{
 			isAuthorized = false;
 			NavManager.NavigateTo($"{NavManager.BaseUri}login");
 			return;
 		}
 
-		//SessionData? data;
-		//try
-		//{
-		//	data = JsonSerializer.Deserialize<SessionData>(sessionJson);
-		//}
-		//catch
-		//{
-		//	data = null;
-		//}
-
-		//if (data == null || string.IsNullOrEmpty(data.RefreshToken))
-		//{
-		//	await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
-		//	_isAuthorized = false;
-		//	NavManager.NavigateTo($"{NavManager.BaseUri}login");
-		//	return;
-		//}
-
-		//// Debug info
-		var licenseKey = Session?.LicenseKey 
-							?? await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") 
-							?? (await LicenseService.LoadLicenseAsync())?.LicenseKey 
-							?? "";
-		var deviceId = await LicenseService.GetDeviceIdAsync();
-
-
+		// если AccessToken еще активен - все ОК
 		if (Session?.ExpiresAt > DateTime.UtcNow)
 		{
+			if (!await CheckPasswordSetAsync()) return;
 
 			debugInfo = new DebugInfo
 			{
@@ -140,32 +93,22 @@ public partial class AuthorizedPage
 				ExpiresAt = Session.ExpiresAt
 			};
 			remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+			timer?.Dispose();
 			timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
-
-			// 3. Access token ещё жив — восстанавливаем сессию в память
-			//if (data.ExpiresAt > DateTime.UtcNow)
-			//{
-			//Session.SetSession(
-			//	new LoginResponseDto
-			//	{
-			//		AccessToken = data.AccessToken,
-			//		RefreshToken = data.RefreshToken,
-			//		ExpiresIn = (int)(data.ExpiresAt - DateTime.UtcNow).TotalSeconds,
-			//		User = data.User
-			//	},
-			//	licenseKey,
-			//	deviceId
-			//);
-
-			if (!await CheckPasswordSetAsync()) return;
 
 			isAuthorized = true;
 			StateHasChanged();
 			return;
 		}
 
-		// 4. Токен протух — пробуем refresh
+		// 4. Токен протух — пробую refresh
+		var licenseKey = Session?.LicenseKey 
+							?? await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") 
+							?? (await LicenseService.LoadLicenseAsync())?.LicenseKey 
+							?? "";
+		var deviceId = await LicenseService.GetDeviceIdAsync();
 
+		//Если RefreshToken пуст - перевожу на страницу входа
 		if (string.IsNullOrEmpty(Session?.RefreshToken))
 		{
 			isAuthorized = false;
@@ -173,6 +116,7 @@ public partial class AuthorizedPage
 			return;
 		}
 
+		//Запрашиваю новый AccessToken на основе RefreshToken, ключа лицензии и deviceId
 		var request = new RefreshRequestDto
 		{
 			RefreshToken = Session.RefreshToken,
@@ -186,16 +130,7 @@ public partial class AuthorizedPage
 		{
 			var newExpiresAt = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
 
-			//var newSessionData = JsonSerializer.Serialize(new
-			//{
-			//	accessToken = response.AccessToken,
-			//	refreshToken = response.RefreshToken,
-			//	expiresAt = newExpiresAt,
-			//	user = response.User
-			//});
-			//await JSRuntime.InvokeVoidAsync("localStorage.setItem", "session_data", newSessionData);
-
-			// ← ВОТ ЭТОГО НЕ ХВАТАЛО: восстанавливаем сессию в память
+			// Обновляю сессию свежими данными
 			Session.SetSession(response, licenseKey, deviceId);
 
 			debugInfo = new DebugInfo
@@ -210,8 +145,10 @@ public partial class AuthorizedPage
 			if(debugInfo.ExpiresAt != null)
 			{
 				remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+				timer?.Dispose();
 				timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
 			}
+
 			await Session.PersistAsync();
 
 			if (!await CheckPasswordSetAsync()) return;
@@ -221,7 +158,7 @@ public partial class AuthorizedPage
 			return;
 		}
 
-		// 5. Refresh не сработал — чистим и на логин
+		// 5. Refresh не сработал — чищу хранилище и перевожу на страницу входа
 		await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
 		isAuthorized = false;
 		NavManager.NavigateTo($"{NavManager.BaseUri}login");
@@ -235,18 +172,6 @@ public partial class AuthorizedPage
 			return false;
 		}
 		return true;
-	}
-
-	private void OpenChangePassword()
-	{
-		userMenuOpen = false;
-		showChangePassword = true;
-	}
-
-	private async Task Logout()
-	{
-		userMenuOpen = false;
-		await ClearSession();
 	}
 
 	private class SessionData
