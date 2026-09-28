@@ -16,6 +16,7 @@ public partial class OrderTraceWidget : ComponentBase, ISavableWidget
 	[Inject] private ProductionApiService ApiService { get; set; } = null!;
 	[Inject] private ISocketService SocketService { get; set; } = null!;
 	[Inject] private IEventAggregator EventAggregator { get; set; } = null!;
+	[Inject] private UserSessionService Session { get; set; } = null!;
 
 	private OrderTraceViewModel? orderTrace;
 	private OrderTraceViewModel? backupTrace;

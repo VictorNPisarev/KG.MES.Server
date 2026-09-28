@@ -1,7 +1,5 @@
 using System.Text.Json;
 using KG.MES.Main.Interfaces;
-using KG.MES.Main.Models;
-using KG.MES.Main.Models.Xml;
 using KG.MES.Main.Services;
 using KG.MES.Shared.Helpers;
 using KG.MES.Shared.Interfaces;
@@ -28,8 +26,12 @@ builder.Services.AddSession(options =>
 });
 
 // Add our custom services
+builder.Services.AddScoped<UserSessionService>();
+builder.Services.AddScoped<LicenseService>();
+
 builder.Services.AddScoped<IXmlReaderService, XmlReaderService>();
 builder.Services.AddHttpClient<I1CExportService, OneCExportService>();
+
 builder.Services.AddHttpClient<ProductionApiService>();
 builder.Services.AddHttpClient<AuthService>();
 builder.Services.AddHttpClient<AdminService>();
@@ -42,10 +44,8 @@ builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddSingleton(LoadViewSettings(builder.Environment));
 builder.Services.AddSingleton<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
-builder.Services.AddScoped<ISocketService, SocketService>();
-//builder.Services.AddScoped<ISocketService, SignalRService>();
-builder.Services.AddScoped<UserSessionService>();
-builder.Services.AddScoped<LicenseService>();
+//builder.Services.AddScoped<ISocketService, SocketService>();
+builder.Services.AddScoped<ISocketService, SignalRService>();
 
 var app = builder.Build();
 

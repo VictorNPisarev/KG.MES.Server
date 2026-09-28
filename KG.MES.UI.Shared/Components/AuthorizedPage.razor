@@ -1,12 +1,12 @@
 @inject NavigationManager NavManager
 
-@if (_isAuthorized == null)
+@if (isAuthorized == null)
 {
 	<div class="text-center py-5">
 		<div class="spinner-border text-primary"></div>
 	</div>
 }
-else if (_isAuthorized == true)
+else if (isAuthorized == true)
 {
 	@ChildContent
 }
@@ -19,16 +19,16 @@ else
 }
 
 @* Debug панель — убрать в продакшене *@
-@if (true || (_isAuthorized == true && _debugInfo != null))
+@if (true || (isAuthorized == true && debugInfo != null))
 {
 	<div style="position: fixed; bottom: 0; right: 0; background: rgba(0,0,0,0.9); color: #0f0; 
 	                padding: 10px; font-size: 11px; max-width: 400px; z-index: 9999; border-radius: 8px 0 0 0;">
-		<div><strong>AccessToken:</strong> <span style="word-break: break-all;">@_debugInfo?.AccessToken</span></div>
-		<div><strong>RefreshToken:</strong> <span style="word-break: break-all;">@_debugInfo?.RefreshToken</span></div>
-		<div><strong>LicenseKey:</strong> @_debugInfo?.LicenseKey</div>
-		<div><strong>DeviceId:</strong> @_debugInfo?.DeviceId</div>
-		<div><strong>ExpiresAt:</strong> @_debugInfo?.ExpiresAt?.ToString("HH:mm:ss")</div>
-		<div><strong>Remaining:</strong> @_remainingSeconds сек</div>
+		<div><strong>AccessToken:</strong> <span style="word-break: break-all;">@debugInfo?.AccessToken</span></div>
+		<div><strong>RefreshToken:</strong> <span style="word-break: break-all;">@debugInfo?.RefreshToken</span></div>
+		<div><strong>LicenseKey:</strong> @debugInfo?.LicenseKey</div>
+		<div><strong>DeviceId:</strong> @debugInfo?.DeviceId</div>
+		<div><strong>ExpiresAt:</strong> @debugInfo?.ExpiresAt?.ToString("HH:mm:ss")</div>
+		<div><strong>Remaining:</strong> @remainingSeconds сек</div>
 		<button class="btn btn-sm btn-outline-danger mt-1" @onclick="ClearSession" style="font-size: 10px;">
 			Сбросить сессию
 		</button>

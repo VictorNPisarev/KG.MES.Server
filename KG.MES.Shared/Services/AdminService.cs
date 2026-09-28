@@ -7,32 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace KG.MES.Shared.Services;
 
-public class AdminService
+public class AdminService : AuthorizedApiService
 {
-	private readonly HttpClient httpClient;
 	private readonly ILogger<AdminService> logger;
 	private readonly string baseUrl;
-	private readonly UserSessionService session;
 
 	public AdminService(
 		HttpClient httpClient,
 		IConfiguration configuration,
 		ILogger<AdminService> logger,
-		UserSessionService session)
+		IServiceProvider serviceProvider) : base(httpClient, serviceProvider)
 	{
-		this.httpClient = httpClient;
 		this.logger = logger;
-		this.session = session;
 		baseUrl = configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.254:3031/api";
-	}
-
-	private void AddAuthHeader()
-	{
-		if (!string.IsNullOrEmpty(session.AccessToken))
-		{
-			httpClient.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", session.AccessToken);
-		}
 	}
 
 	// ========== ЛИЦЕНЗИИ ==========
@@ -43,7 +30,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var query = $"?page={page}&limit={limit}";
 			if (!string.IsNullOrEmpty(search)) query += $"&search={Uri.EscapeDataString(search)}";
 			if (type.HasValue) query += $"&type={type.Value}";
@@ -63,7 +51,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			return await httpClient.GetFromJsonAsync<LicenseDto>($"{baseUrl}/admin/licenses/{licenseId}");
 		}
 		catch (Exception ex)
@@ -77,7 +66,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/admin/licenses/create", request);
 			if (!response.IsSuccessStatusCode) return null;
 			return await response.Content.ReadFromJsonAsync<LicenseDto>();
@@ -93,7 +83,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/admin/licenses/{licenseId}/revoke", request);
 			return response.IsSuccessStatusCode;
 		}
@@ -108,7 +99,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsync($"{baseUrl}/admin/licenses/{licenseId}/activate", null);
 			return response.IsSuccessStatusCode;
 		}
@@ -123,7 +115,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsJsonAsync(
 				$"{baseUrl}/admin/licenses/{licenseId}/extend",
 				new ExtendLicenseRequestDto { DaysToAdd = daysToAdd });
@@ -140,7 +133,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			return await httpClient.GetFromJsonAsync<List<DeviceInfoDto>>(
 				$"{baseUrl}/admin/licenses/{licenseId}/devices") ?? new();
 		}
@@ -158,7 +152,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var query = $"?page={page}&limit={limit}";
 			if (!string.IsNullOrEmpty(search)) query += $"&search={Uri.EscapeDataString(search)}";
 
@@ -177,7 +172,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			return await httpClient.GetFromJsonAsync<UserAdminDetailsDto>($"{baseUrl}/admin/users/{userId}");
 		}
 		catch (Exception ex)
@@ -191,7 +187,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/admin/users/create", request);
 			if (!response.IsSuccessStatusCode) return null;
 			return await response.Content.ReadFromJsonAsync<CreateUserResultDto>();
@@ -207,7 +204,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsync($"{baseUrl}/admin/users/{userId}/block", null);
 			return response.IsSuccessStatusCode;
 		}
@@ -222,7 +220,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsync($"{baseUrl}/admin/users/{userId}/unblock", null);
 			return response.IsSuccessStatusCode;
 		}
@@ -237,7 +236,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsync($"{baseUrl}/admin/users/{userId}/resetPassword", null);
 			return response.IsSuccessStatusCode;
 		}
@@ -252,7 +252,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/admin/users/{userId}/setRole", request);
 			return response.IsSuccessStatusCode;
 		}
@@ -267,7 +268,8 @@ public class AdminService
 	{
 		try
 		{
-			AddAuthHeader();
+			EnsureAuthorization();
+
 			return await httpClient.GetFromJsonAsync<List<RoleDto>>($"{baseUrl}/admin/roles")
 				   ?? new List<RoleDto>();
 		}

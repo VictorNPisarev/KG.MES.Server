@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using KG.MES.Shared.Models.Dto;
@@ -9,11 +11,11 @@ namespace KG.MES.Server.Controllers;
 
 public partial class UsersController
 {
-	private readonly IUserService _userService;
+	private readonly IUserService userService;
 
 	public UsersController(IUserService userService)
 	{
-		_userService = userService;
+		this.userService = userService;
 	}
 
 	public async Task<IActionResult> SetPasswordHandler(SetPasswordRequestDto request)
@@ -25,11 +27,11 @@ public partial class UsersController
 		if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(request.NewPassword))
 			return BadRequest(new { error = "Email and password are required" });
 
-		var user = await _userService.GetUserByEmailAsync(email);
+		var user = await userService.GetUserByEmailAsync(email);
 		if (user == null)
 			return NotFound(new { error = "User not found" });
 
-		var result = await _userService.SetPasswordAsync(user.Id, request.NewPassword);
+		var result = await userService.SetPasswordAsync(user.Id, request.NewPassword);
 		if (!result)
 			return BadRequest(new { error = "Failed to set password" });
 
@@ -41,7 +43,7 @@ public partial class UsersController
 		if (string.IsNullOrEmpty(email))
 			return BadRequest(new { error = "email is required" });
 
-		var result = await _userService.GetUserByEmailAsync(email);
+		var result = await userService.GetUserByEmailAsync(email);
 		if (result == null)
 			return NotFound(new { error = "User not found" });
 
@@ -53,25 +55,31 @@ public partial class UsersController
 		if (userId == Guid.Empty)
 			return BadRequest(new { error = "userId is required" });
 
-		var result = await _userService.GetUserWorkplacesAsync(userId);
+		var result = await userService.GetUserWorkplacesAsync(userId);
 		return Ok(result);
 	}
 
 	public async Task<IActionResult> ChangePasswordHandler(ChangePasswordRequestDto request)
 	{
 		var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		
 		if (!Guid.TryParse(userIdClaim, out var userId))
-			return Unauthorized(new { error = "Invalid user" });
+			return Unauthorized(new { error = "Ошибка авторизации" });
 
 		if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
-			return BadRequest(new { error = "Current and new passwords are required" });
+			return BadRequest(new 
+				{ 
+					error = "Укажите текущий и новый пароль", 
+					currentPasswordError = string.IsNullOrEmpty(request.CurrentPassword),
+					newPasswordError = string.IsNullOrEmpty(request.NewPassword)
+				});
 
 		if (request.NewPassword.Length < 6)
-			return BadRequest(new { error = "Password must be at least 6 characters" });
+			return BadRequest(new { error = "Пароль должен быть не меньше 6 символов", newPasswordError = true });
 
-		var result = await _userService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+		var result = await userService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
 		if (!result)
-			return BadRequest(new { error = "Current password is incorrect" });
+			return BadRequest(new { error = "Текущий пароль не подходит", currentPasswordError = true });
 
 		return Ok(new { message = "Password changed successfully" });
 	}

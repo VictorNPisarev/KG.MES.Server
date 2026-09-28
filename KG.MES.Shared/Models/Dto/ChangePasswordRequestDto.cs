@@ -9,4 +9,10 @@ public class ChangePasswordRequestDto
 
 	[JsonPropertyName("new_password")]
 	public string NewPassword { get; set; } = string.Empty;
+
+	[JsonPropertyName("current_password_error")]
+	private bool currentPasswordError { get; set; } = false;
+
+	[JsonPropertyName("new_password_error")]
+	private bool newPasswordError { get; set; } = false;
 }

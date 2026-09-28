@@ -7,10 +7,10 @@ namespace KG.MES.Main.Models
 	{
 		[JsonPropertyName("code")]
 		public string Code { get; set; } = string.Empty;
-		
+
 		[JsonPropertyName("name")]
 		public string Name { get; set; } = string.Empty;
-		
+
 		[JsonPropertyName("description")]
 		public string? Description { get; set; }
 	}
@@ -18,6 +18,6 @@ namespace KG.MES.Main.Models
 	public class IndicatorsRoot
 	{
 		[JsonPropertyName("indicators")]
-		public List<SortingIndicator> Indicators { get; set; } = new();
+		public List<SortingIndicator> Indicators { get; set; } = [];
 	}
 }

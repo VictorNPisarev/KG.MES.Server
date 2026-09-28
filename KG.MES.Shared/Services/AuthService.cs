@@ -1,4 +1,5 @@
 // KG.MES.Shared/Services/AuthService.cs
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,32 +9,37 @@ using Microsoft.Extensions.Logging;
 
 namespace KG.MES.Shared.Services;
 
-public class AuthService
+public class AuthService : AuthorizedApiService
 {
-	private readonly HttpClient _httpClient;
-	private readonly ILogger<AuthService> _logger;
-	private readonly string _baseUrl;
-
+	private readonly ILogger<AuthService> logger;
+	private readonly string baseUrl;
 	public string? LastError { get; private set; }
 
 	private class ErrorResponse
 	{
 		[JsonPropertyName("error")]
 		public string? Error { get; set; }
+
+		[JsonPropertyName("currentPasswordError")]
+		public bool? CurrentPasswordError { get; set; }
+
+		[JsonPropertyName("newPasswordError")]
+		public bool? NewPasswordError { get; set; }
+
 	}
 
-	public AuthService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthService> logger)
+	public AuthService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthService> logger,
+		IServiceProvider serviceProvider) : base(httpClient, serviceProvider)
 	{
-		_httpClient = httpClient;
-		_logger = logger;
-		_baseUrl = configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.179:3031/api";
+		this.logger = logger;
+		baseUrl = configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.179:3031/api";
 	}
 
 	public async Task<LoginResponseDto?> LoginAsync(LoginRequestDto request)
 	{
 		try
 		{
-			var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/auth/login", request);
+			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/auth/login", request);
 
 			if (!response.IsSuccessStatusCode)
 			{
@@ -41,7 +47,7 @@ public class AuthService
 				var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent,
 					new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-				_logger.LogWarning("Login failed: {Error}", error?.Error);
+				logger.LogWarning("Login failed: {Error}", error?.Error);
 
 				// Сохраняем ошибку для отображения
 				LastError = error?.Error ?? "Неверные учётные данные";
@@ -52,7 +58,7 @@ public class AuthService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error during login");
+			logger.LogError(ex, "Error during login");
 			LastError = $"Error during login: {ex.Message}";
 			return null;
 		}
@@ -62,15 +68,64 @@ public class AuthService
 	{
 		try
 		{
-			var response = await _httpClient.PostAsJsonAsync($"{_baseUrl}/auth/refresh", refreshRequestDto);
+			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/auth/refresh", refreshRequestDto);
 
 			if (!response.IsSuccessStatusCode) return null;
 			return await response.Content.ReadFromJsonAsync<LoginResponseDto>();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error refreshing token");
+			logger.LogError(ex, "Error refreshing token");
 			return null;
+		}
+	}
+
+	public async Task<(bool Success, string? Error, bool? CurrentPassError, bool? NewPassError)> ChangePasswordAsync(string currentPassword, string newPassword)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/users/me/change-password",
+				new ChangePasswordRequestDto { CurrentPassword = currentPassword, NewPassword = newPassword });
+
+			if (response.IsSuccessStatusCode)
+				return (true, null, null, null);
+
+			var errorContent = await response.Content.ReadAsStringAsync();
+			var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			return (false, error?.Error ?? "Не удалось изменить пароль", error?.CurrentPasswordError, error?.NewPasswordError);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error changing password");
+			return (false, $"Ошибка соединения {ex.Message}", false, false);
+		}
+	}
+
+	public async Task<(bool Success, string? Error)> SetPasswordAsync(string email, string newPassword)
+	{
+		try
+		{
+			var response = await httpClient.PostAsJsonAsync(
+				$"{baseUrl}/users/set-password",
+				new { email, newPassword });
+
+			if (response.IsSuccessStatusCode)
+				return (true, null);
+
+			var errorContent = await response.Content.ReadAsStringAsync();
+			var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			return (false, error?.Error ?? "Не удалось установить пароль");
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error setting password");
+			return (false, "Ошибка соединения с сервером");
 		}
 	}
 }

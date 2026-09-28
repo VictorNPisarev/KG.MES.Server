@@ -4,31 +4,31 @@
 	<div class="login-card">
 		<h2>Вход в систему</h2>
 
-		@if (!string.IsNullOrEmpty(_error))
+		@if (!string.IsNullOrEmpty(error))
 		{
-			<div class="alert alert-danger">@_error</div>
+			<div class="alert alert-danger">@error</div>
 		}
 
 		<div class="mb-3">
 			<label class="form-label">Email</label>
-			<input type="email" @bind="_email" class="form-control" placeholder="email@example.com" />
+			<input type="email" @bind="email" class="form-control" placeholder="email@example.com" />
 		</div>
 
 		<div class="mb-3">
 			<label class="form-label">Пароль</label>
-			<input type="password" @bind="_password" class="form-control" placeholder="Пароль" />
+			<input type="password" @bind="password" class="form-control" placeholder="Пароль" />
 		</div>
 
-		@if (string.IsNullOrEmpty(_licenseKey))
+		@if (string.IsNullOrEmpty(licenseKey))
 		{
 			<div class="mb-3">
 				<label class="form-label">Лицензионный ключ</label>
-				<input type="text" @bind="_licenseKeyHandle" class="form-control" placeholder="XXXX-XXXX-XXXX-XXXX" />
+				<input type="text" @bind="licenseKeyHandle" class="form-control" placeholder="XXXX-XXXX-XXXX-XXXX" />
 			</div>
 		}
 
-		<button class="btn btn-primary w-100" @onclick="Login" disabled="@_isLoading">
-			@if (_isLoading)
+		<button class="btn btn-primary w-100" @onclick="Login" disabled="@isLoading">
+			@if (isLoading)
 			{
 				<span class="spinner-border spinner-border-sm me-2"></span>
 			}

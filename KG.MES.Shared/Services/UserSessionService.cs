@@ -44,19 +44,15 @@ public class UserSessionService
 	/// <summary>
 	/// Восстанавливает сессию из localStorage при старте circuit (после F5).
 	/// </summary>
-	public async Task RestoreAsync(IJSRuntime jsRuntime)
-	{
-		await RestoreAsync();
-	}
 	public async Task RestoreAsync()
 	{
-		var json = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "session_data");
-		if (string.IsNullOrEmpty(json))
+		var storedSession = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "session_data");
+		if (string.IsNullOrEmpty(storedSession))
 			return;
 
 		try
 		{
-			var data = JsonSerializer.Deserialize<StoredSession>(json);
+			var data = JsonSerializer.Deserialize<StoredSession>(storedSession);
 			if (data == null)
 			{
 				//await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
@@ -76,14 +72,14 @@ public class UserSessionService
 		}
 		catch
 		{
-			await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
+			//await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
 		}
 	}
 
 	/// <summary>
 	/// Сохраняет сессию в localStorage.
 	/// </summary>
-	public async Task PersistAsync(IJSRuntime jsRuntime)
+	public async Task PersistAsync()
 	{
 		if (loginResponse == null)
 			return;
