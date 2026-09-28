@@ -16,7 +16,7 @@ public class AdminService : AuthorizedApiService
 		HttpClient httpClient,
 		IConfiguration configuration,
 		ILogger<AdminService> logger,
-		UserSessionService session) : base(httpClient, session)
+		IServiceProvider serviceProvider) : base(httpClient, serviceProvider)
 	{
 		this.logger = logger;
 		baseUrl = configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.254:3031/api";

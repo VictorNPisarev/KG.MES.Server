@@ -44,8 +44,8 @@ builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddSingleton(LoadViewSettings(builder.Environment));
 builder.Services.AddSingleton<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
-builder.Services.AddScoped<ISocketService, SocketService>();
-//builder.Services.AddScoped<ISocketService, SignalRService>();
+//builder.Services.AddScoped<ISocketService, SocketService>();
+builder.Services.AddScoped<ISocketService, SignalRService>();
 
 var app = builder.Build();
 

@@ -62,17 +62,22 @@ public partial class UsersController
 		var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 		
 		if (!Guid.TryParse(userIdClaim, out var userId))
-			return Unauthorized(new { error = "Invalid user" });
+			return Unauthorized(new { error = "Ошибка авторизации" });
 
 		if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword))
-			return BadRequest(new { error = "Current and new passwords are required" });
+			return BadRequest(new 
+				{ 
+					error = "Укажите текущий и новый пароль", 
+					currentPasswordError = string.IsNullOrEmpty(request.CurrentPassword),
+					newPasswordError = string.IsNullOrEmpty(request.NewPassword)
+				});
 
 		if (request.NewPassword.Length < 6)
-			return BadRequest(new { error = "Password must be at least 6 characters" });
+			return BadRequest(new { error = "Пароль должен быть не меньше 6 символов", newPasswordError = true });
 
 		var result = await userService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
 		if (!result)
-			return BadRequest(new { error = "Current password is incorrect" });
+			return BadRequest(new { error = "Текущий пароль не подходит", currentPasswordError = true });
 
 		return Ok(new { message = "Password changed successfully" });
 	}

@@ -35,8 +35,8 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 
 	protected override async Task OnInitializedAsync()
 	{
-		await SocketService.SubscribeAsync("supply");
-		SocketService.OnMessage += OnSocketMessage;
+		//await SocketService.SubscribeAsync("supply");
+		//SocketService.OnMessage += OnSocketMessage;
 
 		//Подписываюсь на изменение комментария
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderCommentUpdated);

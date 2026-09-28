@@ -18,14 +18,22 @@ public partial class ChangePasswordDialog
 	private string confirmPassword = "";
 	private string _error = "";
 	private string _success = "";
-	private bool _isLoading;
+	private bool isLoading;
+	//флаги для подсветки полей
+	private bool currentPasswordError;
+	private bool newPasswordError;
+	private bool confirmPasswordError;
 
 	private async Task Save()
 	{
 		_error = "";
 		_success = "";
 
-		if (string.IsNullOrEmpty(currentPassword) || string.IsNullOrEmpty(newPassword))
+		currentPasswordError = string.IsNullOrEmpty(currentPassword);
+		newPasswordError = string.IsNullOrEmpty(newPassword);
+		confirmPasswordError = string.IsNullOrEmpty(confirmPassword);
+
+		if (currentPasswordError || newPasswordError || confirmPasswordError)
 		{
 			_error = "Заполните все поля";
 			return;
@@ -33,19 +41,21 @@ public partial class ChangePasswordDialog
 
 		if (newPassword != confirmPassword)
 		{
+			newPasswordError = confirmPasswordError = true;
 			_error = "Пароли не совпадают";
 			return;
 		}
 
 		if (newPassword.Length < 6)
 		{
+			newPasswordError = true;
 			_error = "Пароль должен быть не менее 6 символов";
 			return;
 		}
 
-		_isLoading = true;
-		var (success, error) = await AuthService.ChangePasswordAsync(currentPassword, newPassword);
-		_isLoading = false;
+		isLoading = true;
+		var (success, error, currentPassError, newPassError) = await AuthService.ChangePasswordAsync(currentPassword, newPassword);
+		isLoading = false;
 
 		if (success)
 		{
@@ -57,6 +67,8 @@ public partial class ChangePasswordDialog
 		else
 		{
 			_error = error ?? "Ошибка смены пароля";
+			currentPasswordError = currentPassError ?? false;
+			newPasswordError = newPassError ?? false;
 		}
 	}
 

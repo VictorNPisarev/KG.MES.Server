@@ -9,6 +9,7 @@
 @import 'login.css';
 @import 'admin.css';
 @import 'sortIcons.css';
+@import 'inputError.css';
 
 .sticky-header {
 	position: sticky;

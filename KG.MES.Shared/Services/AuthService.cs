@@ -19,10 +19,17 @@ public class AuthService : AuthorizedApiService
 	{
 		[JsonPropertyName("error")]
 		public string? Error { get; set; }
+
+		[JsonPropertyName("currentPasswordError")]
+		public bool? CurrentPasswordError { get; set; }
+
+		[JsonPropertyName("newPasswordError")]
+		public bool? NewPasswordError { get; set; }
+
 	}
 
 	public AuthService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthService> logger,
-		UserSessionService session) : base(httpClient, session)
+		IServiceProvider serviceProvider) : base(httpClient, serviceProvider)
 	{
 		this.logger = logger;
 		baseUrl = configuration["ProductionApi:BaseUrl"] ?? "http://192.168.0.179:3031/api";
@@ -73,28 +80,28 @@ public class AuthService : AuthorizedApiService
 		}
 	}
 
-	public async Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword)
+	public async Task<(bool Success, string? Error, bool? CurrentPassError, bool? NewPassError)> ChangePasswordAsync(string currentPassword, string newPassword)
 	{
 		try
 		{
 			EnsureAuthorization();
 
 			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/users/me/change-password",
-				new { currentPassword, newPassword });
+				new ChangePasswordRequestDto { CurrentPassword = currentPassword, NewPassword = newPassword });
 
 			if (response.IsSuccessStatusCode)
-				return (true, null);
+				return (true, null, null, null);
 
 			var errorContent = await response.Content.ReadAsStringAsync();
 			var error = JsonSerializer.Deserialize<ErrorResponse>(errorContent,
 				new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-			return (false, error?.Error ?? "Не удалось изменить пароль");
+			return (false, error?.Error ?? "Не удалось изменить пароль", error?.CurrentPasswordError, error?.NewPasswordError);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error changing password");
-			return (false, $"Ошибка соединения {ex.Message}");
+			return (false, $"Ошибка соединения {ex.Message}", false, false);
 		}
 	}
 

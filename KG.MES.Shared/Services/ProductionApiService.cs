@@ -31,7 +31,7 @@ public class ProductionApiService : AuthorizedApiService
 		HttpClient httpClient,
 		ILogger<ProductionApiService> logger,
 		IConfiguration configuration,
-		UserSessionService session) : base(httpClient, session)
+		IServiceProvider serviceProvider) : base(httpClient, serviceProvider)
 	{
 		this.configuration = configuration;
 		this.logger = logger;

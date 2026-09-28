@@ -71,6 +71,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private Dictionary<string, List<FacetValueDto>> facets = [];
 	private ITotalsDto? totals;
 
+	private string debugMessage = string.Empty;
 
 	private IconInfo testIcon = new IconInfo
 	{
@@ -217,14 +218,18 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	
 	private async Task LoadOrders()
 	{
+		debugMessage += "\r\nLoadOrders() in";
 		isLoading = true;
 		StateHasChanged();
 
 		try
 		{
+			debugMessage += "\r\nLoadOrders() try in";
 			//ApiService.Session = Session;
 
+			debugMessage += "\r\nLoadOrders() before filters";
 			var filters = BuildFilterConditionsForIn();
+			debugMessage += "\r\nLoadOrders() after filters";
 
 			if (LoadItems != null)
 			{
@@ -249,6 +254,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		finally
 		{
 			isLoading = false;
+			debugMessage += "\r\nLoadOrders() finally";
 			StateHasChanged();
 		}
 	}
@@ -296,6 +302,9 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private async Task OpenOrder(TListItem order)
 	{
 		selectedOrder = order;
+
+		debugMessage = $"order: {GetOrderId(selectedOrder)}";
+
 		if (useSplitView)
 		{
 			// Просто обновляем панель — Dashboard сам переинициализируется
@@ -760,6 +769,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		var response = await ApiService.GetFilterFacetsAsync<TListItem>(Endpoint, request);
 
 		facets = response?.Facets ?? [];
+
+		debugMessage += $"\r\n facets: {facets.Count}";
 	}
 
 	// Группы фильтров на основе фасетов

@@ -26,7 +26,6 @@
 			</div>
 		</div>
 	</div>
-
 	<!-- Фильтры -->
 	<div class="row mt-4 g-2">
 		<div class="col-md-2">
@@ -322,6 +321,11 @@
 					</h5>
 					<button type="button" class="btn-close" @onclick="() => dashboardRef!.CloseOrder()"></button>
 				</div>
+
+				<div>
+					<span class="text-muted">@debugMessage</span>
+				</div>
+
 				<div class="modal-body">
 					<OrderDashboard @ref="dashboardRef" TOrder="TCardItem" LoadItem="LoadItem"
 						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" />
