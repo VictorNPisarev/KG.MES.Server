@@ -18,4 +18,7 @@ public class LoginRequestDto
 
 	[JsonPropertyName("deviceName")]
 	public string? DeviceName { get; set; }
+
+	[JsonPropertyName("applicationCode")]
+	public string? ApplicationCode { get; set; }
 }

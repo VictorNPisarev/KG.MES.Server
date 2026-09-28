@@ -368,4 +368,25 @@ public class ServerLicenseService : ILicenseService
 		_logger.LogInformation("📅 License {LicenseId} extended by {Days} days", licenseId, daysToAdd);
 		return true;
 	}
+
+	public async Task<bool> CanSelfRegisterAsync(string licenseKey)
+	{
+		if (string.IsNullOrEmpty(licenseKey))
+			return false;
+
+		var license = await _context.Licenses
+			.FirstOrDefaultAsync(l => l.KeyCode == licenseKey);
+
+		if (license == null)
+			return false;
+
+		if (!license.IsActive)
+			return false;
+
+		if (license.ExpiresAt.HasValue && license.ExpiresAt < DateTime.UtcNow)
+			return false;
+
+		// Только мультидевайсная лицензия разрешает self-registration
+		return license.LicenseType == LicenseType.MultiDevice;
+	}
 }

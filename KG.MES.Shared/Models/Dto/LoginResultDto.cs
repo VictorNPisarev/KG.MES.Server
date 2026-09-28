@@ -13,6 +13,16 @@ public class LoginResultDto
 	[JsonPropertyName("response")]
 	public LoginResponseDto? Response { get; set; }
 
+	[JsonPropertyName("registrationRequired")]
+	public bool RegistrationRequired { get; set; }
+
+	[JsonPropertyName("registrationToken")]
+	public string? RegistrationToken { get; set; }
+
+	public static LoginResultDto CreateRegistrationRequired(string token)
+	=> new() { Success = false, RegistrationRequired = true, RegistrationToken = token };
+
+
 	public static LoginResultDto CreateSuccess(LoginResponseDto response) =>
 		new()
 		{

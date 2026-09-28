@@ -12,4 +12,6 @@ public partial class AuthController : ControllerBase
 	[HttpPost("refresh")]
 	public Task<IActionResult> Refresh([FromBody] RefreshRequestDto request) => RefreshHandler(request);
 
+	[HttpPost("register")]
+	public Task<IActionResult> Register([FromBody] RegisterRequestDto request) => RegisterHandler(request);
 }

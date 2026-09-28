@@ -7,4 +7,5 @@ public interface IAuthService
 {
 	Task<LoginResultDto> AuthenticateUserAsync(LoginRequestDto request, string? ipAddress = null);
 	Task<LoginResultDto> RefreshAuthenticationToken(RefreshRequestDto request);
+	Task<LoginResultDto> RegisterUserAsync(RegisterRequestDto request, string? ipAddress = null);
 }

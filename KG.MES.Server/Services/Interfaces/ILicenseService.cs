@@ -85,4 +85,10 @@ public interface ILicenseService
 	/// <returns></returns>
 	Task<bool> ExtendLicenseAsync(Guid licenseId, int? daysToAdd);
 
+	/// <summary>
+	/// Возможность самостоятельной регистрации пользователей без обращения к админу
+	/// </summary>
+	/// <param name="licenseKey"></param>
+	/// <returns></returns>
+	Task<bool> CanSelfRegisterAsync(string licenseKey);
 }

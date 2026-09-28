@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using KG.MES.Shared.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace KG.MES.Server.Tests.Services;
 
@@ -23,6 +24,7 @@ public class AuthServiceTests : IDisposable
 	private readonly Mock<IJwtService> _jwtServiceMock;
 	private readonly Mock<IUserDeviceService> _userDeviceServiceMock;
 	private readonly Mock<ILogger<AuthController>> _loggerMock;
+	private readonly Mock<IPasswordHasher<User>> _passwordHasherMock;
 
 	public AuthServiceTests()
 	{
@@ -38,6 +40,7 @@ public class AuthServiceTests : IDisposable
 		_jwtServiceMock = new Mock<IJwtService>();
 		_userDeviceServiceMock = new Mock<IUserDeviceService>();
 		_loggerMock = new Mock<ILogger<AuthController>>();
+		_passwordHasherMock = new Mock<IPasswordHasher<User>>();
 
 		_service = new ServerAuthService(
 			_context,
@@ -45,7 +48,8 @@ public class AuthServiceTests : IDisposable
 			_licenseServiceMock.Object,
 			_jwtServiceMock.Object,
 			_userDeviceServiceMock.Object,
-			_loggerMock.Object
+			_loggerMock.Object,
+			_passwordHasherMock.Object
 		);
 	}
 

@@ -15,7 +15,10 @@ public class User
 	[Column("password_hash")] public string? PasswordHash { get; set; }
 	[Column("is_password_set")] public bool IsPasswordSet { get; set; }
 	[Column("is_active")] public bool IsActive { get; set; } = true;
-
+	[Column("is_approved")] public bool IsApproved { get; set; } = false;
+	[Column("approval_deadline")] public DateTime? ApprovalDeadline { get; set; }
+	[Column("approved_by")] public Guid? ApprovedBy { get; set; }
+	[Column("approved_at")] public DateTime? ApprovedAt { get; set; }
 	[ForeignKey("RoleId")] public Role? Role { get; set; }
 
 	public ICollection<UserWorkplace>? UserWorkplaces { get; set; }
