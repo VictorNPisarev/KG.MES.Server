@@ -32,7 +32,8 @@ public partial class MainLayout
 	private async Task Logout()
 	{
 		userMenuOpen = false;
-		NavManager.NavigateTo($"{NavManager.BaseUri}login");
+		await Session.ClearSession();
+		NavManager.NavigateTo(NavManager.BaseUri + "login", true);
 	}
 
 }

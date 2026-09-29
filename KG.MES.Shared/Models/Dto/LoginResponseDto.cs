@@ -18,4 +18,11 @@ public class LoginResponseDto
 
 	[JsonPropertyName("user")]
 	public UserDto? User { get; set; }
+
+	[JsonPropertyName("registrationRequired")]
+	public bool RegistrationRequired { get; set; } = false;
+
+	[JsonPropertyName("registrationToken")]
+	public string? RegistrationToken { get; set; }
+
 }

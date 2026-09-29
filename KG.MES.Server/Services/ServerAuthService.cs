@@ -390,11 +390,11 @@ public class ServerAuthService : IAuthService
 	{
 		return applicationCode switch
 		{
-			"Masters" => "Master",
-			"Sales" => "Manager",
-			"Supply" => "Supplier",
-			"Main" => "User",
-			_ => "User"  // дефолтная роль
+			"Masters" => "Middle",
+			"Sales" => "Simple",
+			"Supply" => "LumberSupply",
+			"Main" => "Advanced",
+			_ => "Simple"
 		};
 	}
 }

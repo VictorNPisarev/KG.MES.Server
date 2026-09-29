@@ -41,10 +41,7 @@ public partial class AuthorizedPage
 
 	private async Task ClearSession()
 	{
-		await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
-		await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "license_key");
-		await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "refresh_token");
-		Session.Clear();
+		await Session.ClearSession();
 		NavManager.NavigateTo(NavManager.BaseUri + "login", true);
 	}
 

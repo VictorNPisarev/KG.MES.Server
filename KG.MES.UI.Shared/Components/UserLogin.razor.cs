@@ -20,6 +20,9 @@ public partial class UserLogin : ComponentBase
 	private string licenseKeyHandle = "";
 	private bool isLoading;
 	private bool isAuthorized;
+	private bool registrationRequired;
+	private string? registrationToken;
+
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -48,6 +51,9 @@ public partial class UserLogin : ComponentBase
 	private async Task Login()
 	{
 		licenseKey = !string.IsNullOrEmpty(licenseKeyHandle) ? licenseKeyHandle : licenseKey;
+
+		registrationRequired = false;
+
 
 		if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
 		{
@@ -79,7 +85,17 @@ public partial class UserLogin : ComponentBase
 
 			var response = await AuthService.LoginAsync(request);
 
-			if (response != null)
+			isLoading = false;
+
+			if (response?.RegistrationRequired == true)
+			{
+				registrationRequired = true;
+				registrationToken = response.RegistrationToken;
+				StateHasChanged();
+				return;
+			}
+
+			if (response != null && !string.IsNullOrEmpty(response.AccessToken))
 			{
 				var deviceId = await LicenseService.GetDeviceIdAsync();
 				Session.SetSession(response, licenseKey, deviceId);
@@ -116,4 +132,16 @@ public partial class UserLogin : ComponentBase
 			StateHasChanged();
 		}
 	}
+
+	private void CancelRegistration()
+	{
+		registrationRequired = false;
+		registrationToken = null;
+	}
+
+	private void GoToRegistration()
+	{
+		NavManager.NavigateTo($"{NavManager.BaseUri}registration?email={email}&token={Uri.EscapeDataString(registrationToken!)}");
+	}
+
 }

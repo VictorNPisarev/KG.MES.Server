@@ -33,13 +33,23 @@ public class UserSessionService
 		ExpiresAt = DateTime.UtcNow.AddSeconds(response.ExpiresIn);
 	}
 
-	public void Clear()
+	private void Clear()
 	{
 		loginResponse = null;
 		LicenseKey = null;
 		DeviceId = null;
 		ExpiresAt = null;
 	}
+
+	public async Task ClearSession()
+	{
+		Clear();
+
+		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
+		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "license_key");
+		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refresh_token");
+	}
+
 
 	/// <summary>
 	/// Восстанавливает сессию из localStorage при старте circuit (после F5).

@@ -128,4 +128,31 @@ public class AuthService : AuthorizedApiService
 			return (false, "Ошибка соединения с сервером");
 		}
 	}
+
+	public async Task<LoginResponseDto?> RegisterAsync(RegisterRequestDto request)
+	{
+		try
+		{
+			var response = await httpClient.PostAsJsonAsync($"{baseUrl}/auth/register", request);
+			var json = await response.Content.ReadAsStringAsync();
+
+			if (response.IsSuccessStatusCode)
+			{
+				return JsonSerializer.Deserialize<LoginResponseDto>(json,
+					new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+			}
+
+			var error = JsonSerializer.Deserialize<ErrorResponse>(json,
+				new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			LastError = error?.Error ?? "Ошибка регистрации";
+			return null;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error during registration");
+			LastError = "Ошибка соединения";
+			return null;
+		}
+	}
 }

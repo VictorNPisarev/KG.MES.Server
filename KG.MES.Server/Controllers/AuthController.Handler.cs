@@ -27,11 +27,7 @@ public partial class AuthController
 			// ✅ Если требуется регистрация — отдаём 200 с флагом, 
 			// чтобы клиент мог показать форму
 			if (result.RegistrationRequired)
-				return Ok(new
-				{
-					registrationRequired = true,
-					registrationToken = result.RegistrationToken
-				});
+				return Ok(result.Response);
 
 			return Unauthorized(new { error = result.Error });
 		}
@@ -60,7 +56,6 @@ public partial class AuthController
 		{
 			return BadRequest(new { error = result.Error });
 		}
-
 		return Ok(result.Response);
 	}
 }
