@@ -10,11 +10,8 @@ namespace KG.MES.Shared.Controllers;
 [Authorize]
 public partial class OrderController : ControllerBase
 {
-	//-------------------------
-	//POST
-	//-------------------------
-
-
+	#region POST
+	
 	// POST: api/orders
 	[HttpPost("orders")]
 	[HttpPost("orders/create")]
@@ -52,13 +49,11 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
+	
+	#endregion POST
 
 
-
-	//-------------------------
-	//GET
-	//-------------------------
-
+	#region GET
 
 	// GET: api/orders
 	[HttpGet("orders")]
@@ -120,11 +115,10 @@ public partial class OrderController : ControllerBase
 	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
 		=> GetFilterFacetsHandler(request);
 
+	#endregion GET
 
-	//-------------------------
-	//PUT
-	//-------------------------
-
+	
+	#region PUT
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}
 	[HttpPut("orders/footprint/{productionOrderId}/workplace/{workplaceId}")]
@@ -151,16 +145,14 @@ public partial class OrderController : ControllerBase
 	[HttpPut("orders/{orderId}")]
 	public Task<IActionResult> UpdateOrder(Guid orderId, [FromBody] OrderRequestDto dto) => UpdateOrderHandler(orderId, dto);
 
+	#endregion PUT
 
-
-	//-------------------------
-	//DELETE
-	//-------------------------
-
-
+	
+	#region DELETE
+	
 	// DELETE: api/orders/{orderId}
 	[HttpDelete("orders/{orderId}")]
 	public Task<IActionResult> DeleteOrder(Guid orderId) => DeleteOrderHandler(orderId);
 
-
+	#endregion DELETE
 }

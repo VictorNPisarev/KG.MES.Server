@@ -6,52 +6,52 @@ namespace KG.MES.Shared.Services;
 
 public class SupplyService
 {
-	private readonly ProductionApiService _api;
-	private readonly ILogger<SupplyService> _logger;
+	private readonly ProductionApiService api;
+	private readonly ILogger<SupplyService> logger;
 
-	private List<SupplyTypeDto>? _cachedTypes;
-	private List<SupplyConditionDto>? _cachedConditions;
+	private List<SupplyTypeDto>? cachedTypes;
+	private List<SupplyConditionDto>? cachedConditions;
 
 	public SupplyService(ProductionApiService api, ILogger<SupplyService> logger)
 	{
-		_api = api;
-		_logger = logger;
+		this.api = api;
+		this.logger = logger;
 	}
 
 	public async Task<List<SupplyTypeDto>> GetTypesAsync()
 	{
-		if (_cachedTypes != null) return _cachedTypes;
+		if (cachedTypes != null) return cachedTypes;
 
 		try
 		{
-			_cachedTypes = await _api.GetSupplyTypesAsync();
-			return _cachedTypes ?? [];
+			cachedTypes = await api.GetSupplyTypesAsync();
+			return cachedTypes ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error loading supply types");
+			logger.LogError(ex, "Error loading supply types");
 			return [];
 		}
 	}
 
 	public async Task<List<SupplyConditionDto>> GetConditionsAsync()
 	{
-		if (_cachedConditions != null) return _cachedConditions;
+		if (cachedConditions != null) return cachedConditions;
 
 		try
 		{
-			_cachedConditions = await _api.GetSupplyConditionsAsync();
-			return _cachedConditions ?? [];
+			cachedConditions = await api.GetSupplyConditionsAsync();
+			return cachedConditions ?? [];
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error loading supply conditions");
+			logger.LogError(ex, "Error loading supply conditions");
 			return [];
 		}
 	}
 	public async Task<List<OrderSupplyViewModel>> GetOrderSuppliesAsync(Guid orderId)
 	{
-		var dtos = await _api.GetOrderSuppliesAsync(orderId);
+		var dtos = await api.GetOrderSuppliesAsync(orderId);
 		var types = await GetTypesAsync();
 		var conditions = await GetConditionsAsync();
 

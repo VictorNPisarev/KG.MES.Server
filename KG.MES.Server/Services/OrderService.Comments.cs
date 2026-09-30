@@ -27,6 +27,7 @@ public partial class OrderService
 					Content = x.Comment.Content,
 					CreatedAt = x.Comment.CreatedAt,
 					UpdatedAt = x.Comment.UpdatedAt,
+					UserId = u != null ? u.Id : null,
 					UserName = u != null ? u.Name : null
 				})
 			.OrderByDescending(c => c.CreatedAt)
@@ -35,6 +36,7 @@ public partial class OrderService
 		return comments.Select(c => new OrderCommentDto
 		{
 			Id = c.Id,
+			UserId = c.UserId,
 			Content = c.Content,
 			CreatedAt = c.CreatedAt?.ToProductionTime(),
 			UpdatedAt = c.UpdatedAt?.ToProductionTime(),
@@ -86,6 +88,7 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
+				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -142,6 +145,7 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
+				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
@@ -206,6 +210,7 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
+				UserId = comment.UserId,
 				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}

@@ -16,6 +16,7 @@ public partial class OrderCommentsWidget : ComponentBase, ISavableWidget, IDispo
 	[Inject] ProductionApiService ApiService { get; set; } = null!;
 	[Inject] IJSRuntime JSRuntime { get; set; } = null!;
 	[Inject] private IEventAggregator EventAggregator { get; set; } = null!;
+	[Inject] private UserSessionService Session { get; set; } = null!;
 
 	private List<OrderCommentViewModel> comments = [];
 	private List<OrderCommentViewModel> originalComments = [];
@@ -48,7 +49,9 @@ public partial class OrderCommentsWidget : ComponentBase, ISavableWidget, IDispo
 			Id = Guid.NewGuid(), // временный ID
 			IsNew = true,
 			IsEditing = true,
-			CreatedAt = DateTime.UtcNow
+			CreatedAt = DateTime.UtcNow,
+			UserId = Session.User?.Id,
+			UserName = Session.User?.Name
 		};
 		comments.Add(newComment);
 	}

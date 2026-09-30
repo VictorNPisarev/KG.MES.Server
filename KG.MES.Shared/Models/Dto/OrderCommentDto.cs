@@ -16,6 +16,9 @@ public class OrderCommentDto
 	[JsonPropertyName("updated_at")]
 	public DateTime? UpdatedAt { get; set; }
 
+	[JsonPropertyName("user_id")]
+	public Guid? UserId { get; set; }
+
 	[JsonPropertyName("user_name")]
 	public string? UserName { get; set; }
 }

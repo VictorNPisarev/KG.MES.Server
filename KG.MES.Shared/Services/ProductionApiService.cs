@@ -616,7 +616,7 @@ public class ProductionApiService : AuthorizedApiService
 				// POST /api/orders/{orderId}/comments
 				response = await httpClient.PostAsJsonAsync(
 					$"{BaseUrl}/orders/{orderId}/comments",
-					new { content = comment.Content });
+					new AddCommentRequestDto { Content = comment.Content, UserId =  comment.UserId});
 
 				return response.IsSuccessStatusCode;
 			}
