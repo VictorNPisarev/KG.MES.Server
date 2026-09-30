@@ -12,4 +12,14 @@ public class RegisterRequestDto
 
 	[JsonPropertyName("password")]
 	public string Password { get; set; } = string.Empty;
+
+	[JsonPropertyName("licenseKey")]
+	public string LicenseKey { get; set; } = string.Empty;
+
+	[JsonPropertyName("deviceHardwareId")]
+	public string DeviceHardwareId { get; set; } = string.Empty;
+
+	[JsonPropertyName("applicationCode")]
+	public string? ApplicationCode { get; set; }
+
 }

@@ -15,6 +15,7 @@ public partial class RegistrationPage
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] private NavigationManager NavManager { get; set; } = null!;
 	[Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+	[Inject] private LicenseService LicenseService { get; set; } = null!;
 
 
 	private string email = "";
@@ -38,6 +39,8 @@ public partial class RegistrationPage
 		error = "";
 		firstNameError = string.IsNullOrWhiteSpace(firstName);
 		lastNameError = string.IsNullOrWhiteSpace(lastName);
+		var deviceHardwareId = await LicenseService.GetDeviceIdAsync();
+		var license = await LicenseService.LoadLicenseAsync();
 
 		if (firstNameError || lastNameError)
 		{
@@ -51,12 +54,21 @@ public partial class RegistrationPage
 			return;
 		}
 
+		if (license == null || license.LicenseKey == string.Empty)
+		{
+			error = "Отсутствует лицензия. Свяжитесь с руководителем.";
+			return;
+
+		}
+
 		isLoading = true;
 
 		var request = new RegisterRequestDto
 		{
 			RegistrationToken = RegistrationToken,
-			FullName = $"{firstName} {lastName}"
+			FullName = $"{firstName} {lastName}",
+			DeviceHardwareId = deviceHardwareId,
+			LicenseKey = license.LicenseKey
 		};
 
 		var result = await AuthService.RegisterAsync(request);
@@ -71,7 +83,7 @@ public partial class RegistrationPage
 				RefreshToken = result.RefreshToken ?? "",
 				ExpiresIn = result.ExpiresIn,
 				User = result.User
-			}, "", "");
+			}, license.LicenseKey, deviceHardwareId);
 
 			await Session.PersistAsync();
 			NavManager.NavigateTo(NavManager.BaseUri, true);

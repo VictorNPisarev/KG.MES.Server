@@ -11,6 +11,7 @@ public class LicenseService
 	private readonly ILogger<LicenseService> _logger;
 	private const string LicenseFileName = "license.key";
 	private readonly IJSRuntime jsRuntime;
+	private string licenseKey;
 
 	public LicenseService(ILogger<LicenseService> logger, IJSRuntime jsRuntime)
 	{
@@ -22,6 +23,12 @@ public class LicenseService
 	{
 		try
 		{
+			licenseKey = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
+			if (!string.IsNullOrEmpty(licenseKey))
+			{
+				return new LicenseFileDto {LicenseKey = licenseKey};
+			}
+
 			// Путь к файлу лицензии (в папке с приложением)
 			var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LicenseFileName);
 

@@ -11,7 +11,7 @@ public class LicenseFileDto
 	public string DeviceId { get; set; } = string.Empty;
 
 	[JsonPropertyName("issuedAt")]
-	public DateTime IssuedAt { get; set; }
+	public DateTime? IssuedAt { get; set; }
 
 	[JsonPropertyName("expiresAt")]
 	public DateTime? ExpiresAt { get; set; }

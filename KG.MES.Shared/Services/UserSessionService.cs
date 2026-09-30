@@ -43,11 +43,8 @@ public class UserSessionService
 
 	public async Task ClearSession()
 	{
-		Clear();
-
 		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "session_data");
-		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "license_key");
-		await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "refresh_token");
+		Clear();
 	}
 
 

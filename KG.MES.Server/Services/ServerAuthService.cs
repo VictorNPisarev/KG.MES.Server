@@ -261,6 +261,18 @@ public class ServerAuthService : IAuthService
 			return LoginResultDto.CreateFailure("License is inactive");
 		}
 
+		if (license.KeyCode != request.LicenseKey)
+		{
+			logger.LogWarning("Запрашиваемая лицензия не соответствует токену регистрации", payload.LicenseId);
+			return LoginResultDto.CreateFailure("License is not equal registration token");
+		}
+
+		if (payload.DeviceHardwareId == null || payload.DeviceHardwareId != request.DeviceHardwareId)
+		{
+			logger.LogWarning("Устройство не соответствует токену регистрации", payload.LicenseId);
+			return LoginResultDto.CreateFailure("HardwareDeviceId is not equal registration token");
+		}
+
 		if (license.LicenseType != LicenseType.MultiDevice)
 		{
 			logger.LogWarning("Self-registration not allowed for license type: {Type}", license.LicenseType);

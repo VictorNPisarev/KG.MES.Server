@@ -36,14 +36,6 @@ public partial class UserLogin : ComponentBase
 			licenseKey = license.LicenseKey;
 			licenseKeyHandle = "";
 		}
-		else
-		{
-			licenseKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "license_key") ?? "";
-			if (!string.IsNullOrEmpty(licenseKey))
-			{
-				licenseKeyHandle = "";
-			}
-		}
 
 		StateHasChanged();
 	}
@@ -100,7 +92,7 @@ public partial class UserLogin : ComponentBase
 				var deviceId = await LicenseService.GetDeviceIdAsync();
 				Session.SetSession(response, licenseKey, deviceId);
 
-				// Сохраняем в localStorage через сервис
+				// Сохраняю в localStorage через сервис
 				await Session.PersistAsync();
 
 				// Лицензию тоже сохраняем, если нужно
