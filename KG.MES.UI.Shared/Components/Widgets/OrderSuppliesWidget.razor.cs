@@ -115,7 +115,7 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 
 	private async Task SaveChanges()
 	{
-		var updates = new List<object>();
+		var updates = new List<UpdateSupplyItemRequest>();
 
 		foreach (var s in supplies)
 		{
@@ -124,11 +124,12 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 			{
 				if (s.SupplyConditionId != original.SupplyConditionId || s.Comment != original.Comment)
 				{
-					updates.Add(new
+					updates.Add(new UpdateSupplyItemRequest
 					{
 						supplyTypeId = s.SupplyTypeId,
 						supplyConditionId = s.SupplyConditionId,
-						comment = s.Comment
+						comment = s.Comment,
+						userId = Session.User?.Id
 					});
 				}
 			}
@@ -138,11 +139,12 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 				var origComment = originalComments.GetValueOrDefault(s.SupplyTypeId) ?? "";
 				if (s.Comment != origComment)
 				{
-					updates.Add(new
+					updates.Add(new UpdateSupplyItemRequest
 					{
 						supplyTypeId = s.SupplyTypeId,
 						supplyConditionId = s.SupplyConditionId,
-						comment = s.Comment
+						comment = s.Comment,
+						userId = Session.User?.Id
 					});
 				}
 			}
@@ -186,7 +188,7 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 		}
 	}
 
-	private async Task SaveComment(OrderSupplyViewModel supply)
+	private async Task SaveComment(Guid? userId, OrderSupplyViewModel supply)
 	{
 		var original = originalSupplies.FirstOrDefault(o => o.SupplyTypeId == supply.SupplyTypeId);
 		var success = false;
@@ -202,7 +204,8 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 				{
 					supplyTypeId = supply.SupplyTypeId,
 					supplyConditionId = supply.SupplyConditionId,
-					comment = supply.Comment
+					comment = supply.Comment,
+					UserId = userId
 				}
 			]);
 		}

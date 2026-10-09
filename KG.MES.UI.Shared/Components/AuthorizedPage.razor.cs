@@ -18,37 +18,37 @@ public partial class AuthorizedPage
 	private bool? isAuthorized;
 
 	#region отладочные данные
-	private DebugInfo? debugInfo;
-	private int remainingSeconds;
-	private Timer? timer;
+	//private DebugInfo? debugInfo;
+	//private int remainingSeconds;
+	//private Timer? timer;
 
-	private class DebugInfo
-	{
-		public string? AccessToken { get; set; } = "";
-		public string? RefreshToken { get; set; } = "";
-		public string? LicenseKey { get; set; } = "";
-		public string? DeviceId { get; set; } = "";
-		public DateTime? ExpiresAt { get; set; }
-	}
+	//private class DebugInfo
+	//{
+	//	public string? AccessToken { get; set; } = "";
+	//	public string? RefreshToken { get; set; } = "";
+	//	public string? LicenseKey { get; set; } = "";
+	//	public string? DeviceId { get; set; } = "";
+	//	public DateTime? ExpiresAt { get; set; }
+	//}
 
-	private async Task UpdateTimer()
-	{
-		if (debugInfo == null || debugInfo.ExpiresAt == null) return;
-		remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-		if (remainingSeconds <= 0) remainingSeconds = 0;
-		await InvokeAsync(StateHasChanged);
-	}
+	//private async Task UpdateTimer()
+	//{
+	//	if (debugInfo == null || debugInfo.ExpiresAt == null) return;
+	//	remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+	//	if (remainingSeconds <= 0) remainingSeconds = 0;
+	//	await InvokeAsync(StateHasChanged);
+	//}
 
-	private async Task ClearSession()
-	{
-		await Session.ClearSession();
-		NavManager.NavigateTo(NavManager.BaseUri + "login", true);
-	}
+	//private async Task ClearSession()
+	//{
+	//	await Session.ClearSession();
+	//	NavManager.NavigateTo(NavManager.BaseUri + "login", true);
+	//}
 
-	public void Dispose()
-	{
-		timer?.Dispose();
-	}
+	//public void Dispose()
+	//{
+	//	timer?.Dispose();
+	//}
 	#endregion
 
 	//protected override async Task OnInitializedAsync()
@@ -80,18 +80,6 @@ public partial class AuthorizedPage
 		if (Session?.ExpiresAt > DateTime.UtcNow)
 		{
 			if (!await CheckPasswordSetAsync()) return;
-
-			debugInfo = new DebugInfo
-			{
-				AccessToken = Session.AccessToken,
-				RefreshToken = Session.RefreshToken,
-				LicenseKey = Session.LicenseKey,
-				DeviceId = Session.DeviceId,
-				ExpiresAt = Session.ExpiresAt
-			};
-			remainingSeconds = (int)((TimeSpan)(Session.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-			timer?.Dispose();
-			timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
 
 			isAuthorized = true;
 			StateHasChanged();
@@ -130,21 +118,21 @@ public partial class AuthorizedPage
 			// Обновляю сессию свежими данными
 			Session.SetSession(response, licenseKey, deviceId);
 
-			debugInfo = new DebugInfo
-			{
-				AccessToken = Session.AccessToken,
-				RefreshToken = Session.RefreshToken,
-				LicenseKey = Session.LicenseKey,
-				DeviceId = Session.DeviceId,
-				ExpiresAt = Session.ExpiresAt
-			};
+			//debugInfo = new DebugInfo
+			//{
+			//	AccessToken = Session.AccessToken,
+			//	RefreshToken = Session.RefreshToken,
+			//	LicenseKey = Session.LicenseKey,
+			//	DeviceId = Session.DeviceId,
+			//	ExpiresAt = Session.ExpiresAt
+			//};
 
-			if(debugInfo.ExpiresAt != null)
-			{
-				remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
-				timer?.Dispose();
-				timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
-			}
+			//if(debugInfo.ExpiresAt != null)
+			//{
+			//	remainingSeconds = (int)((TimeSpan)(debugInfo.ExpiresAt - DateTime.UtcNow)).TotalSeconds;
+			//	timer?.Dispose();
+			//	timer = new Timer(async _ => await UpdateTimer(), null, 0, 1000);
+			//}
 
 			await Session.PersistAsync();
 

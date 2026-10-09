@@ -40,6 +40,7 @@ public class ServerAuthService : IAuthService
 
 	public async Task<LoginResultDto> AuthenticateUserAsync(LoginRequestDto request, string? ipAddress = null)
 	{
+		var sw = System.Diagnostics.Stopwatch.StartNew();
 		// ============================================================
 		// 1. ПРОВЕРЯЕМ ПОЛЬЗОВАТЕЛЯ
 		// ============================================================
@@ -172,6 +173,9 @@ public class ServerAuthService : IAuthService
 			}
 		};
 
+		sw.Stop();
+		Console.WriteLine("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
+
 		return LoginResultDto.CreateSuccess(response);
 	}
 
@@ -263,13 +267,13 @@ public class ServerAuthService : IAuthService
 
 		if (license.KeyCode != request.LicenseKey)
 		{
-			logger.LogWarning("Запрашиваемая лицензия не соответствует токену регистрации", payload.LicenseId);
+			logger.LogWarning($"Запрашиваемая лицензия {payload.LicenseId} не соответствует токену регистрации");
 			return LoginResultDto.CreateFailure("License is not equal registration token");
 		}
 
 		if (payload.DeviceHardwareId == null || payload.DeviceHardwareId != request.DeviceHardwareId)
 		{
-			logger.LogWarning("Устройство не соответствует токену регистрации", payload.LicenseId);
+			logger.LogWarning("Устройство не соответствует токену регистрации");
 			return LoginResultDto.CreateFailure("HardwareDeviceId is not equal registration token");
 		}
 

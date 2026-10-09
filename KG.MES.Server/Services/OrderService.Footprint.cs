@@ -114,7 +114,7 @@ public partial class OrderService
 
 			var newOrders = await _context.ProductionOrders
 				.Where(po => po.CurrentWorkplaceId == noneId)
-				.Join(_context.Orders, po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
+				.Join(_context.Orders.Where(o => !o.IsOnlyPaid), po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
 				{
 					ProductionOrderId = po.Id,
 					WorkplaceId = workplaceId,
@@ -150,7 +150,7 @@ public partial class OrderService
 						 fp.Status == OrderStatus.WorkplaceStatus.Joinery ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Active))
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
+			.Join(_context.Orders.Where(o => !o.IsOnlyPaid), x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
 			{
 				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,

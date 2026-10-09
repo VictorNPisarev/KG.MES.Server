@@ -136,6 +136,7 @@ public class ServerSupplyService : ISupplyService
 						{
 							existingComment.Content = update.Comment;
 							existingComment.UpdatedAt = DateTime.UtcNow;
+							existingComment.UserId = update.UserId;
 						}
 					}
 					else

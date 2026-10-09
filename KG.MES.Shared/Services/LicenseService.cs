@@ -11,7 +11,7 @@ public class LicenseService
 	private readonly ILogger<LicenseService> _logger;
 	private const string LicenseFileName = "license.key";
 	private readonly IJSRuntime jsRuntime;
-	private string licenseKey;
+	private string licenseKey = string.Empty;
 
 	public LicenseService(ILogger<LicenseService> logger, IJSRuntime jsRuntime)
 	{

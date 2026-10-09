@@ -9,19 +9,11 @@ namespace KG.MES.Shared.Controllers;
 [Route("api")]
 public partial class SupplyController : ControllerBase
 {
+	#region GET
+
 	// GET: api/orders/{orderId}/supplies
 	[HttpGet("orders/{orderId}/supplies")]
 	public Task<IActionResult> GetOrderSupplyStatuses(Guid orderId) => GetOrderSupplyStatusesHandler(orderId);
-
-	// PUT: api/orders/{orderId}/supply/{supplyTypeId}
-	[HttpPut("orders/{orderId}/supply/{supplyTypeId}")]
-	public Task<IActionResult> UpdateSupplyStatus(Guid orderId, Guid supplyTypeId, [FromBody] UpdateSupplyItemRequest request)
-		=> UpdateSupplyStatusHandler(orderId, supplyTypeId, request);
-
-	// PUT: api/orders/{orderId}/supplies
-	[HttpPut("orders/{orderId}/supplies")]
-	public Task<IActionResult> UpdateAllSupplyStatuses(Guid orderId, [FromBody] UpdateOrderSupplyItemsRequestDto request)
-		=> UpdateAllSupplyStatusesHandler(orderId, request);
 	
 	// GET: api/supplies/conditions
 	[HttpGet("supplies/conditions")]
@@ -38,8 +30,28 @@ public partial class SupplyController : ControllerBase
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
 		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
 
+	#endregion GET
+
+	#region POST
+
 	// GET: api/supply/orders/fasets
 	[HttpPost("supply/orders/facets")]
 	public Task<IActionResult> GetSupplyOrderFacets([FromBody] FilterFacetsRequestDto request)
 		=> GetFilterFacetsHandler(request);
+
+	#endregion POST
+
+	#region PUT
+
+	// PUT: api/orders/{orderId}/supply/{supplyTypeId}
+	[HttpPut("orders/{orderId}/supply/{supplyTypeId}")]
+	public Task<IActionResult> UpdateSupplyStatus(Guid orderId, Guid supplyTypeId, [FromBody] UpdateSupplyItemRequest request)
+		=> UpdateSupplyStatusHandler(orderId, supplyTypeId, request);
+
+	// PUT: api/orders/{orderId}/supplies
+	[HttpPut("orders/{orderId}/supplies")]
+	public Task<IActionResult> UpdateAllSupplyStatuses(Guid orderId, [FromBody] UpdateOrderSupplyItemsRequestDto request)
+		=> UpdateAllSupplyStatusesHandler(orderId, request);
+
+	#endregion PUT
 }
