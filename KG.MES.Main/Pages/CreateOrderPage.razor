@@ -1,0 +1,165 @@
+@page "/create-order"
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Services
+
+<PageTitle>@(isEditing ? "Редактирование заказа" : "Новый заказ")</PageTitle>
+
+<div class="container-fluid py-4">
+	<h1 class="display-6 mb-4">
+		<i class="bi @(isEditing ? "bi-pencil-square" : "bi-plus-square")"></i>
+		@(isEditing ? "Редактирование заказа" : "Новый заказ")
+	</h1>
+
+	<div class="card shadow-sm">
+		<div class="card-body">
+			@* 1. Номер заказа и примечание *@
+			<div class="row g-3 mb-4">
+				<div class="col-md-4">
+					<label class="form-label">№ заказа</label>
+					<input type="text" class="form-control" @bind="OrderNumber"
+						   disabled="@isEditing" />
+				</div>
+				<div class="col-md-8">
+					<label class="form-label">Примечание</label>
+					<textarea class="form-control" @bind="Comment" rows="2"></textarea>
+				</div>
+			</div>
+
+			@* 2. Изделия *@
+			<div class="card bg-light mb-4">
+				<div class="card-header"><h6 class="mb-0">Изделия</h6></div>
+				<div class="card-body">
+					<div class="row g-3">
+						<div class="col-md-3">
+							<label class="form-label">Окон, шт</label>
+							<input type="number" class="form-control" @bind="WindowCount" min="0" />
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">Окна, м²</label>
+							<input type="number" class="form-control" @bind="WindowArea" min="0" step="0.01" />
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">Щитовые, шт</label>
+							<input type="number" class="form-control" @bind="PlateCount" min="0" />
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">Щитовые, м²</label>
+							<input type="number" class="form-control" @bind="PlateArea" min="0" step="0.01" />
+						</div>
+					</div>
+				</div>
+			</div>
+
+			@* 3. Даты и сроки *@
+			<div class="card bg-light mb-4">
+				<div class="card-header"><h6 class="mb-0">Сроки</h6></div>
+				<div class="card-body">
+					<div class="row g-3">
+						<div class="col-md-3">
+							<label class="form-label">Дата передачи в производство</label>
+							<input id="startDate" type="date" class="form-control" value="@RtmDate?.ToString("yyyy-MM-dd")"
+								   @onchange='(ChangeEventArgs e) => HandleDateChange(e, "startDate")'
+								   @onblur='() => OnDaysChanged("startDate")' />
+						</div>
+						<div class="col-md-2">
+							<label class="form-label">Согласованный срок (дн.)</label>
+							<input id="approvedDays" type="number" class="form-control" @bind="ApprovedDays" min="0"
+								   @onkeyup='(e) => OnDaysChanged("approvedDays", e)'
+								   @onblur='() => OnDaysChanged("approvedDays")' />
+						</div>
+						<div class="col-md-2">
+							<label class="form-label">Несогласованный срок (дн.)</label>
+							<input id="unapprovedDays" type="number" class="form-control" @bind="UnapprovedDays" min="0"
+								   @onkeyup='(e) => OnDaysChanged("unapprovedDays", e)'
+								   @onblur='() => OnDaysChanged("unapprovedDays")' />
+						</div>
+						<div class="col-md-2">
+							<label class="form-label">Плановая готовность</label>
+							<div class="input-group">
+								<input id="readyDate" type="text" class="form-control"
+									   value="@ReadyDate?.ToString("dd.MM.yyyy")" readonly />
+								@if (isCalculatingReadyDate)
+								{
+									<span class="input-group-text">
+										<span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+									</span>
+								}
+							</div>
+						</div>
+						<div class="col-md-3">
+							<label class="form-label">Дата готовности в СО8</label>
+							<input type="date" class="form-control" @bind="So8Date" @bind:format="yyyy-MM-dd" />
+						</div>
+					</div>
+				</div>
+			</div>
+
+			@* 4. Флаги и станок *@
+			<div class="card bg-light mb-4">
+				<div class="card-header"><h6 class="mb-0">Параметры</h6></div>
+				<div class="card-body">
+					<div class="row g-3 align-items-center">
+						<div class="col-md-4">
+							<label class="form-label">Станок</label>
+							<select class="form-select" @bind="Machine">
+								<option value="">Не определен</option>
+								<option value="Conturex">Conturex</option>
+								<option value="Угловой центр">Угловой центр</option>
+							</select>
+						</div>
+						<div class="col-md-8">
+							<label class="form-label d-block mb-2">Флаги</label>
+							<div class="d-flex flex-wrap gap-3">
+								<div class="form-check">
+									<input type="checkbox" class="visually-hidden" id="isEconom" @bind="IsEconom" />
+									<label class="form-check-label d-flex align-items-center gap-2" for="isEconom" style="cursor: pointer;">
+										<i class="bi @(IsEconom ? "bi-piggy-bank-fill text-primary" : "bi-piggy-bank text-secondary")"
+										   style="font-size: 1.2rem; transition: all 0.2s;"></i>
+										<span>Эконом</span>
+									</label>
+								</div>
+								<div class="form-check">
+									<input type="checkbox" class="visually-hidden" id="isClaim" @bind="IsClaim" />
+									<label class="form-check-label d-flex align-items-center gap-2" for="isClaim" style="cursor: pointer;">
+										<i class="bi @(IsClaim ? "bi-exclamation-triangle-fill text-danger" : "bi-triangle text-secondary")"
+										   style="font-size: 1.2rem; transition: all 0.2s;"></i>
+										<span>Рекламация</span>
+									</label>
+								</div>
+								<div class="form-check">
+									<input type="checkbox" class="visually-hidden" id="isOnlyPaid" @bind="IsOnlyPaid" />
+									<label class="form-check-label d-flex align-items-center gap-2" for="isOnlyPaid" style="cursor: pointer;">
+										<i class="bi @(IsOnlyPaid ? "bi-cash-stack text-success" : "bi-cash-coin text-secondary")"
+										   style="font-size: 1.2rem; transition: all 0.2s;"></i>
+										<span>Оплачен, но не запущен</span>
+									</label>
+								</div>
+								<div class="form-check">
+									<input type="checkbox" class="visually-hidden" id="isTwoSidePaint" @bind="IsTwoSidePaint" />
+									<label class="form-check-label d-flex align-items-center gap-2" for="isTwoSidePaint" style="cursor: pointer;">
+										<i class="bi @(IsTwoSidePaint ? "bi-arrows-collapse-vertical icon-double-paint-classic" : "bi-arrows-collapse-vertical text-secondary opacity-50")"
+										style="font-size: 1.2rem;"></i>
+										<span>Двухстор. покраска</span>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="d-flex gap-2">
+				<button class="btn btn-primary" @onclick="SaveOrder" disabled="@isSaving">
+					@if (isSaving) { <span class="spinner-border spinner-border-sm me-2"></span> }
+					@(isEditing ? "Сохранить" : "Создать заказ")
+				</button>
+				<NavLink href="" class="btn btn-outline-secondary">Отмена</NavLink>
+			</div>
+
+			@if (!string.IsNullOrEmpty(StatusMessage))
+			{
+				<div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">@StatusMessage</div>
+			}
+		</div>
+	</div>
+</div>

@@ -25,6 +25,11 @@ public class AppDbContext : DbContext
 	public DbSet<ProductionCalendarDay> ProductionCalendarDays { get; set; }
 	public DbSet<OrderCommercial> OrderCommercials { get; set; }
 	public DbSet<Customer> Customers { get; set; }
+	public DbSet<License> Licenses { get; set; }
+	public DbSet<Device> Devices { get; set; }
+	public DbSet<UserDevice> UserDevices { get; set; }
+	public DbSet<RefreshToken> RefreshTokens { get; set; }
+
 
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -224,6 +229,43 @@ public class AppDbContext : DbContext
 		modelBuilder.Entity<Customer>()
 			.HasIndex(c => c.Name);
 
+		// ========== 🆕 UserDevices ==========
+		modelBuilder.Entity<License>()
+			.HasIndex(l => l.KeyCode)
+			.IsUnique();
+
+		modelBuilder.Entity<Device>()
+			.HasIndex(d => d.DeviceHardwareId)
+			.IsUnique();
+
+		modelBuilder.Entity<UserDevice>()
+			.HasIndex(ud => new { ud.UserId, ud.DeviceId })
+			.IsUnique();
+
+		modelBuilder.Entity<RefreshToken>(entity =>
+		{
+			entity.ToTable("refresh_tokens");
+			entity.HasKey(e => e.Id);
+			entity.HasIndex(e => e.Token).IsUnique();
+			entity.HasIndex(e => e.UserId);
+			entity.HasIndex(e => e.DeviceId);
+			entity.HasIndex(e => e.LicenseId);
+
+			entity.HasOne(rt => rt.User)
+				.WithMany()
+				.HasForeignKey(rt => rt.UserId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			entity.HasOne(rt => rt.Device)
+				.WithMany()
+				.HasForeignKey(rt => rt.DeviceId)
+				.OnDelete(DeleteBehavior.Cascade);
+
+			entity.HasOne(rt => rt.License)
+				.WithMany()
+				.HasForeignKey(rt => rt.LicenseId)
+				.OnDelete(DeleteBehavior.Cascade);
+		});
 
 		base.OnModelCreating(modelBuilder);
 	}

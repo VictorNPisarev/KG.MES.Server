@@ -1,4 +1,4 @@
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;

@@ -1,0 +1,16 @@
+{
+	"listEndpoint": "orders",
+	"cardEndpoint": "orders",
+	"title": "Заказы (Мастера)",
+	"showActions": false,
+	"canEdit": false,
+	"showTrace": true,
+	"editTrace": true,
+	"showSupply": true,
+	"editSupply": false,
+	"additional": 
+	{
+		"defaultSortBy": "ready_date",
+		"defaultSortOrder": "asc"
+	}
+}

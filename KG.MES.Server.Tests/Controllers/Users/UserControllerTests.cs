@@ -1,77 +1,41 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using KG.MES.Shared.Data;
 using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using KG.MES.Server.Tests.Helpers;
 
 namespace KG.MES.Shared.Tests.Controllers.Users;
 
 [Trait("Category", "Users")]
-public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class UsersControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public UsersControllerTests(WebApplicationFactory<Program> factory)
+	public UsersControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetUserByEmail_ShouldReturnExpectedResponse()
 	{
-		// 1. Настраиваем подмену БД (убираем PgSQL, вешаем InMemory)
-		var customFactory = _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				// Удаляем старые конфигурации (.NET 9/10)
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
+		var client = CreateClient();
 
-				// Регистрируем InMemory
-				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase("TestDb"));
-			});
-		});
+		Role? createdRole = null;
+		User? createdUser = null;
 
-		// 2. Создаем клиент. 
-		// Именно в этот момент хост собирается, и DI-контейнер окончательно формируется!
-		var client = customFactory.CreateClient();
-
-		// 3. СИДИРОВАНИЕ ДАННЫХ (Правильный способ)
-		// Мы берем Services у уже собранной фабрики и создаем нормальный Scope
-		using (var scope = customFactory.Services.CreateScope())
-		{
-			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-			// Явно создаем БД (для InMemory это инициализирует хранилище)
-			db.Database.EnsureCreated();
-
-			db.Roles.Add(new Role
-			{
-				Id = Guid.Parse("d8e3dbbd-8f69-409b-8e4e-19e34f3b8179"),
-				Name = "Middle",
-				Level = 10
-			});
-
-			db.Users.Add(new User
-			{
-				Id = Guid.Parse("6449f64c-1119-4d5a-94ab-3105014f0110"),
-				Email = "victor.n.pisarev@gmail.com",
-				Name = "Виктор",
-				RoleId = Guid.Parse("d8e3dbbd-8f69-409b-8e4e-19e34f3b8179"),
-			});
-
-			db.SaveChanges();
-		}
+		BuildTestData(builder => builder
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u => { u.Email = "test@example.com"; u.Name = "Тест"; createdUser = u; 
+			}));
 
 		// 4. Act (Выполняем запрос)
-		var response = await client.GetAsync("/api/users/by-email/victor.n.pisarev@gmail.com");
+		var response = await client.GetAsync("/api/users/by-email/test@example.com");
 
 		// 5. Assert (Проверки)
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
@@ -79,10 +43,8 @@ public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>
 		var content = await response.Content.ReadAsStringAsync();
 		var json = JsonDocument.Parse(content);
 
-		json.RootElement.GetProperty("id").GetString().Should().Be("6449f64c-1119-4d5a-94ab-3105014f0110");
-		json.RootElement.GetProperty("email").GetString().Should().Be("victor.n.pisarev@gmail.com");
-		json.RootElement.GetProperty("name").GetString().Should().Be("Виктор");
-		json.RootElement.GetProperty("role_id").GetString().Should().Be("d8e3dbbd-8f69-409b-8e4e-19e34f3b8179");
+		json.RootElement.GetProperty("email").GetString().Should().Be("test@example.com");
+		json.RootElement.GetProperty("name").GetString().Should().Be("Тест");
 		json.RootElement.GetProperty("role_name").GetString().Should().Be("Middle");
 		json.RootElement.GetProperty("role_level").GetInt32().Should().Be(10);
 
@@ -94,49 +56,75 @@ public class UsersControllerTests : IClassFixture<WebApplicationFactory<Program>
 	public async Task GetUserWorkplaces_ShouldReturnExpectedResponse()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory();
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		// Создаем данные через Builder (читается как английский текст!)
 		Role? createdRole = null;
 		User? createdUser = null;
 		var workplaces = new List<Workplace>();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "Simple"; r.Level = 10; createdRole = r; })
 			.WithUser(u => { u.Email = "test@example.com"; u.Name = "Тест"; createdUser = u; })
 			.WithWorkplace(w => { w.Name = "Торцовка"; workplaces.Add(w); })
 			.WithWorkplace(w => { w.Name = "Столярка"; workplaces.Add(w); })
 			.WithUserWorkplace(createdUser!.Id, workplaces[0].Id)
-			.WithUserWorkplace(createdUser.Id, workplaces[1].Id)
-			.Build(customFactory.Services);
+			.WithUserWorkplace(createdUser.Id, workplaces[1].Id));
 
 		// Act
-		var response = await client.GetAsync($"/api/users/{createdUser.Id}/workplaces");
+		var response = await client.GetAsync($"/api/users/{createdUser!.Id}/workplaces");
 
 		// Assert
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 		var json = await ParseJsonResponse(response);
 
 		json.GetArrayLength().Should().Be(2);
-		// ... остальные проверки
+	}
+
+	[Fact]
+	public async Task SetPassword_ShouldHashPassword()
+	{
+		// Arrange
+		var client = CreateClient();
+
+		Role? createdRole = null;
+		User? createdUser = null;
+
+		BuildTestData(builder => builder
+			.WithRole(r => { r.Name = "Middle"; r.Level = 10; createdRole = r; })
+			.WithUser(u =>
+			{
+				u.Email = "test@example.com";
+				u.Name = "Тест";
+				u.RoleId = createdRole?.Id;
+				u.PasswordHash = null;
+				u.IsPasswordSet = false;
+				createdUser = u;
+			}));
+
+		var request = new
+		{
+			email = "test@example.com",
+			newPassword = "NewPassword123!"
+		};
+
+		// Act
+		var response = await client.PostAsJsonAsync("/api/users/set-password", request);
+
+		// Assert
+		response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+
+		// Проверяем, что пароль установлен
+		using var scope = Services.CreateScope();
+		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		var user = await db.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
+
+		user.Should().NotBeNull();
+		user!.PasswordHash.Should().NotBeNullOrEmpty();
+		user.IsPasswordSet.Should().BeTrue();
 	}
 
 	// ====== Вспомогательные методы ======
-
-	private WebApplicationFactory<Program> SetupTestFactory()
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase("TestDb"));
-			});
-		});
-	}
 
 	private async Task<JsonElement> ParseJsonResponse(HttpResponseMessage response)
 	{

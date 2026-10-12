@@ -1,0 +1,143 @@
+.custom-select-btn
+{
+	background: white;
+	border: 1px solid #dee2e6;
+	border-radius: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	width: 100%;
+	text-align: left;
+	font-size: 1rem;
+	color: #212529;
+	cursor: pointer;
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.custom-select-btn:hover
+{
+	border-color: #86b7fe;
+}
+
+.custom-select-btn:focus
+{
+	border-color: #86b7fe;
+	outline: 0;
+	box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.table-active
+{
+	background-color: rgba(13, 110, 253, 0.15) !important;
+	border-left: 3px solid #0d6efd;
+}
+
+.table-active td
+{
+	font-weight: 500;
+	color: #0d6efd;
+}
+
+/*Настройка ширины колонок таблицы*/
+.form-range-sm
+{
+	height: 10px;
+}
+
+.form-range-sm::-webkit-slider-runnable-track
+{
+	height: 10px;
+	background: #ced4da;
+	border-radius: 5px;
+}
+
+.form-range-sm::-webkit-slider-thumb
+{
+	width: 8px;
+	height: 8px;
+	margin-top: 1px;
+}
+
+/*Настройка ширины колонок таблицы для Firefox */
+.form-range-sm::-moz-range-track
+{
+	height: 10px;
+	background: #ced4da;
+	border-radius: 5px;
+}
+
+.form-range-sm::-moz-range-thumb
+{
+	width: 8px;
+	height: 8px;
+}
+
+/*Кнопка сброса ширины*/
+.btn-reset-width 
+{
+	width: 0.8rem;
+	height: 0.8rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #000000;
+	cursor: pointer;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.btn-reset-width:hover {
+	color: #dc3545;
+}
+
+.btn-reset-width i
+{
+	font-size: 0.8rem;
+	line-height: 1;
+}
+
+.filter-icon-active
+{
+	color: #0d6efd;
+	font-size: 1rem;
+}
+
+.btn-nowrap
+{
+	white-space: nowrap;
+}
+
+@media (max-width: 992px)
+{
+	.btn-nowrap .btn-text
+	{
+		display: none;
+	}
+}
+
+.filter-group-header
+{
+	border: 1px solid rgba(13, 110, 253, 0.2);
+	border-radius: 0.375rem;
+	width: max-content;
+	max-width: 370px;
+}
+
+.filter-group-header
+{
+	background-color: rgba(13, 110, 253, 0.1);
+	/* синий с прозрачностью 10% */
+	color: #0d6efd;
+	transition: background-color 0.2s;
+}
+
+.filter-group-header:hover
+{
+	background-color: rgba(13, 110, 253, 0.15);
+}
+
+.advanced-filter-panel
+{
+	width: max-content;
+	max-width: 400px;
+	/* ограничение, чтобы не растянулось слишком сильно */
+}

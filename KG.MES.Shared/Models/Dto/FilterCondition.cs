@@ -29,5 +29,5 @@ public class FilterCondition
 	/// Оператор сравнения: "eq", "contains", "in", "between", "gt", "lt", "gte", "lte"
 	/// </summary>
 	[JsonPropertyName("operator")]
-	public string? Operator { get; set; }
+	public string? Operator { get; set; } = "in";
 }

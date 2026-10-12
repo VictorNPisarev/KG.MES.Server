@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\KG.MES.Shared\KG.MES.Shared.csproj" />
+    <ProjectReference Include="..\KG.MES.UI.Shared\KG.MES.UI.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\KG.MES.Shared\Config\BadgeStyles.Base.json" Link="Config\BadgeStyles.Base.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+{
+	"listEndpoint": "orders",
+	"cardEndpoint": "orders",
+	"title": "Производство",
+	"showActions": true,
+	"canExport": true,
+	"canEdit": true,
+	"canDelete": false,
+	"showTrace": true,
+	"editTrace": false,
+	"showSupply": true,
+	"editSupply": false,
+	"additional": {
+		"defaultSortBy": "ready_date",
+		"defaultSortOrder": "asc"
+	}
+}

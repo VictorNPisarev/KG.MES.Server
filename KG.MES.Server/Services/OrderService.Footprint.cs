@@ -1,5 +1,5 @@
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Extensions;
 using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -9,12 +9,12 @@ namespace KG.MES.Shared.Services;
 
 public partial class OrderService
 {
-	public async Task<List<OrderWorkplaceDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId)
+	public async Task<List<WorkplaceOrderDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId)
 	{
 		var activeOrders = await _context.OrderFootprints
 			.Where(fp => fp.WorkplaceId == workplaceId && fp.Status == OrderStatus.WorkplaceStatus.Active)
 			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new OrderWorkplaceDto
+			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
 			{
 				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
@@ -38,7 +38,7 @@ public partial class OrderService
 		return activeOrders;
 	}
 
-	public async Task<List<OrderWorkplaceDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId)
+	public async Task<List<WorkplaceOrderDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
 		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
 
@@ -102,11 +102,11 @@ public partial class OrderService
 	}
 
 
-	public async Task<List<OrderWorkplaceDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId)
+	public async Task<List<WorkplaceOrderDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
 		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
 		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(_context, workplaceId);
-		var result = new List<OrderWorkplaceDto>();
+		var result = new List<WorkplaceOrderDto>();
 
 		if (isStart)
 		{
