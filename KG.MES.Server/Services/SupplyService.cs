@@ -177,7 +177,7 @@ public class SupplyService : ISupplyService
 	public async Task<PaginatedResponse<SupplyStatusListItemDto>> GetAllSupplyItemsAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
-		var orderQuery = _context.Orders.AsQueryable();
+		var orderQuery = _context.Orders.Where(o => !o.IsOnlyPaid).AsQueryable();
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
