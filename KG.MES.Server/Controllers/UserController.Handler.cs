@@ -4,8 +4,6 @@ using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using KG.MES.Shared.Models.Dto;
-using System.Security.Claims;
 
 namespace KG.MES.Server.Controllers;
 
