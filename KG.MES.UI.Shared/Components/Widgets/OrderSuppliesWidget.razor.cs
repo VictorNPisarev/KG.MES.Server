@@ -200,11 +200,11 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 			Console.WriteLine("original == null");
 			success = await ApiService.UpdateOrderSuppliesAsync(OrderId,
 			[
-				new
+				new UpdateSupplyItemRequest
 				{
-					supplyTypeId = supply.SupplyTypeId,
-					supplyConditionId = supply.SupplyConditionId,
-					comment = supply.Comment,
+					SupplyTypeId = supply.SupplyTypeId,
+					SupplyConditionId = supply.SupplyConditionId,
+					Comment = supply.Comment,
 					UserId = userId
 				}
 			]);

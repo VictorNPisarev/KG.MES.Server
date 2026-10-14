@@ -472,7 +472,7 @@ public class ProductionApiService : AuthorizedApiService
 		}
 	}
 
-	public async Task<bool> UpdateOrderSuppliesAsync(Guid orderId, List<object> supplies)
+	public async Task<bool> UpdateOrderSuppliesAsync(Guid orderId, List<UpdateSupplyItemRequest> supplies)
 	{
 		try
 		{

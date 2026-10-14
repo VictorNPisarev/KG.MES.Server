@@ -21,5 +21,5 @@ public class UpdateSupplyItemRequest
 	public string? Comment { get; set; }
 
 	[JsonPropertyName("userId")]
-	public Guid? UserId { get; internal set; }
+	public Guid? UserId { get; set; }
 }

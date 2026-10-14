@@ -174,7 +174,7 @@ public class ServerAuthService : IAuthService
 		};
 
 		sw.Stop();
-		Console.WriteLine("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
+		logger.LogInformation("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
 
 		return LoginResultDto.CreateSuccess(response);
 	}
