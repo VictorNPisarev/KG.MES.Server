@@ -5,5 +5,7 @@
 
 <PageTitle>@AppSettings.Title</PageTitle>
 
-<OrderListView TListItem="SalesOrderViewModel" LoadItems="LoadOrderViewModels" 
-	TCardItem="OrderViewModel" LoadItem="LoadOrderViewModel" Settings="@AppSettings" />
+<AuthorizedPage>
+	<OrderListView TListItem="SalesOrderViewModel" LoadItems="LoadOrderViewModels" 
+		TCardItem="OrderViewModel" LoadItem="LoadOrderViewModel" Settings="@AppSettings" />
+</AuthorizedPage>

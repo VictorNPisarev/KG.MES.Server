@@ -151,7 +151,7 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 		}
 
 		updates = updates
-			.GroupBy(u => ((dynamic)u).supplyTypeId)
+			.GroupBy(u => ((dynamic)u).SupplyTypeId)
 			.Select(g => g.First())
 			.ToList();
 
