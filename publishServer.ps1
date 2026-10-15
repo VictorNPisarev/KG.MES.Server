@@ -58,7 +58,7 @@ if (Test-Path "$iisPath\#app_offline.htm")
 {
 	Rename-Item -Path "$iisPath\#app_offline.htm" -NewName "app_offline.htm"
 	Write-Host "App offline mode activated" -ForegroundColor Yellow
-	Start-Sleep -Seconds 2
+	Start-Sleep -Seconds 5
 }
 
 ## Копирование

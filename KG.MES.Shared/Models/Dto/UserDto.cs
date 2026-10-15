@@ -21,4 +21,7 @@ public class UserDto
 
 	[JsonPropertyName("role_level")]
 	public int RoleLevel { get; set; }
+
+	[JsonPropertyName("is_password_set")]
+	public bool IsPasswordSet { get; set; }
 }

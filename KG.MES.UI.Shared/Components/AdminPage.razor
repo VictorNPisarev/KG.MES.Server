@@ -1,0 +1,451 @@
+@page "/admin"
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Models.Enums
+@using KG.MES.Shared.Services
+
+<PageTitle>Администрирование</PageTitle>
+
+<div class="container-fluid py-4">
+	<h1 class="display-6 mb-4">
+		<i class="bi bi-shield-lock"></i> Администрирование
+	</h1>
+
+	<ul class="nav nav-tabs mb-4">
+		<li class="nav-item">
+			<button class="nav-link @(activeTab == "users" ? "active" : "")" @onclick='() => activeTab = "users"'>
+				<i class="bi bi-people me-1"></i> Сотрудники
+			</button>
+		</li>
+		<li class="nav-item">
+			<button class="nav-link @(activeTab == "licenses" ? "active" : "")" @onclick='() => activeTab = "licenses"'>
+				<i class="bi bi-key me-1"></i> Лицензии
+			</button>
+		</li>
+	</ul>
+
+	@if (activeTab == "licenses")
+	{
+		<div class="card shadow-sm">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="mb-0">Лицензии</h5>
+				@if (CanCreateLicense)
+				{
+					<button class="btn btn-primary btn-sm" @onclick="OpenCreateLicenseModal">
+						<i class="bi bi-plus-lg me-1"></i> Создать лицензию
+					</button>
+				}
+			</div>
+			<div class="card-body">
+				@if (licenses.Any())
+				{
+					<div class="table-responsive">
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th>Ключ</th>
+									<th>Тип</th>
+									<th>Статус</th>
+									<th>Устройства</th>
+									<th>Истекает</th>
+									<th>Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var license in licenses)
+								{
+									<tr>
+										<td><code>@license.KeyCode</code></td>
+										<td>@(license.LicenseType == LicenseType.SingleDevice ? "Однодевайсная" : "Мультидевайсная")</td>
+										<td>
+											<span class="badge @(license.IsActive ? "bg-success" : "bg-danger")">
+												@(license.IsActive ? "Активна" : "Отозвана")
+											</span>
+										</td>
+										<td>@license.UsedDevices / @(license.MaxDevices?.ToString() ?? "∞")</td>
+										<td>@(license.ExpiresAt?.ToString("dd.MM.yyyy") ?? "—")</td>
+										<td>
+											<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenViewLicenseModal(license.Id)">
+												<i class="bi bi-eye"></i>
+											</button>
+											@if (CanRevokeLicense && license.IsActive)
+											{
+												<button class="btn btn-sm btn-outline-danger" @onclick="() => OpenRevokeModal(license.Id)">
+													<i class="bi bi-x-octagon"></i>
+												</button>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+				else
+				{
+					<p class="text-muted">Нет лицензий</p>
+				}
+			</div>
+		</div>
+	}
+	else if (activeTab == "users")
+	{
+		<div class="card shadow-sm">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="mb-0">Сотрудники</h5>
+				@if (CanCreateUser)
+				{
+					<button class="btn btn-primary btn-sm" @onclick="OpenCreateUserModal">
+						<i class="bi bi-plus-lg me-1"></i> Создать сотрудника
+					</button>
+				}
+			</div>
+			<div class="card-body">
+				@if (users.Any())
+				{
+					<div class="table-responsive">
+						<table class="table table-hover">
+							<thead>
+								<tr>
+									<th>Имя</th>
+									<th>Email</th>
+									<th>Роль</th>
+									<th>Статус</th>
+									<th>Последний вход</th>
+									<th>Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var user in users)
+								{
+									<tr>
+										<td>@user.Name</td>
+										<td>@user.Email</td>
+										<td>@user.RoleName</td>
+										<td>
+											<span class="badge @(user.IsActive ? "bg-success" : "bg-warning")">
+												@(user.IsActive ? "Активен" : "Заблокирован")
+											</span>
+										</td>
+										<td>@(user.LastLoginAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
+										<td>
+											<div class="d-flex align-items-center gap-3">
+												@if (CanBlockUser)
+												{
+													<div class="user-toggle-block" @onclick="() => ToggleUserBlock(user)">
+														<div class="user-toggle-icons">
+															<i class="bi bi-unlock-fill @(user.IsActive ? "text-success" : "text-muted")"
+																style="font-size: 0.6rem;"></i>
+															<i class="bi bi-lock-fill @(!user.IsActive ? "text-danger" : "text-muted")"
+																style="font-size: 0.6rem;"></i>
+														</div>
+														<div class="toggle-track-slim @(user.IsActive ? "" : "block")">
+															<div class="toggle-thumb-slim"></div>
+														</div>
+													</div>
+												}
+												@if (CanSetRole)
+												{
+													<button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" 
+															style="width: 28px; height: 28px;"
+															@onclick="() => OpenSetRoleModal(user)">
+														<i class="bi bi-person-gear" style="font-size: 0.9rem;"></i>
+													</button>
+												}
+											</div>
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+				else
+				{
+					<p class="text-muted">Нет сотрудников</p>
+				}
+			</div>
+		</div>
+	}
+</div>
+
+@* Модалка создания лицензии *@
+@if (showCreateLicense)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Создать лицензию</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Тип лицензии</label>
+						<select class="form-select" @bind="newLicenseType">
+							<option value="@LicenseType.SingleDevice">Однодевайсная</option>
+							<option value="@LicenseType.MultiDevice">Мультидевайсная</option>
+						</select>
+					</div>
+					@if (newLicenseType == LicenseType.MultiDevice)
+					{
+						<div class="mb-3">
+							<label class="form-label">Максимум устройств</label>
+							<input type="number" class="form-control" @bind="newLicenseMaxDevices" min="1" />
+						</div>
+					}
+					<div class="mb-3">
+						<label class="form-label">Срок действия (дней)</label>
+						<input type="number" class="form-control" @bind="newLicenseDays" min="1" />
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Примечание</label>
+						<textarea class="form-control" @bind="newLicenseNotes" rows="2"></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="CreateLicense" disabled="@isCreating">
+						@if (isCreating) { <span class="spinner-border spinner-border-sm me-1"></span> }
+						Создать
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка создания сотрудника *@
+@if (showCreateUser)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Создать сотрудника</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Имя</label>
+						<input class="form-control" @bind="newUserName" />
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Email</label>
+						<input type="email" class="form-control" @bind="newUserEmail" />
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Роль</label>
+						<select class="form-select" @bind="newUserRole">
+							@foreach (var role in roles@*.Where(r => Config.AllowedRolesToCreate.Contains(r.Name))*@)
+							{
+								<option value="@role.Name">@role.Name</option>
+							}
+						</select>
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Пароль (необязательно)</label>
+						<input type="password" class="form-control" @bind="newUserPassword" placeholder="Сгенерировать автоматически" />
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="CreateUser" disabled="@isCreating">
+						@if (isCreating) { <span class="spinner-border spinner-border-sm me-1"></span> }
+						Создать
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка отзыва лицензии *@
+@if (showRevokeModal)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Отозвать лицензию</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<p>Вы уверены? Все устройства с этой лицензией потеряют доступ.</p>
+					<div class="mb-3">
+						<label class="form-label">Причина</label>
+						<textarea class="form-control" @bind="revokeReason" rows="2"></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-danger" @onclick="ConfirmRevoke">Отозвать</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка назначения роли *@
+@if (showSetRoleModal)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Назначить роль</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Роль для @selectedUser?.Name</label>
+						<select class="form-select" @bind="selectedRole">
+							@foreach (var role in roles)
+							{
+								<option value="@role.Name">@role.Name</option>
+							}
+						</select>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="ConfirmSetRole">Назначить</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка просмотра лицензии *@
+@if (showViewLicenseModal)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Лицензия @selectedLicense?.KeyCode</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					@if (selectedLicense != null)
+					{
+						<div class="row mb-3">
+							<div class="col-md-6">
+								<label class="text-muted small">Ключ</label>
+								<div><code>@selectedLicense.KeyCode</code></div>
+							</div>
+							<div class="col-md-6">
+								<label class="text-muted small">Статус</label>
+								<div>
+									<span class="badge @(selectedLicense.IsActive ? "bg-success" : "bg-danger")">
+										@(selectedLicense.IsActive ? "Активна" : "Отозвана")
+									</span>
+								</div>
+							</div>
+						</div>
+						<div class="row mb-3">
+							<div class="col-md-6">
+								<label class="text-muted small">Тип</label>
+								<div>@(selectedLicense.LicenseType == LicenseType.SingleDevice ? "Однодевайсная" : "Мультидевайсная")</div>
+							</div>
+							<div class="col-md-6">
+								<label class="text-muted small">Истекает</label>
+								<div>@(selectedLicense.ExpiresAt?.ToString("dd.MM.yyyy") ?? "Без срока")</div>
+							</div>
+						</div>
+						<div class="row mb-3">
+							<div class="col-md-6">
+								<label class="text-muted small">Устройства</label>
+								<div>@selectedLicense.UsedDevices / @(selectedLicense.MaxDevices?.ToString() ?? "∞")</div>
+							</div>
+							<div class="col-md-6">
+								<label class="text-muted small">Создана</label>
+								<div>@selectedLicense.CreatedAt.ToString("dd.MM.yyyy")</div>
+							</div>
+						</div>
+						@if (!string.IsNullOrEmpty(selectedLicense.Notes))
+						{
+							<div class="mb-3">
+								<label class="text-muted small">Примечание</label>
+								<div>@selectedLicense.Notes</div>
+							</div>
+						}
+
+						<h6 class="mt-4">Устройства</h6>
+						@if (licenseDevices.Any())
+						{
+							<table class="table table-sm">
+								<thead>
+									<tr>
+										<th>Hardware ID</th>
+										<th>Имя</th>
+										<th>Зарегистрировано</th>
+										<th>Последний вход</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var device in licenseDevices)
+									{
+										<tr>
+											<td><code>@device.DeviceHardwareId</code></td>
+											<td>@device.DeviceName</td>
+											<td>@device.RegisteredAt.ToString("dd.MM.yyyy HH:mm")</td>
+											<td>@device.LastUsedAt.ToString("dd.MM.yyyy HH:mm")</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						}
+						else
+						{
+							<p class="text-muted">Нет устройств</p>
+						}
+					}
+				</div>
+				<div class="modal-footer">
+					@if (CanExtendLicense && selectedLicense?.IsActive == true)
+					{
+						<button class="btn btn-outline-primary" @onclick="OpenExtendModal">
+							<i class="bi bi-calendar-plus me-1"></i> Продлить
+						</button>
+					}
+					<button class="btn btn-secondary" @onclick="CloseModals">Закрыть</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка продления лицензии *@
+@if (showExtendModal)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Продлить лицензию</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Дней добавить</label>
+						<input type="number" class="form-control" @bind="extendDays" min="1" disabled="@extendUnlimited" />
+					</div>
+					<div class="form-check mb-3">
+						<input type="checkbox" class="form-check-input" id="unlimited" @bind="extendUnlimited" />
+						<label class="form-check-label" for="unlimited">Бессрочная</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="ConfirmExtend">Продлить</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}

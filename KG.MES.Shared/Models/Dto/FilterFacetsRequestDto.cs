@@ -5,7 +5,7 @@ public class FilterFacetsRequestDto
 	/// <summary>
 	/// Список полей, для которых нужно получить уникальные значения
 	/// </summary>
-	public List<string> Fields { get; set; } = new();
+	public List<string> Fields { get; set; } = [];
 
 	/// <summary>
 	/// Опционально: фильтры, которые уже применены (чтобы фасеты учитывали их)

@@ -11,25 +11,22 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
+using KG.MES.Server.Tests.Helpers;
 
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderTraceControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public OrderTraceControllerTests(WebApplicationFactory<Program> factory)
+	public OrderTraceControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetOrderTrace_WhenIdentifierIsGuid_ShouldReturnTrace()
 	{
 		// 1. Arrange
-		var customFactory = SetupTestFactory("TestDb_OrderTrace_Guid");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.Parse("a8d03ea4-3522-4dbb-999c-804bb7035dff");
 		var productionOrderId = Guid.Parse("6dad36f6-c235-475c-9b8b-4ef9854ea497");
@@ -38,7 +35,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 		var workplace2Id = Guid.Parse("cf806c33-98d0-4852-9923-e9b00c31581c");
 		var workplace3Id = Guid.Parse("018953eb-647d-4044-8bfa-1fc419e69952");
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o =>
 			{
 				o.Id = orderId;
@@ -70,8 +67,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 				fp.ProductionOrderId = productionOrderId;
 				fp.WorkplaceId = workplace3Id;
 				fp.Status = "planned";
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// 2. Act (передаем GUID)
 		var response = await client.GetAsync($"/api/orders/{orderId}/trace");
@@ -94,33 +90,32 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 		trace.OrderNumber.Should().Be("1014");
 		trace.ReadyDate.Should().Be(DateTime.Parse("2026-06-21T21:00:00.000Z"));
 
-		trace.Workplaces.Should().HaveCount(3);
+		trace.WorkplaceTraces.Should().HaveCount(3);
 
-		trace.Workplaces[0].WorkplaceId.Should().Be(workplace1Id);
-		trace.Workplaces[0].WorkplaceName.Should().Be("Торцовка");
-		trace.Workplaces[0].Status.Should().Be("completed");
+		trace.WorkplaceTraces[0].WorkplaceId.Should().Be(workplace1Id);
+		trace.WorkplaceTraces[0].WorkplaceName.Should().Be("Торцовка");
+		trace.WorkplaceTraces[0].Status.Should().Be("completed");
 
-		trace.Workplaces[1].WorkplaceId.Should().Be(workplace2Id);
-		trace.Workplaces[1].WorkplaceName.Should().Be("Профилирование");
-		trace.Workplaces[1].Status.Should().Be("pending");
+		trace.WorkplaceTraces[1].WorkplaceId.Should().Be(workplace2Id);
+		trace.WorkplaceTraces[1].WorkplaceName.Should().Be("Профилирование");
+		trace.WorkplaceTraces[1].Status.Should().Be("pending");
 
-		trace.Workplaces[2].WorkplaceId.Should().Be(workplace3Id);
-		trace.Workplaces[2].WorkplaceName.Should().Be("Сборка");
-		trace.Workplaces[2].Status.Should().Be("planned");
+		trace.WorkplaceTraces[2].WorkplaceId.Should().Be(workplace3Id);
+		trace.WorkplaceTraces[2].WorkplaceName.Should().Be("Сборка");
+		trace.WorkplaceTraces[2].Status.Should().Be("planned");
 	}
 
 	[Fact]
 	public async Task GetOrderTrace_WhenIdentifierIsOrderNumber_ShouldReturnTrace()
 	{
 		// 1. Arrange
-		var customFactory = SetupTestFactory("TestDb_OrderTrace_Number");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 		var workplaceId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o =>
 			{
 				o.Id = orderId;
@@ -138,8 +133,7 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 				fp.ProductionOrderId = productionOrderId;
 				fp.WorkplaceId = workplaceId;
 				fp.Status = "pending";
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// 2. Act (передаем номер заказа, а не GUID)
 		var response = await client.GetAsync("/api/orders/2025/trace");
@@ -159,17 +153,16 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 		var trace = result.Orders[0];
 		trace.OrderId.Should().Be(orderId);
 		trace.OrderNumber.Should().Be("2025");
-		trace.Workplaces.Should().HaveCount(1);
-		trace.Workplaces[0].WorkplaceName.Should().Be("Покраска");
-		trace.Workplaces[0].Status.Should().Be("pending");
+		trace.WorkplaceTraces.Should().HaveCount(1);
+		trace.WorkplaceTraces[0].WorkplaceName.Should().Be("Покраска");
+		trace.WorkplaceTraces[0].Status.Should().Be("pending");
 	}
 
 	[Fact]
 	public async Task GetOrderTrace_WhenOrderNotFound_ShouldReturnNotFound()
 	{
 		// 1. Arrange
-		var customFactory = SetupTestFactory("TestDb_OrderTrace_NotFound");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var nonExistentOrderId = Guid.NewGuid();
 
@@ -184,20 +177,18 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 	public async Task GetOrderTrace_WhenOrderHasNoProductionOrder_ShouldReturnNotFound()
 	{
 		// 1. Arrange
-		var customFactory = SetupTestFactory("TestDb_OrderTrace_NoProduction");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o =>
 			{
 				o.Id = orderId;
 				o.OrderNumber = "3030";
 				o.ReadyDate = DateTime.UtcNow.AddDays(15);
-			})
+			}));
 			// НЕ создаем ProductionOrder
-			.Build(customFactory.Services);
 
 		// 2. Act
 		var response = await client.GetAsync($"/api/orders/{orderId}/trace");
@@ -213,20 +204,6 @@ public class OrderTraceControllerTests : IClassFixture<WebApplicationFactory<Pro
 
 		result.Should().NotBeNull();
 		result!.Orders.Should().HaveCount(0);
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-					options.UseInMemoryDatabase(dbName));
-			});
-		});
 	}
 }
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using KG.MES.Server.Tests.Helpers;
 using KG.MES.Shared.Data;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Tests.Helpers;
@@ -15,28 +16,24 @@ using Xunit;
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderCommentsControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public OrderCommentsControllerTests(WebApplicationFactory<Program> factory)
+	public OrderCommentsControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetOrderComments_WithMixedUserIds_ShouldReturnAllWithCorrectUserNames()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Comments_Mixed");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var userId = Guid.NewGuid();
 		var commentWithUserId = Guid.NewGuid();
 		var commentWithoutUserId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithRole(r => { r.Name = "User"; r.Level = 1; })
 			.WithUser(u => { u.Id = userId; u.Email = "author@test.com"; u.Name = "Иван Иванов"; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "4100"; })
@@ -57,8 +54,7 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 				c.Content = "коммент без автора";
 				c.CreatedAt = DateTime.UtcNow;
 				c.UpdatedAt = DateTime.UtcNow;
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// Act
 		var response = await client.GetAsync($"/api/orders/{orderId}/comments");
@@ -88,13 +84,11 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 	public async Task AddOrderComment_ShouldCreateAndReturnComment()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Comments_Add");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
+
 		var orderId = Guid.NewGuid();
 
-		new TestDataBuilder()
-			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "5000"; })
-			.Build(customFactory.Services);
+		BuildTestData(builder => builder.WithOrder(o => { o.Id = orderId; o.OrderNumber = "5000"; }));
 
 		// Act
 		var requestBody = new AddCommentRequestDto { UserId = null, Content = "тестовый коммент" };
@@ -116,16 +110,14 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 	public async Task AddProductionOrderComment_ShouldCreateComment()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Comments_Prod");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "6000"; })
-			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; })
-			.Build(customFactory.Services);
+			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; }));
 
 		// Act
 		var requestBody = new AddProductionOrderCommentRequestDto
@@ -150,18 +142,16 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 	public async Task AddSupplyComment_ShouldCreateCommentForSupplyItem()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Comments_Supply");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var supplyTypeId = Guid.NewGuid();
 		var orderSupplyId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "7000"; })
 			.WithOrderSupply(os => { os.Id = orderSupplyId; os.OrderId = orderId; })
-			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = supplyTypeId; })
-			.Build(customFactory.Services);
+			.WithSupplyItem(si => { si.OrderSupplyId = orderSupplyId; si.SupplyTypeId = supplyTypeId; }));
 
 		// Act
 		var requestBody = new AddSupplyCommentRequestDto
@@ -186,16 +176,14 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 	public async Task UpdateOrderComment_ShouldUpdateContent()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Comments_Update");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var orderId = Guid.NewGuid();
 		var commentId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "8000"; })
-			.WithComment(c => { c.Id = commentId; c.OrderId = orderId; c.Content = "старый текст"; })
-			.Build(customFactory.Services);
+			.WithComment(c => { c.Id = commentId; c.OrderId = orderId; c.Content = "старый текст"; }));
 
 		// Act
 		var requestBody = new UpdateCommentRequestDto { Content = "новый текст" };
@@ -209,24 +197,5 @@ public class OrderCommentsControllerTests : IClassFixture<WebApplicationFactory<
 
 		result.Should().NotBeNull();
 		result!.Content.Should().Be("новый текст");
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					// Игнорируем предупреждение о транзакциях в InMemory
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning));
-				});
-			});
-		});
 	}
 }

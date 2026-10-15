@@ -1,0 +1,16 @@
+{
+	"extends": "base",
+	"groups":
+	{
+		"workplaces":
+		{
+		}
+	},
+	"displays": 
+	{
+		"workplace_name": 
+		{
+			"Не определен": "Ожидает"
+		}
+	}
+}

@@ -1,0 +1,242 @@
+@typeparam TListItem
+@using KG.MES.Shared.Helpers
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+
+<div class="d-flex gap-2 justify-content-end align-items-center mb-2">
+	@if (ShowActions && RowActions != null)
+	{
+		@RowActions
+	}
+	@*<div class="d-flex gap-2">*@
+		<div class="position-relative">
+			<button class="btn btn-sm btn-outline-secondary" @onclick="() => isColumnsOpen = !isColumnsOpen" type="button">
+				<i class="bi bi-gear"></i> Колонки
+				<i class="bi @(isColumnsOpen ? "bi-chevron-up" : "bi-chevron-down") ms-1 small"></i>
+			</button>
+
+			@if (isColumnsOpen)
+			{
+				<div class="dropdown-menu dropdown-menu-end show p-3"
+					style="min-width: 300px; position: absolute; right: 0; z-index: 1000;">
+					<h6 class="dropdown-header">Настройка колонок</h6>
+					@foreach (var setting in columnSettings.OrderBy(s => s.Order))
+					{
+						var info = columnInfos.FirstOrDefault(i => i.PropertyName == setting.PropertyName);
+						var title = info?.Title ?? setting.PropertyName;
+						<div class="d-flex align-items-center py-1">
+							<div class="form-check mb-0">
+								<input type="checkbox" class="form-check-input" id="col-@setting.PropertyName"
+									checked="@setting.Visible"
+									@onchange="(e) => ToggleColumn(setting.PropertyName, (bool)(e.Value ?? false))" />
+								<label class="form-check-label" for="col-@setting.PropertyName">@title</label>
+								<button class="btn btn-sm btn-link p-0" @onclick="() => MoveColumn(setting.PropertyName, -1)"
+									disabled="@(setting.Order <= 0)">
+									<i class="bi bi-chevron-up small"></i>
+								</button>
+								<button class="btn btn-sm btn-link p-0" @onclick="() => MoveColumn(setting.PropertyName, 1)">
+									<i class="bi bi-chevron-down small"></i>
+								</button>
+							</div>
+						</div>
+					}
+					<hr />
+					<button class="btn btn-sm btn-outline-primary w-100"
+						@onclick="async () => { await ResetColumns(); isColumnsOpen = false; }">
+						<i class="bi bi-arrow-counterclockwise"></i> Сбросить
+					</button>
+				</div>
+
+				<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999;"
+					@onclick="() => isColumnsOpen = false"></div>
+			}
+		</div>
+		<button class="btn btn-sm btn-outline-secondary @(isResizeMode ? "active" : "")"
+				@onclick="ToggleResizeMode" title="Настроить ширину колонок">
+			<i class="bi bi-arrows"></i>
+		</button>
+
+	@*</div>*@
+</div>
+
+<div class="row g-0 d-flex w-100" style="flex-wrap: nowrap;">
+	<div class="table-responsive">
+			@{
+				var visibleData = BuildVisibleColumns();
+				<table class="table table-hover">
+					<thead class="table-light">
+						<tr>
+							@foreach (var col in visibleData)
+							{
+								@*<th style="@(col.Setting.Width > 0 ? $"width: {col.Setting.Width}px;" : "")">
+									@col.Info.Title
+								</th>*@
+								<th style="@(col.Setting.Width > 0 ? $"width: {col.Setting.Width}px;" : "")">
+									@if (isResizeMode)
+									{
+										<div class="d-flex flex-column align-items-start">
+											@*<span class="text-dark fw-bold text-truncate mb-1" style="max-width: 100%; font-size: 0.9rem;">*@
+												@col.Info.Title
+											@*</span>*@
+											<div class="d-flex align-items-center gap-1 w-100">
+												<input type="range" min="50" max="300" 
+													value="@col.Setting.Width"
+													@oninput="(e) => UpdateWidth(col.Info.PropertyName, e.Value?.ToString())"
+													@onchange="async (e) => { await UpdateWidth(col.Info.PropertyName, e.Value?.ToString()); await SaveWidths(); }"
+													class="form-range form-range-sm" style="width: 100%;" />
+												<button class="btn-reset-width" @onclick="() => ResetWidth(col.Info.PropertyName)"
+														title="Автоматическая ширина">
+													<i class="bi bi-x-circle" style="font-size: 0.6rem;"></i>
+												</button>
+											</div>
+											<small class="text-muted" style="font-size: 0.7rem;">@col.Setting.Width px</small>
+										</div>
+									}
+									else
+									{
+										@if (AllowSorting && col.Info.Sortable)
+										{
+											<button class="btn btn-link p-0 text-dark fw-bold text-decoration-none d-flex align-items-center gap-1" 
+													@onclick="() => SortBy(col.Info.PropertyName)">
+												@col.Info.Title
+												@{ var sortIcon = GetSortIconAttributes(col.Info); }
+											<i class="bi @sortIcon.Class @sortIcon.Css ms-1" title="@sortIcon.Title"></i>
+											</button>
+										}
+										else
+										{
+											@col.Info.Title
+										}
+									}
+								</th>
+							}
+							<th style="width: 40px;"></th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in SortedItems)
+						{
+							<tr>
+								@foreach (var col in visibleData)
+								{
+									<td>
+										@if(item != null)
+										{
+											@if (col.Info.IconConditions?.Length > 0)
+											{
+												var icons = ColumnHelper.GetIcons(item, col.Info.IconConditions);
+												foreach (var icon in icons)
+												{
+													<i class="@icon.Class @icon.Css fs-6 me-1" title="@icon.Title"></i>
+												}
+											}
+
+											@if (col.Info.IsBadge)
+											{
+												var prop = item.GetType().GetProperty(col.Info.BadgeProperty ?? col.Info.PropertyName);
+												var value = prop?.GetValue(item);
+
+												<span class="badge @BadgeHelper.GetBadgeClass(value?.ToString())">
+													@BadgeHelper.GetFormattedBadgeValue(item, col.Info)
+												</span>
+											}
+											else
+											{
+												@ColumnHelper.GetFormattedValue(item, col.Info)
+											}
+											
+											@if (!string.IsNullOrEmpty(col.Info.CommentField))
+											{
+													// Находим колонку комментария
+												var commentCol = visibleData.Any(c => c.Info.PropertyName == col.Info.CommentField);
+												
+												if (!commentCol)
+												{
+													var comment = item.GetType().GetProperty(col.Info.CommentField)?.GetValue(item)?.ToString();
+													if (!string.IsNullOrEmpty(comment))
+													{
+														<i class="bi bi-chat-left-text text-primary ms-1 small" 
+														title="@comment" 
+														style="cursor: help;"></i>
+													}
+												}
+											}
+										}
+									</td>
+								}
+								@if (ShowActions && RowTemplate != null)
+								{
+									<td>@RowTemplate(item)</td>
+								}
+							</tr>
+						}
+					</tbody>
+					@if (columnInfos.Any(c => c.ShowTotal))
+					{
+						@if (CalculateTotal)
+						{
+							<tfoot class="table-light fw-bold">
+								<tr>
+									@foreach (var col in BuildVisibleColumns())
+									{
+											<td>
+												@if (col.Info.ShowTotal)
+												{
+														var total = GetColumnTotal(col.Info);
+														@if (col.Info.DisplayFormat == "F2")
+														{
+																@total.ToString("F2")
+														}
+														else
+														{
+																@total.ToString("0")
+														}
+												}
+												else
+												{
+													@if (col == visibleData.First())
+													{
+														<text>Итого:</text>
+													}
+
+														@* Пустая ячейка для несуммируемых колонок *@
+												}
+											</td>
+									}
+									@if (ShowActions && RowTemplate != null)
+									{
+											<td></td>
+									}
+								</tr>
+							</tfoot>
+						}
+						else if (ShowTotal)
+						{
+							<tfoot class="table-light fw-bold">
+								<tr>
+									@foreach (var col in BuildVisibleColumns())
+									{
+										<td>
+											@if (col == BuildVisibleColumns().First())
+											{
+												<text>Итого:</text>
+											}
+											else if (col.Info.ShowTotal && Totals != null)
+											{
+												@GetTotalValue(col.Info)
+											}
+										</td>
+									}
+									@if (ShowActions && RowTemplate != null)
+									{
+										<td></td>
+									}
+								</tr>
+							</tfoot>
+						}
+					}
+				</table>
+			}
+	</div>
+</div>

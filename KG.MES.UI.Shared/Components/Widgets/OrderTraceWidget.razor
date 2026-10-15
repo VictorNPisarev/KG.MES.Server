@@ -1,0 +1,102 @@
+@using KG.MES.Shared.Helpers
+@using KG.MES.Shared.Models.ViewModels
+@using KG.MES.Shared.Services
+
+@if (isLoading)
+{
+	<div class="text-center py-3">
+		<div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+	</div>
+}
+else if (orderTrace?.WorkplaceTraces != null && orderTrace.WorkplaceTraces.Any())
+{
+	<div class="trace-panel">
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<h6 class="trace-title"><i class="bi bi-clock-history"></i> История производства</h6>
+			<div class="d-flex gap-1">
+				@if (EditMode)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="SaveChanges">
+						<i class="bi bi-check-lg"></i>
+					</button>
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="CancelEdit">
+						<i class="bi bi-x-lg"></i>
+					</button>
+				}
+				else if (CanEdit)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="EnterEditMode">
+						<i class="bi bi-pencil"></i>
+					</button>
+				}
+			</div>
+		</div>
+		<div>
+			<table class="trace-table">
+				<tbody>
+					@foreach (WorkplaceTraceViewModel wp in orderTrace.WorkplaceTraces)
+					{
+						<tr>
+							<td class="trace-workplace">@wp.WorkplaceName</td>
+							<td class="trace-status">
+								@if (EditMode)
+								{
+									<div class="dropdown" style="position: relative; display: inline-block;">
+										<span class="badge @BadgeHelper.GetBadgeClass(wp.Status)"
+											  style="cursor: pointer;"
+											  @onclick="() => ToggleDropdown(wp.WorkplaceId.ToString())">
+											@wp.GetStatusText()
+											<i class="bi bi-chevron-down ms-1 small"></i>
+										</span>
+										@if (openDropdowns.GetValueOrDefault(wp.WorkplaceId.ToString()))
+										{
+											<ul class="dropdown-menu show" style="position: absolute; z-index: 1000;">
+												<li><a class="dropdown-item" @onclick='() => { wp.Status = "planned"; CloseDropdown(wp.WorkplaceId.ToString()); }' @onclick:preventDefault><span class="badge bg-secondary">Не определён</span></a></li>
+												<li><a class="dropdown-item" @onclick='() => { wp.Status = "pending"; CloseDropdown(wp.WorkplaceId.ToString()); }' @onclick:preventDefault><span class="badge bg-warning">Ожидает</span></a></li>
+												<li><a class="dropdown-item" @onclick='() => { wp.Status = "active"; CloseDropdown(wp.WorkplaceId.ToString()); }' @onclick:preventDefault><span class="badge bg-primary">В работе</span></a></li>
+												<li><a class="dropdown-item" @onclick='() => { wp.Status = "completed"; CloseDropdown(wp.WorkplaceId.ToString()); }' @onclick:preventDefault><span class="badge bg-success">Завершён</span></a></li>
+											</ul>
+											<div class="position-fixed top-0 start-0 w-100 h-100" 
+												 style="z-index: 999;" 
+												 @onclick="() => CloseDropdown(wp.WorkplaceId.ToString())"></div>
+										}
+									</div>
+								}
+								else
+								{
+									<span class="badge @BadgeHelper.GetBadgeClass(wp.Status)">
+										@wp.GetStatusText()
+									</span>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+}
+else
+{
+	<p class="text-muted mb-0">Нет данных о прохождении заказа</p>
+}
+@if (CanEdit)
+{
+	<div class="d-flex gap-2 mt-3 pt-2 border-top">
+		<button class="btn btn-sm btn-outline-complete" @onclick="CompleteOrder"
+			disabled="@(isCompleting || isDeparturing)">
+			@if (isCompleting)
+			{
+				<span class="spinner-border spinner-border-sm me-1"></span>
+			}
+			Готов
+		</button>
+		<button class="btn btn-sm btn-outline-departure" @onclick="DepartureOrder" disabled="@(isCompleting || isDeparturing)">
+			@if (isDeparturing)
+			{
+				<span class="spinner-border spinner-border-sm me-1"></span>
+			}
+			Отгружен
+		</button>
+	</div>
+}
