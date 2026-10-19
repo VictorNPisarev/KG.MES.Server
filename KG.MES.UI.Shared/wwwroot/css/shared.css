@@ -10,6 +10,7 @@
 @import 'admin.css';
 @import 'sortIcons.css';
 @import 'inputError.css';
+@import 'supplyHistory.css';
 
 .sticky-header {
 	position: sticky;

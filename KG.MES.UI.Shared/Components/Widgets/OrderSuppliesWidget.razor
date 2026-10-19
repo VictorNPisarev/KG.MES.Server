@@ -41,6 +41,15 @@ else
 					@foreach (var s in supplies)
 					{
 						<tr>
+							<td>
+								@if (s.OrderSupplyId != Guid.Empty)
+								{
+									<button class="btn btn-sm btn-link text-secondary p-0" @onclick="() => OpenHistory(s)"
+										title="История изменений">
+										<i class="bi bi-clock-history"></i>
+									</button>
+								}
+							</td>
 							<td class="supplies-material">@s.SupplyTypeName</td>
 							<td class="supplies-status">
 								<div class="d-flex align-items-center gap-1">
@@ -53,7 +62,6 @@ else
 												@(s.SupplyConditionName ?? "—")
 												<i class="bi bi-chevron-down ms-1 small"></i>
 											</span>
-
 											@if (openDropdowns.GetValueOrDefault(s.SupplyTypeId))
 											{
 												<ul class="dropdown-menu show" style="position: absolute; z-index: 1000;">
@@ -139,4 +147,64 @@ else
 	{
 		<p class="text-muted small mb-0">Нет данных о снабжении</p>
 	}
+}
+
+@if (showHistory && historyTarget != null)
+{
+	<div class="history-overlay" @ref="overlayRef" @onclick="CloseHistory" @onkeydown="OnKeyDown" tabindex="0">
+		<div class="history-panel" @onclick:stopPropagation>
+			<div class="history-header">
+				<h6 class="mb-0">
+					<i class="bi bi-clock-history me-1"></i>
+					История: @historyTarget.SupplyTypeName
+				</h6>
+				<button class="btn-close" @onclick="CloseHistory"></button>
+			</div>
+
+			<div class="history-body">
+				@if (isLoadingHistory)
+				{
+					<div class="text-center py-3">
+						<div class="spinner-border spinner-border-sm text-primary"></div>
+					</div>
+				}
+				else if (history.Any())
+				{
+					@foreach (var h in history.OrderByDescending(x => x.OperationTime))
+					{
+						<div class="history-item gap-2">
+							<div class="history-line">
+								<span class="history-date">@h.OperationTime.ToString("dd.MM.yyyy HH:mm")</span>
+								@if (!string.IsNullOrEmpty(h.UserName))
+								{
+									<span class="history-user">— @h.UserName</span>
+								}
+							</div>
+
+							@if (!string.IsNullOrEmpty(h.ConditionCode))
+							{
+								<div class="history-status">
+									<span class="badge @BadgeHelper.GetBadgeClass(h.ConditionCode)">
+										@h.ConditionCode
+									</span>
+								</div>
+							}
+
+							@if (!string.IsNullOrEmpty(h.Comment))
+							{
+								<div class="history-comment">
+									<i class="bi bi-chat-left-text me-1"></i>
+									@h.Comment
+								</div>
+							}
+						</div>
+					}
+				}
+				else
+				{
+					<p class="text-muted small mb-0 p-3">Нет истории изменений</p>
+				}
+			</div>
+		</div>
+	</div>
 }

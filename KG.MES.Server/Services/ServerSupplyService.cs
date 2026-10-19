@@ -4,6 +4,7 @@ using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Shared.Models.Entities;
+using KG.MES.Server.Extensions;
 
 namespace KG.MES.Shared.Services;
 
@@ -58,6 +59,7 @@ public class ServerSupplyService : ISupplyService
 			.SelectMany(x => x.c.DefaultIfEmpty(), (x, c) => new OrderSupplyDto
 			{
 				OrderSupplyId = x.si.OrderSupplyId,
+				SupplyItemId = x.si.Id,
 				SupplyTypeId = x.si.SupplyTypeId,
 				SupplyConditionId = x.sc != null ? x.sc.Id : (Guid?)null,
 				ExpectedDate = x.si.ExpectedDate,
@@ -120,50 +122,54 @@ public class ServerSupplyService : ISupplyService
 		foreach (var update in updates)
 		{
 			var supplyItem = await _context.SupplyItems
-				.FirstOrDefaultAsync(si => si.OrderSupplyId == orderSupply.Id && si.SupplyTypeId == update.SupplyTypeId);
+				.FirstOrDefaultAsync(si => si.OrderSupplyId == orderSupply.Id
+											&& si.SupplyTypeId == update.SupplyTypeId);
 
-			if (supplyItem != null)
+			if (supplyItem == null) continue;
+
+			// ✅ Логируем ДО обновления
+			await LogSupplyChangeAsync(
+				supplyItem.Id,
+				update.UserId,
+				update.SupplyConditionId,
+				update.Comment,
+				source: "API");
+
+			// Обновляем комментарий
+			if (!string.IsNullOrEmpty(update.Comment))
 			{
-				// Если есть комментарий и он изменился
-				if (!string.IsNullOrEmpty(update.Comment))
+				if (supplyItem.CommentId.HasValue)
 				{
-					if (supplyItem.CommentId.HasValue)
+					var existingComment = await _context.Comments
+						.FirstOrDefaultAsync(c => c.Id == supplyItem.CommentId.Value);
+					if (existingComment != null)
 					{
-						// Обновляем существующий комментарий
-						var existingComment = await _context.Comments
-							.FirstOrDefaultAsync(c => c.Id == supplyItem.CommentId.Value);
-						if (existingComment != null)
-						{
-							existingComment.Content = update.Comment;
-							existingComment.UpdatedAt = DateTime.UtcNow;
-							existingComment.UserId = update.UserId;
-						}
-					}
-					else
-					{
-						// Создаём новый комментарий
-						var newComment = new Comment
-						{
-							Id = Guid.NewGuid(),
-							OrderId = orderId,
-							UserId = update.UserId,
-							Content = update.Comment,
-							CreatedAt = DateTime.UtcNow,
-							UpdatedAt = DateTime.UtcNow
-						};
-						_context.Comments.Add(newComment);
-						await _context.SaveChangesAsync();
-
-						supplyItem.CommentId = newComment.Id;
+						existingComment.Content = update.Comment;
+						existingComment.UpdatedAt = DateTime.UtcNow;
+						existingComment.UserId = update.UserId;
 					}
 				}
-
-				// Обновляем остальные поля
-				supplyItem.ConditionId = update.SupplyConditionId;
-				supplyItem.ExpectedDate = update.ExpectedDate;
-				supplyItem.Quantity = update.Quantity;
-				supplyItem.UpdatedAt = DateTime.UtcNow;
+				else
+				{
+					var newComment = new Comment
+					{
+						Id = Guid.NewGuid(),
+						OrderId = orderId,
+						UserId = update.UserId,
+						Content = update.Comment,
+						CreatedAt = DateTime.UtcNow,
+						UpdatedAt = DateTime.UtcNow
+					};
+					_context.Comments.Add(newComment);
+					supplyItem.CommentId = newComment.Id;
+				}
 			}
+
+			// Обновляем остальные поля
+			supplyItem.ConditionId = update.SupplyConditionId;
+			supplyItem.ExpectedDate = update.ExpectedDate;
+			supplyItem.Quantity = update.Quantity;
+			supplyItem.UpdatedAt = DateTime.UtcNow;
 		}
 
 		await _context.SaveChangesAsync();
@@ -279,5 +285,64 @@ public class ServerSupplyService : ISupplyService
 				Pages = (int)Math.Ceiling(total / (double)limit)
 			}
 		};
+	}
+
+	/// <summary>
+	/// Логирует изменение снабжения (только если что-то изменилось)
+	/// </summary>
+	private async Task LogSupplyChangeAsync(
+		Guid supplyItemId,
+		Guid? userId,
+		Guid? conditionId,
+		string? comment,
+		string source = "API")
+	{
+		// Получаем последний лог
+		var lastLog = await _context.SupplyLogs
+			.Where(sl => sl.SupplyItemId == supplyItemId)
+			.OrderByDescending(sl => sl.OperationTime)
+			.FirstOrDefaultAsync();
+
+		// Проверяем, изменилось ли что-то
+		var conditionChanged = lastLog?.ConditionId != conditionId;
+		var commentChanged = lastLog?.Comment != comment;
+
+		if (!conditionChanged && !commentChanged)
+			return;
+
+		_context.SupplyLogs.Add(new SupplyLog
+		{
+			Id = Guid.NewGuid(),
+			SupplyItemId = supplyItemId,
+			UserId = userId,
+			ConditionId = conditionId,
+			Comment = comment,
+			OperationTime = DateTime.UtcNow,
+			Source = source
+		});
+	}
+
+	public async Task<List<SupplyItemHistoryDto>> GetSupplyHistoryAsync(Guid supplyItemId)
+	{
+		var logs = await _context.SupplyLogs
+			.Where(sl => sl.SupplyItemId == supplyItemId)
+			.OrderByDescending(sl => sl.OperationTime)
+			.Select(sl => new SupplyItemHistoryDto
+			{
+				Id = sl.Id,
+				SupplyTypeName = sl.SupplyItem.SupplyType.Name,
+				ConditionCode = sl.Condition != null ? sl.Condition.ConditionCode : null,
+				Comment = sl.Comment,
+				UserId = sl.UserId,
+				UserName = sl.User != null ? sl.User.Name : null,
+				OperationTime = sl.OperationTime,
+				Source = sl.Source
+			})
+			.ToListAsync();
+
+		foreach (var log in logs)
+			log.OperationTime = log.OperationTime.ToProductionTime();
+
+		return logs;
 	}
 }

@@ -11,4 +11,6 @@ public interface ISupplyService
 	Task<PaginatedResponse<SupplyDto>> GetAllSupplyItemsAsync(int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
 	Task<OperationResultDto> UpdateSupplyItemAsync(Guid orderId, Guid supplyTypeId, UpdateSupplyItemRequest request);
 	Task<OperationResultDto> UpdateAllSupplyItemsAsync(Guid orderId, List<UpdateSupplyItemRequest> updates);
+	Task<List<SupplyItemHistoryDto>> GetSupplyHistoryAsync(Guid supplyItemId);
+
 }

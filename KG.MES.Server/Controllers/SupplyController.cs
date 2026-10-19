@@ -30,6 +30,10 @@ public partial class SupplyController : ControllerBase
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
 		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
 
+	[HttpGet("supply-items/{supplyItemId}/history")]
+	public Task<IActionResult> GetSupplyHistory(Guid supplyItemId)
+		=> GetSupplyHistoryHandler(supplyItemId);
+
 	#endregion GET
 
 	#region POST

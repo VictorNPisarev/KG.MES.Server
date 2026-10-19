@@ -5,6 +5,8 @@ namespace KG.MES.Shared.Models.ViewModels;
 
 public class OrderSupplyViewModel
 {
+	public Guid OrderSupplyId { get; private set; }
+	public Guid SupplyItemId { get; private set; }
 	public Guid SupplyTypeId { get; private set; }
 	public Guid? SupplyConditionId { get; private set; }
 	public string? Comment { get; set; }

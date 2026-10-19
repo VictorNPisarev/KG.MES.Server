@@ -957,4 +957,19 @@ public class ProductionApiService : AuthorizedApiService
 		return await response.Content.ReadFromJsonAsync<FilterFacetsResponseDto>();
 			//   ?? new FilterFacetsResponseDto();
 	}
+
+	public async Task<List<SupplyItemHistoryDto>> GetSupplyItemHistoryAsync(Guid supplyItemId)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var url = $"{BaseUrl}/supply-items/{supplyItemId}/history";
+			return await httpClient.GetFromJsonAsync<List<SupplyItemHistoryDto>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching history for supply item {Id}", supplyItemId);
+			return [];
+		}
+	}
 }

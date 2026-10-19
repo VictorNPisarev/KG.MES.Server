@@ -29,7 +29,7 @@ public class AppDbContext : DbContext
 	public DbSet<Device> Devices { get; set; }
 	public DbSet<UserDevice> UserDevices { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
-
+	public DbSet<SupplyLog> SupplyLogs { get; set; }
 
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -267,6 +267,34 @@ public class AppDbContext : DbContext
 				.OnDelete(DeleteBehavior.Cascade);
 		});
 
+		// SupplyLog
+		modelBuilder.Entity<SupplyLog>()
+			.HasIndex(sl => sl.SupplyItemId);
+
+		modelBuilder.Entity<SupplyLog>()
+			.HasIndex(sl => sl.OperationTime);
+
+		modelBuilder.Entity<SupplyLog>()
+			.HasIndex(sl => new { sl.SupplyItemId, sl.OperationTime });
+
+		modelBuilder.Entity<SupplyLog>()
+			.HasOne(sl => sl.SupplyItem)
+			.WithMany()
+			.HasForeignKey(sl => sl.SupplyItemId)
+			.OnDelete(DeleteBehavior.Cascade);
+
+		modelBuilder.Entity<SupplyLog>()
+			.HasOne(sl => sl.Condition)
+			.WithMany()
+			.HasForeignKey(sl => sl.ConditionId)
+			.OnDelete(DeleteBehavior.SetNull);
+
+		modelBuilder.Entity<SupplyLog>()
+			.HasOne(sl => sl.User)
+			.WithMany()
+			.HasForeignKey(sl => sl.UserId)
+			.OnDelete(DeleteBehavior.SetNull);
+			
 		base.OnModelCreating(modelBuilder);
 	}
 }

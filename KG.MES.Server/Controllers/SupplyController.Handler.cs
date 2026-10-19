@@ -7,22 +7,22 @@ namespace KG.MES.Shared.Controllers;
 
 public partial class SupplyController
 {
-	private readonly ISupplyService _supplyService;
+	private readonly ISupplyService supplyService;
 
-	private readonly IOrderService _orderService;
+	private readonly IOrderService orderService;
 
-	private readonly ILogger<SupplyController> _logger;
+	private readonly ILogger<SupplyController> logger;
 
 	public SupplyController(IOrderService orderService, ISupplyService supplyService, ILogger<SupplyController> logger)
 	{
-		_orderService = orderService;
-		_supplyService = supplyService;
-		_logger = logger;
+		this.orderService = orderService;
+		this.supplyService = supplyService;
+		this.logger = logger;
 	}
 
 	public async Task<IActionResult> GetOrderSupplyStatusesHandler(Guid orderId)
 	{
-		var items = await _supplyService.GetOrderSupplyItemsAsync(orderId);
+		var items = await supplyService.GetOrderSupplyItemsAsync(orderId);
 		return Ok(items);
 	}
 
@@ -31,7 +31,7 @@ public partial class SupplyController
 		Guid supplyTypeId,
 		UpdateSupplyItemRequest request)
 	{
-		var result = await _supplyService.UpdateSupplyItemAsync(orderId, supplyTypeId, request);
+		var result = await supplyService.UpdateSupplyItemAsync(orderId, supplyTypeId, request);
 		if (!result.Success)
 			return BadRequest(result);
 		return Ok(result);
@@ -46,7 +46,7 @@ public partial class SupplyController
 			return BadRequest(new { error = "supplies array is required" });
 		}
 
-		var result = await _supplyService.UpdateAllSupplyItemsAsync(orderId, request.Supplies);
+		var result = await supplyService.UpdateAllSupplyItemsAsync(orderId, request.Supplies);
 
 		if (!result.Success)
 			return BadRequest(result);
@@ -56,20 +56,20 @@ public partial class SupplyController
 
 	public async Task<IActionResult> GetSupplyConditionsHandler()
 	{
-		var conditions = await _supplyService.GetSupplyConditionsAsync();
+		var conditions = await supplyService.GetSupplyConditionsAsync();
 		return Ok(conditions);
 	}
 
 	public async Task<IActionResult> GetSupplyTypesHandler()
 	{
-		var types = await _supplyService.GetSupplyTypesAsync();
+		var types = await supplyService.GetSupplyTypesAsync();
 		return Ok(types);
 	}
 
 	public async Task<IActionResult> GetAllSupplyStatusesHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
 		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid>? workplaceIds = null)
 	{
-		var result = await _supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+		var result = await supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
 		return Ok(result);
 	}
 
@@ -78,8 +78,13 @@ public partial class SupplyController
 		if (request?.Fields == null || !request.Fields.Any())
 			return BadRequest(new { error = "Fields are required" });
 
-		var result = await _orderService.GetFilterFacetsAsync<OrderSupplyDto>(request);
+		var result = await orderService.GetFilterFacetsAsync<OrderSupplyDto>(request);
 		return Ok(result);
 	}
 
+	public async Task<IActionResult> GetSupplyHistoryHandler(Guid supplyItemId)
+	{
+		var history = await supplyService.GetSupplyHistoryAsync(supplyItemId);
+		return Ok(history);
+	}
 }

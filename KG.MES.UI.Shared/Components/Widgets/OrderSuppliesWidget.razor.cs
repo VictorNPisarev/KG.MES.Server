@@ -6,6 +6,7 @@ using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Events;
 using Microsoft.Extensions.Logging;
 using KG.MES.Shared.Models.Dto;
+using Microsoft.AspNetCore.Components.Web;
 using Mapster;
 
 namespace KG.MES.UI.Shared.Components.Widgets;
@@ -32,6 +33,14 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 	private Dictionary<Guid, bool> showComments = [];
 	private Dictionary<Guid, string> originalComments = [];
 	private Dictionary<Guid, bool> openDropdowns = [];
+	private bool showHistory;
+	private OrderSupplyViewModel? historyTarget;
+	private List<SupplyItemHistoryDto> history = [];
+	private bool isLoadingHistory;
+	private ElementReference overlayRef;
+
+
+
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -287,6 +296,45 @@ public partial class OrderSuppliesWidget : ComponentBase, ISavableWidget
 		}
 	}
 
+	private async Task OpenHistory(OrderSupplyViewModel supply)
+	{
+		historyTarget = supply;
+		showHistory = true;
+		isLoadingHistory = true;
+		history = [];
+		StateHasChanged();
+
+		try
+		{
+			history = await ApiService.GetSupplyItemHistoryAsync(supply.SupplyItemId);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"History load error: {ex.Message}");
+		}
+		finally
+		{
+			isLoadingHistory = false;
+			StateHasChanged();
+		}
+
+		// Фокус на overlay, чтобы Esc сработал
+		await Task.Yield();
+		try { await overlayRef.FocusAsync(); } catch { }
+	}
+
+	private void CloseHistory()
+	{
+		showHistory = false;
+		historyTarget = null;
+		history = [];
+	}
+
+	private void OnKeyDown(KeyboardEventArgs e)
+	{
+		if (e.Key == "Escape")
+			CloseHistory();
+	}
 
 	public void Dispose()
 	{

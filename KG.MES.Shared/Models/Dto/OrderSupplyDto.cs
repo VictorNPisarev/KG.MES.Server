@@ -7,6 +7,9 @@ public class OrderSupplyDto
 	[JsonPropertyName("order_supply_id")]
 	public Guid OrderSupplyId { get; set; }
 
+	[JsonPropertyName("supply_item_id")]
+	public Guid SupplyItemId { get; set; }
+
 	[JsonPropertyName("supply_type_id")]
 	public Guid SupplyTypeId { get; set; }
 
