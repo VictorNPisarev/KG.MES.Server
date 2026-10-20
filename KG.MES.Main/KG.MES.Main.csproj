@@ -21,6 +21,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+	<RazorLangVersion>latest</RazorLangVersion>
   </PropertyGroup>
 
 </Project>

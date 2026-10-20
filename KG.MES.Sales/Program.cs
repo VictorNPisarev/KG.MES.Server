@@ -41,13 +41,37 @@ if (!app.Environment.IsDevelopment())
 	app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+
+if (builder.Configuration.GetValue<bool>("UseHttps"))
+{
+	app.UseHttpsRedirection();
+}
+//app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 await LoadDataAsync(app.Services, app.Environment);
+
+if (builder.Configuration.GetValue<bool>("OpenBrowserOnStart"))
+{
+	app.Lifetime.ApplicationStarted.Register(() =>
+	{
+		var baseUrl = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
+		var url = $"{baseUrl}/sales";
+
+		try
+		{
+			System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+			{
+				FileName = url,
+				UseShellExecute = true
+			});
+		}
+		catch { }
+	});
+}
 
 app.Run();
 

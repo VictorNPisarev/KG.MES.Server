@@ -18,6 +18,7 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+	<RazorLangVersion>latest</RazorLangVersion>
   </PropertyGroup>
 
 </Project>
