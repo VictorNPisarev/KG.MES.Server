@@ -57,6 +57,12 @@ public class UserAdminListItemDto
 
 	[JsonPropertyName("lastLoginAt")]
 	public DateTime? LastLoginAt { get; set; }
+
+	[JsonPropertyName("is_approved")]
+	public bool IsApproved { get; set; }
+
+	[JsonPropertyName("approval_deadline")]
+	public DateTime? ApprovalDeadline { get; set; }
 }
 
 /// <summary>
@@ -90,6 +96,12 @@ public class UserAdminDetailsDto
 
 	[JsonPropertyName("lastLoginAt")]
 	public DateTime? LastLoginAt { get; set; }
+	
+	[JsonPropertyName("is_approved")]
+	public bool IsApproved { get; set; }
+
+	[JsonPropertyName("approval_deadline")]
+	public DateTime? ApprovalDeadline { get; set; }
 
 	[JsonPropertyName("workplaces")]
 	public List<UserWorkplaceDto> Workplaces { get; set; } = [];

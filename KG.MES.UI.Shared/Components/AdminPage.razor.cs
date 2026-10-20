@@ -55,6 +55,12 @@ public partial class AdminPage
 	private List<DeviceInfoDto> licenseDevices = [];
 	private int extendDays = 30;
 	private bool extendUnlimited;
+	private bool showResetPasswordModal;
+	private string newResetPassword = "";
+	private string resetPasswordError = "";
+	private bool resetPasswordFieldError;
+	private bool selectedUserIsApproved;
+
 
 	private List<RoleDto> roles = [];
 
@@ -75,17 +81,13 @@ public partial class AdminPage
 	private void OpenCreateLicenseModal()
 	{
 		showCreateLicense = true;
-		showCreateUser = false;
-		showRevokeModal = false;
-		showSetRoleModal = false;
+		CloseOtherModalsExcept(nameof(showCreateLicense));
 	}
 
 	private void OpenCreateUserModal()
 	{
 		showCreateUser = true;
-		showCreateLicense = false;
-		showRevokeModal = false;
-		showSetRoleModal = false;
+		CloseOtherModalsExcept(nameof(showCreateUser));
 	}
 
 	private void OpenRevokeModal(Guid licenseId)
@@ -93,19 +95,16 @@ public partial class AdminPage
 		revokeLicenseId = licenseId;
 		revokeReason = "";
 		showRevokeModal = true;
-		showCreateLicense = false;
-		showCreateUser = false;
-		showSetRoleModal = false;
+		CloseOtherModalsExcept(nameof(showRevokeModal));
 	}
 
 	private void OpenSetRoleModal(UserAdminListItemDto user)
 	{
 		selectedUser = user;
 		selectedRole = user.RoleName ?? "User";
+		selectedUserIsApproved = user.IsApproved;
 		showSetRoleModal = true;
-		showCreateLicense = false;
-		showCreateUser = false;
-		showRevokeModal = false;
+		CloseOtherModalsExcept(nameof(showSetRoleModal));
 	}
 
 	private void CloseModals()
@@ -116,6 +115,11 @@ public partial class AdminPage
 		showSetRoleModal = false;
 		showViewLicenseModal = false;
 		showExtendModal = false;
+		showResetPasswordModal = false;
+		resetPasswordError = "";
+		resetPasswordFieldError = false;
+		selectedUser = null;
+
 	}
 
 	private async Task CreateLicense()
@@ -159,14 +163,37 @@ public partial class AdminPage
 		CloseModals();
 	}
 
-	private async Task ConfirmSetRole()
+	private async Task ConfirmUpdateProfile()
 	{
-		if (selectedUser != null)
+		if (selectedUser == null) return;
+
+		isCreating = true;
+		try
 		{
-			await AdminService.SetUserRoleAsync(selectedUser.Id, new SetRoleRequestDto { RoleName = selectedRole });
+			// 1. Роль — отдельным запросом
+			if (selectedUser.RoleName != selectedRole)
+			{
+				await AdminService.SetUserRoleAsync(selectedUser.Id,
+					new SetRoleRequestDto { RoleName = selectedRole });
+			}
+
+			// 2. Подтверждение — только если изменилось
+			if (selectedUser.IsApproved != selectedUserIsApproved)
+			{
+				if (selectedUserIsApproved)
+					await AdminService.ApproveUserAsync(selectedUser.Id);
+				else
+					await AdminService.RevokeUserApprovalAsync(selectedUser.Id);
+			}
+
+
 			await LoadUsers();
+			CloseModals();
 		}
-		CloseModals();
+		finally
+		{
+			isCreating = false;
+		}
 	}
 
 	private async Task BlockUser(Guid id)
@@ -186,7 +213,7 @@ public partial class AdminPage
 		selectedLicense = await AdminService.GetLicenseByIdAsync(licenseId);
 		licenseDevices = await AdminService.GetLicenseDevicesAsync(licenseId);
 		showViewLicenseModal = true;
-		CloseOtherModals();
+		CloseOtherModalsExcept(nameof(showViewLicenseModal));
 	}
 
 	private void OpenExtendModal()
@@ -208,13 +235,15 @@ public partial class AdminPage
 		await LoadLicenses();
 	}
 
-	private void CloseOtherModals()
+	private void CloseOtherModalsExcept(string? except = null)
 	{
-		showCreateLicense = false;
-		showCreateUser = false;
-		showRevokeModal = false;
-		showSetRoleModal = false;
-		showExtendModal = false;
+		if (except != nameof(showCreateLicense)) showCreateLicense = false;
+		if (except != nameof(showCreateUser)) showCreateUser = false;
+		if (except != nameof(showRevokeModal)) showRevokeModal = false;
+		if (except != nameof(showSetRoleModal)) showSetRoleModal = false;
+		if (except != nameof(showExtendModal)) showExtendModal = false;
+		if (except != nameof(showViewLicenseModal)) showViewLicenseModal = false;
+		if (except != nameof(showResetPasswordModal)) showResetPasswordModal = false;
 	}
 
 	private async Task ToggleUserBlock(UserAdminListItemDto user)
@@ -225,5 +254,82 @@ public partial class AdminPage
 			await AdminService.UnblockUserAsync(user.Id);
 
 		await LoadUsers();
+	}
+
+	// Открытие
+	private void OpenResetPasswordModal(UserAdminListItemDto user)
+	{
+		selectedUser = user;
+		newResetPassword = "";
+		resetPasswordError = "";
+		resetPasswordFieldError = false;
+		showResetPasswordModal = true;
+		CloseOtherModalsExcept(nameof(showResetPasswordModal));
+	}
+
+	// Подтверждение
+	private async Task ConfirmResetPassword()
+	{
+		if (selectedUser == null) return;
+
+		resetPasswordError = "";
+		resetPasswordFieldError = string.IsNullOrWhiteSpace(newResetPassword);
+
+		if (resetPasswordFieldError)
+		{
+			resetPasswordError = "Пароль не может быть пустым";
+			return;
+		}
+
+		if (newResetPassword.Length < 4)
+		{
+			resetPasswordFieldError = true;
+			resetPasswordError = "Пароль должен быть не менее 4 символов";
+			return;
+		}
+
+		isCreating = true;
+		try
+		{
+			var success = await AdminService.SetUserPasswordAsync(selectedUser.Email, newResetPassword);
+			if (success)
+			{
+				await LoadUsers();
+				CloseModals();
+			}
+			else
+			{
+				resetPasswordError = "Не удалось сбросить пароль";
+			}
+		}
+		finally
+		{
+			isCreating = false;
+		}
+	}
+
+	private async Task OnApprovalChanged(ChangeEventArgs e)
+	{
+		if (selectedUser == null) return;
+
+		var isApproved = e.Value is bool b && b;
+
+		// Сразу дёргаем API при изменении чекбокса
+		isCreating = true;
+		try
+		{
+			if (isApproved)
+				await AdminService.ApproveUserAsync(selectedUser.Id);
+			else
+				await AdminService.RevokeUserApprovalAsync(selectedUser.Id);
+
+			selectedUser.IsApproved = isApproved;
+		}
+		finally
+		{
+			isCreating = false;
+		}
+
+		StateHasChanged();
 	}
 }

@@ -279,4 +279,53 @@ public class AdminService : AuthorizedApiService
 			return new List<RoleDto>();
 		}
 	}
+
+	public async Task<bool> SetUserPasswordAsync(string email, string newPassword)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PostAsJsonAsync(
+				$"{baseUrl}/users/{Uri.EscapeDataString(email)}/set-password",
+				new { newPassword });
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error setting password for user {Email}", email);
+			return false;
+		}
+	}
+
+	public async Task<bool> ApproveUserAsync(Guid userId)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PostAsync(
+				$"{baseUrl}/admin/users/{userId}/approve", null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error approving user {Id}", userId);
+			return false;
+		}
+	}
+
+	public async Task<bool> RevokeUserApprovalAsync(Guid userId)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PostAsync(
+				$"{baseUrl}/admin/users/{userId}/revoke-approval", null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error revoking approval for user {Id}", userId);
+			return false;
+		}
+	}
 }

@@ -20,30 +20,6 @@ public class UserService : IUserService
 		this.logger = logger;
 	}
 
-	public async Task<User?> AuthenticateAsync(string email, string password)
-	{
-		var user = await context.Users
-			.Include(u => u.Role)
-			.FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
-
-		if (user == null || string.IsNullOrEmpty(user.PasswordHash))
-			return null;
-
-		var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
-
-		if (result == PasswordVerificationResult.Success)
-			return user;
-
-		// Если хэш устарел (например, обновили алгоритм) — пересохраняем
-		if (result == PasswordVerificationResult.SuccessRehashNeeded)
-		{
-			user.PasswordHash = passwordHasher.HashPassword(user, password);
-			await context.SaveChangesAsync();
-		}
-
-		return null;
-	}
-
 	public async Task<bool> SetPasswordAsync(Guid userId, string newPassword)
 	{
 		var user = await context.Users.FindAsync(userId);
@@ -170,7 +146,9 @@ public class UserService : IUserService
 				RoleName = u.Role != null ? u.Role.Name : null,
 				IsActive = u.IsActive,
 				IsPasswordSet = u.IsPasswordSet,
-				CreatedAt = u.CreatedAt//,
+				CreatedAt = u.CreatedAt,
+				IsApproved = u.IsApproved,
+				ApprovalDeadline = u.ApprovalDeadline//,
 				//LastLoginAt = u.LastLoginAt
 			})
 			.ToListAsync();
@@ -212,6 +190,8 @@ public class UserService : IUserService
 			IsActive = user.IsActive,
 			IsPasswordSet = user.IsPasswordSet,
 			CreatedAt = user.CreatedAt,
+			IsApproved = user.IsApproved,
+			ApprovalDeadline = user.ApprovalDeadline,
 			//LastLoginAt = user.LastLoginAt,
 			Workplaces = user.UserWorkplaces?
 				.Select(uw => new UserWorkplaceDto
@@ -291,7 +271,9 @@ public class UserService : IUserService
 				RoleName = role.Name,
 				IsActive = user.IsActive,
 				IsPasswordSet = user.IsPasswordSet,
-				CreatedAt = user.CreatedAt
+				CreatedAt = user.CreatedAt,
+				IsApproved = user.IsApproved,
+				ApprovalDeadline = user.ApprovalDeadline
 			}
 		};
 	}
@@ -410,6 +392,47 @@ public class UserService : IUserService
 		await context.SaveChangesAsync();
 
 		logger.LogInformation("Password changed for user {Email}", user.Email);
+		return true;
+	}
+
+	public async Task<bool> ApproveUserAsync(Guid userId, Guid adminId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsApproved = true;
+		user.ApprovedAt = DateTime.UtcNow;
+		user.ApprovedBy = adminId;
+		user.ApprovalDeadline = null;
+
+		await context.SaveChangesAsync();
+
+		logger.LogInformation(
+			"User {Email} approved by admin {AdminId}",
+			user.Email, adminId);
+
+		return true;
+	}
+
+	public async Task<bool> RevokeUserApprovalAsync(Guid userId, Guid adminId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsApproved = false;
+		user.ApprovedAt = null;
+		user.ApprovedBy = null;
+		// Опционально: дать новый дедлайн
+		user.ApprovalDeadline = DateTime.UtcNow.AddDays(7);
+
+		await context.SaveChangesAsync();
+
+		logger.LogInformation(
+			"User {Email} approval revoked by admin {AdminId}",
+			user.Email, adminId);
+
 		return true;
 	}
 

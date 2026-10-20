@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Enums;
@@ -177,5 +178,37 @@ public partial class AdminController
 		{
 			return StatusCode(500, new { error = ex.Message });
 		}
+	}
+
+	public Task<IActionResult> ApproveUserHandler(Guid userId)
+	=> HandleAsync(async () =>
+	{
+		var adminId = GetCurrentUserId();  // ← из токена
+		var result = await userService.ApproveUserAsync(userId, adminId);
+
+		if (!result)
+			throw new KeyNotFoundException("Пользователь не найден");
+
+		return result;
+	});
+
+	public Task<IActionResult> RevokeUserApprovalHandler(Guid userId)
+	=> HandleAsync(async () =>
+	{
+		var adminId = GetCurrentUserId();
+		var result = await userService.RevokeUserApprovalAsync(userId, adminId);
+
+		if (!result)
+			throw new KeyNotFoundException("Пользователь не найден");
+
+		return result;
+	});
+
+	private Guid GetCurrentUserId()
+	{
+		var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+			throw new UnauthorizedAccessException("User ID not found in token");
+		return userId;
 	}
 }

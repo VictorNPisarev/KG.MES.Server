@@ -128,7 +128,7 @@
 										</td>
 										<td>@(user.LastLoginAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
 										<td>
-											<div class="d-flex align-items-center gap-3">
+											<div class="d-flex align-items-center gap-2">
 												@if (CanBlockUser)
 												{
 													<div class="user-toggle-block" @onclick="() => ToggleUserBlock(user)">
@@ -145,10 +145,26 @@
 												}
 												@if (CanSetRole)
 												{
-													<button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" 
-															style="width: 28px; height: 28px;"
-															@onclick="() => OpenSetRoleModal(user)">
+													<button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center position-relative"
+															style="width: 28px; height: 28px;" 
+															@onclick="() => OpenSetRoleModal(user)"
+															title="@(user.IsApproved ? "Профиль" : "Не подтверждён — нажмите для настройки")">
 														<i class="bi bi-person-gear" style="font-size: 0.9rem;"></i>
+														@if (!user.IsApproved)
+														{
+															<span
+																class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+																title="Не подтверждён">
+																<span class="visually-hidden">Не подтверждён</span>
+															</span>
+														}
+													</button>
+												}
+												@if (CanResetPassword) @* или отдельное право, например CanResetPassword *@
+			{
+													<button class="btn btn-sm btn-outline-warning"
+														@onclick="() => OpenResetPasswordModal(user)">
+														<i class="bi bi-key"></i>
 													</button>
 												}
 											</div>
@@ -288,19 +304,26 @@
 	<div class="modal-backdrop fade show"></div>
 }
 
-@* Модалка назначения роли *@
-@if (showSetRoleModal)
+@* Модалка редактирования профиля *@
+@if (showSetRoleModal && selectedUser != null)
 {
 	<div class="modal fade show" style="display: block;" tabindex="-1">
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h5 class="modal-title">Назначить роль</h5>
+					<h5 class="modal-title">
+						<i class="bi bi-person-gear me-1"></i> Профиль: @selectedUser.Name
+					</h5>
 					<button class="btn-close" @onclick="CloseModals"></button>
 				</div>
 				<div class="modal-body">
 					<div class="mb-3">
-						<label class="form-label">Роль для @selectedUser?.Name</label>
+						<label class="form-label">Email</label>
+						<input class="form-control" value="@selectedUser.Email" readonly />
+					</div>
+
+					<div class="mb-3">
+						<label class="form-label">Роль</label>
 						<select class="form-select" @bind="selectedRole">
 							@foreach (var role in roles)
 							{
@@ -308,10 +331,29 @@
 							}
 						</select>
 					</div>
+
+					<div class="form-check mb-3">
+						<input type="checkbox" class="form-check-input" id="isApproved" @bind="selectedUserIsApproved" />
+						<label class="form-check-label" for="isApproved">Подтверждён</label>
+					</div>
+
+					@if (!selectedUserIsApproved)
+					{
+						<div class="alert alert-warning py-2 small">
+							<i class="bi bi-exclamation-triangle me-1"></i>
+							Пользователь не подтверждён. Доступ будет ограничен.
+						</div>
+					}
 				</div>
 				<div class="modal-footer">
 					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
-					<button class="btn btn-primary" @onclick="ConfirmSetRole">Назначить</button>
+					<button class="btn btn-primary" @onclick="ConfirmUpdateProfile" disabled="@isCreating">
+						@if (isCreating)
+						{
+							<span class="spinner-border spinner-border-sm me-1"></span>
+						}
+						Сохранить
+					</button>
 				</div>
 			</div>
 		</div>
@@ -443,6 +485,47 @@
 				<div class="modal-footer">
 					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
 					<button class="btn btn-primary" @onclick="ConfirmExtend">Продлить</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка сброса пароля *@
+@if (showResetPasswordModal && selectedUser != null)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Сброс пароля</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<p>Установить новый пароль для <strong>@selectedUser.Name</strong> (@selectedUser.Email)?</p>
+
+					@if (!string.IsNullOrEmpty(resetPasswordError))
+					{
+						<div class="alert alert-danger py-2">@resetPasswordError</div>
+					}
+
+					<div class="mb-3">
+						<label class="form-label">Новый пароль</label>
+						<input type="text" class="form-control @(resetPasswordFieldError ? "is-invalid" : "")"
+							@bind="newResetPassword" @bind:after="() => resetPasswordFieldError = false" />
+						<small class="text-muted">Минимум 4 символа</small>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="ConfirmResetPassword" disabled="@isCreating">
+						@if (isCreating)
+						{
+							<span class="spinner-border spinner-border-sm me-1"></span>
+						}
+						Сбросить
+					</button>
 				</div>
 			</div>
 		</div>

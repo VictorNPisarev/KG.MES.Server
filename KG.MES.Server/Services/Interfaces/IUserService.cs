@@ -5,7 +5,6 @@ namespace KG.MES.Shared.Services.Interfaces;
 
 public interface IUserService
 {
-	Task<User?> AuthenticateAsync(string email, string password);
 	Task<bool> SetPasswordAsync(Guid userId, string newPassword);
 	Task<UserDto?> GetUserByEmailAsync(string email);
 	Task<UserDto?> GetUserByIdAsync(Guid userId);
@@ -30,4 +29,8 @@ public interface IUserService
 	Task<List<RoleDto>> GetAllRolesAsync();
 
 	Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
+
+	Task<bool> ApproveUserAsync(Guid userId, Guid adminId);
+	
+	Task<bool> RevokeUserApprovalAsync(Guid userId, Guid adminId);
 }

@@ -44,7 +44,9 @@ public class ServerAuthService : IAuthService
 		// ============================================================
 		// 1. ПРОВЕРЯЕМ ПОЛЬЗОВАТЕЛЯ
 		// ============================================================
-		var user = await userService.AuthenticateAsync(request.Email, request.Password);
+		var user = await context.Users
+			.Include(u => u.Role)
+			.FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
 
 		// 1.1 Пользователь не найден → возможна self-registration
 		if (user == null)
@@ -79,7 +81,28 @@ public class ServerAuthService : IAuthService
 			return LoginResultDto.CreateRegistrationRequired(registrationToken);
 		}
 
-		// 1.2. Пользователь найден, но не подтверждён → проверяю дедлайн
+		// 1.2. пользователь найден, проверяю пароль
+		if (string.IsNullOrEmpty(user.PasswordHash))
+		{
+			logger.LogWarning("User {Email} has no password set", request.Email);
+			return LoginResultDto.CreateFailure("Invalid email or password");
+		}
+
+		var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+		if (result == PasswordVerificationResult.SuccessRehashNeeded)
+		{
+			user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+			await context.SaveChangesAsync();
+		}
+
+		if (result != PasswordVerificationResult.Success && result != PasswordVerificationResult.SuccessRehashNeeded)
+		{
+			logger.LogWarning("Invalid password for {Email}", request.Email);
+			return LoginResultDto.CreateFailure("Invalid email or password");
+		}
+
+		// 1.3. Пользователь найден, но не подтверждён → проверяю дедлайн
 		if (!user.IsApproved)
 		{
 			if (user.ApprovalDeadline == null || user.ApprovalDeadline < DateTime.UtcNow)

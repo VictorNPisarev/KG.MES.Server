@@ -54,6 +54,12 @@ public partial class AdminController : ControllerBase
 	public Task<IActionResult> SetUserRole(Guid userId, [FromBody] SetRoleRequestDto request)
 		=> SetUserRoleHandler(userId, request);
 
+	[HttpPost("users/{userId}/approve")]
+	public Task<IActionResult> ApproveUser(Guid userId) => ApproveUserHandler(userId);
+
+	[HttpPost("users/{userId}/revoke-approval")]
+	public Task<IActionResult> RevokeUserApproval(Guid userId) => RevokeUserApprovalHandler(userId);
+
 	//-------------------------
 	//GET
 	//-------------------------
