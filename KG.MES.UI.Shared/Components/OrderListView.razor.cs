@@ -349,13 +349,24 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 	private async Task CloseOrder()
 	{
+		// Сбрасываю фокус с активного элемента ДО закрытия модалки
+		try
+		{
+			await JSRuntime.InvokeVoidAsync("eval", @"
+				document.activeElement?.blur();
+				document.body.focus();
+			");
+			await Task.Delay(30);
+		}
+		catch { }
+
 		selectedOrder = default;
 		isModalOpen = false;
+		dashboardRef = null;
 
 		if (useSplitView)
 		{
 			// Без перезагрузки списка — просто скрываем панель
-			dashboardRef = null;
 			StateHasChanged();
 		}
 		else

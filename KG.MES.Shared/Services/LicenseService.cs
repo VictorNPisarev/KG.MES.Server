@@ -1,8 +1,13 @@
 // KG.MES.Shared/Services/LicenseFileService.cs
+using System.Net.NetworkInformation;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using System.Management;
+
 
 namespace KG.MES.Shared.Services;
 
@@ -12,6 +17,8 @@ public class LicenseService
 	private const string LicenseFileName = "license.key";
 	private readonly IJSRuntime jsRuntime;
 	private string licenseKey = string.Empty;
+	private string? cachedDeviceId;
+
 
 	public LicenseService(ILogger<LicenseService> logger, IJSRuntime jsRuntime)
 	{
@@ -107,13 +114,97 @@ public class LicenseService
 		}
 	}
 
+	//public async Task<string> GetDeviceIdAsync()
+	//{
+	//	var stored = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "device_id");
+	//	if (!string.IsNullOrEmpty(stored)) return stored;
+
+	//	var deviceId = Guid.NewGuid().ToString("N");
+	//	await jsRuntime.InvokeVoidAsync("localStorage.setItem", "device_id", deviceId);
+	//	return deviceId;
+	//}
+
+	// --- Получение DeviceId ---
 	public async Task<string> GetDeviceIdAsync()
 	{
-		var stored = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "device_id");
-		if (!string.IsNullOrEmpty(stored)) return stored;
+		// 1. Пытаемся получить ID железа (Windows)
+		var hardwareId = GenerateHardwareId();
+		if (!string.IsNullOrEmpty(hardwareId))
+		{
+			// Если железо доступно, всегда используем его (и обновляем кэш в localStorage, если надо)
+			if (cachedDeviceId != hardwareId)
+			{
+				cachedDeviceId = hardwareId;
+				try
+				{
+					await jsRuntime.InvokeVoidAsync("localStorage.setItem", "device_id", hardwareId);
+				}
+				catch { /* игнорируем ошибки JS, если localStorage недоступен */ }
+			}
+			return hardwareId;
+		}
 
-		var deviceId = Guid.NewGuid().ToString("N");
-		await jsRuntime.InvokeVoidAsync("localStorage.setItem", "device_id", deviceId);
-		return deviceId;
+		// 2. Если железо недоступно (не-Windows), берем из localStorage или генерируем
+		if (cachedDeviceId != null) return cachedDeviceId;
+
+		try
+		{
+			var stored = await jsRuntime.InvokeAsync<string>("localStorage.getItem", "device_id");
+			if (!string.IsNullOrEmpty(stored))
+			{
+				cachedDeviceId = stored;
+				return stored;
+			}
+		}
+		catch { }
+
+		var fallbackId = Guid.NewGuid().ToString("N");
+		cachedDeviceId = fallbackId;
+		try
+		{
+			await jsRuntime.InvokeVoidAsync("localStorage.setItem", "device_id", fallbackId);
+		}
+		catch { }
+
+		return fallbackId;
+	}
+
+	private string? GenerateHardwareId()
+	{
+		try
+		{
+			// Получаем CPU ID
+			string cpuId = "";
+			using (var searcher = new ManagementObjectSearcher("SELECT ProcessorId FROM Win32_Processor"))
+			{
+				var cpu = searcher.Get().Cast<ManagementObject>().FirstOrDefault();
+				cpuId = cpu?["ProcessorId"]?.ToString() ?? "";
+			}
+
+			// Получаем MAC-адрес первого активного сетевого интерфейса
+			string mac = "";
+			var networkInterface = NetworkInterface.GetAllNetworkInterfaces()
+				.FirstOrDefault(n => n.OperationalStatus == OperationalStatus.Up
+									 && n.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+			if (networkInterface != null)
+			{
+				mac = networkInterface.GetPhysicalAddress().ToString();
+			}
+
+			// Если не удалось получить ни CPU, ни MAC — возвращаем null
+			if (string.IsNullOrEmpty(cpuId) && string.IsNullOrEmpty(mac))
+				return null;
+
+			// Формируем строку и хешируем
+			var combined = $"{cpuId}:{mac}";
+			using var sha256 = SHA256.Create();
+			var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(combined));
+			return Convert.ToBase64String(bytes);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning(ex, "Failed to generate hardware ID");
+			return null;
+		}
 	}
 }

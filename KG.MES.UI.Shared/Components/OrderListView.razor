@@ -323,7 +323,7 @@
 				</div>
 				<div class="modal-body">
 					<OrderDashboard @ref="dashboardRef" TOrder="TCardItem" LoadItem="LoadItem"
-						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" />
+						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" @key="@GetOrderId(selectedOrder)" />
 				</div>
 			</div>
 		</div>

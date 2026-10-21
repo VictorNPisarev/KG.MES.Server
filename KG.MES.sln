@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Supply", "KG.MES.Sup
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Sales", "KG.MES.Sales\KG.MES.Sales.csproj", "{001C6374-8680-4709-BF7A-126A9E0D1BFF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KG.MES.Sales.Desktop", "KG.MES.Sales.Desktop\KG.MES.Sales.Desktop.csproj", "{E011F3EA-10B1-47B6-BA86-E55C8F069597}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{001C6374-8680-4709-BF7A-126A9E0D1BFF}.Release|x64.Build.0 = Release|Any CPU
 		{001C6374-8680-4709-BF7A-126A9E0D1BFF}.Release|x86.ActiveCfg = Release|Any CPU
 		{001C6374-8680-4709-BF7A-126A9E0D1BFF}.Release|x86.Build.0 = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|x64.Build.0 = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Debug|x86.Build.0 = Debug|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|x64.ActiveCfg = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|x64.Build.0 = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|x86.ActiveCfg = Release|Any CPU
+		{E011F3EA-10B1-47B6-BA86-E55C8F069597}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

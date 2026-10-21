@@ -26,14 +26,16 @@ public class SalesOrderViewModel
 	[Column("Щитовые, м2", Order = 9, DisplayFormat = "F2")]
 	public double? PlateArea { get; set; }
 
-	[Column("Эконом", Order = 10, IsBadge = true)]
+	[Column("Эконом", Order = 10, IsBadge = true, Visible = false)]
 	public bool IsEconom { get; set; }
 
-	[Column("Рекламация", Order = 11, IsBadge = true)]
+	[Column("Рекламация", Order = 11, IsBadge = true, Visible = false)]
 	public bool IsClaim { get; set; }
 
-	[Column("Оплачен, не запущен", Order = 12, IsBadge = true)]
+	[Column("Оплачен, не запущен", Order = 12, IsBadge = true, Visible = false)]
 	public bool IsOnlyPaid { get; set; }
+
+	public bool IsTwoSidePaint { get; set; }
 
 	[Column("Дата запуска", Visible = false, DisplayFormat = "dd.MM.yyyy", Sortable = true)]
 	public DateTime StartDate { get; set; }
@@ -47,15 +49,15 @@ public class SalesOrderViewModel
 
 	public Guid? ManagerId { get; set; }
 
-	[Column("Менеджер", Order = 4, Sortable = true)]
+	[Column("Менеджер", Order = 4, Sortable = true, Visible = false)]
 	public string? ManagerName { get; set; }
 
 	public Guid? CustomerId { get; set; }
 
-	[Column("Контрагент", Order = 5, Sortable = true)]
+	[Column("Контрагент", Order = 5, Sortable = true, Visible = false)]
 	public string? CustomerName { get; set; }
 
-	[Column("Стоимость", Order = 6)]
+	[Column("Стоимость", Order = 6, Visible = false)]
 	public decimal? Amount { get; set; }
 
 	public string? Currency { get; set; }

@@ -16,7 +16,7 @@ using Microsoft.JSInterop;
 
 namespace KG.MES.UI.Shared.Components;
 
-public partial class OrderDashboard<TOrder> : ComponentBase
+public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 {
 	[Parameter] public Guid OrderId { get; set; }
 	[Parameter] public OrderViewSettings Settings { get; set; } = new();
@@ -178,6 +178,7 @@ public partial class OrderDashboard<TOrder> : ComponentBase
 	[JSInvokable]
 	public async Task OnWidgetDrop(string draggedId, string targetId)
 	{
+		Console.WriteLine($"OnWidgetDrop: {draggedId} -> {targetId}");
 		Console.WriteLine($"=== OnWidgetDrop ===");
 		Console.WriteLine($"draggedId: {draggedId}, targetId: {targetId}");
 
@@ -216,11 +217,26 @@ public partial class OrderDashboard<TOrder> : ComponentBase
 		await SaveDashboard();
 		StateHasChanged();
 	}
+
 	public void Dispose()
 	{
+		// 1. Очищаю JS-обработчики, чтобы они не копились и не вешали WebView2
+		try
+		{
+			JSRuntime.InvokeVoidAsync("dashboardDragDrop.dispose");
+		}
+		catch
+		{
+			// Игнорирую ошибки, если JS уже уничтожен
+		}
+
+		// 2. Отписываюсь от событий
 		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
+
+		// 3. Освобождаю DotNetObjectReference
 		dotnetRef?.Dispose();
 	}
+
 	private string GetWidgetClass(WidgetSettings widget)
 	{
 		var classes = new List<string>();
@@ -338,7 +354,7 @@ public partial class OrderDashboard<TOrder> : ComponentBase
 	{
 		if (e.OrderId == OrderId)
 		{
-			await LoadOrder();
+			await InvokeAsync(LoadOrder);
 		}
 	}
 
