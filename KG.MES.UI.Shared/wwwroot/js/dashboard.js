@@ -4,7 +4,12 @@ window.dashboardDragDrop = {
 	_draggedId: null,
 
 	init: function ( dotnetHelper ) {
-		// ЗАЩИТА: Если уже инициализировано, просто обновляем ссылку на dotnetHelper и выходим
+		// ✅ Если это WebView2 — не инициализирую drag-and-drop
+		if ( window.isWebView2 ) {
+			console.log( 'Drag-and-drop disabled in WebView2' );
+			return;
+		}
+
 		if ( this._isInitialized ) {
 			this._dotnetHelper = dotnetHelper;
 			return;
@@ -14,7 +19,6 @@ window.dashboardDragDrop = {
 		this._isInitialized = true;
 		console.log( "Dashboard Drag&Drop initialized" );
 
-		// --- Drag & Drop ---
 		this._onDragStart = this._onDragStart.bind( this );
 		this._onDragEnd = this._onDragEnd.bind( this );
 		this._onDragOver = this._onDragOver.bind( this );
@@ -62,8 +66,7 @@ window.dashboardDragDrop = {
 	_onDragEnd: function () {
 		document.querySelectorAll( '.dragging' ).forEach( el => el.classList.remove( 'dragging' ) );
 		document.querySelectorAll( '.drag-over' ).forEach( el => el.classList.remove( 'drag-over' ) );
-		//if ( document.activeElement ) document.activeElement.blur();
-		//this._draggedId = null;
+		this._draggedId = null; // ✅ ОБЯЗАТЕЛЬНО сбрасываем здесь
 	},
 
 	_onDragOver: function ( e ) {
@@ -88,8 +91,9 @@ window.dashboardDragDrop = {
 		document.querySelectorAll( '.drag-over' ).forEach( el => el.classList.remove( 'drag-over' ) );
 		document.querySelectorAll( '.dragging' ).forEach( el => el.classList.remove( 'dragging' ) );
 
-		//const draggedId = this._draggedId;
-		//this._draggedId = null; // сбрасываем до C#-вызова
+		// ✅ ВОССТАНАВЛИВАЕМ ЭТИ СТРОКИ! Без них код падал с ReferenceError
+		const draggedId = this._draggedId;
+		this._draggedId = null; // сбрасываем до C#-вызова
 
 		if ( !draggedId ) return;
 
@@ -100,8 +104,10 @@ window.dashboardDragDrop = {
 
 		const safeInvoke = ( method, ...args ) => {
 			if ( helper ) {
-				helper.invokeMethodAsync( method, ...args )
-					.catch( err => console.error( `JSInterop error in ${method}:`, err ) );
+				setTimeout( () => {
+					helper.invokeMethodAsync( method, ...args )
+						.catch( err => console.error( `JSInterop error in ${method}:`, err ) );
+				}, 0);
 			}
 		};
 
@@ -121,11 +127,9 @@ window.dashboardDragDrop = {
 	},
 
 	_onMouseUpGlobal: function () {
-		// Сброс при отпускании мыши (если drag отменился)
 		document.querySelectorAll( '.dragging' ).forEach( el => el.classList.remove( 'dragging' ) );
 		document.querySelectorAll( '.drag-over' ).forEach( el => el.classList.remove( 'drag-over' ) );
-		//if ( document.activeElement ) document.activeElement.blur();
-		//this._draggedId = null;
+		this._draggedId = null; // ✅ И здесь на всякий случай
 	},
 
 	_onMouseDownGlobal: function ( e ) {
@@ -138,16 +142,13 @@ window.dashboardDragDrop = {
 		const isRightEdge = e.clientX > rect.right - 10;
 		if ( !isRightEdge ) return;
 
-		// ✅ НЕ e.preventDefault() и НЕ e.stopPropagation() — они блокируют WebView2
-		// Вместо этого — просто перехватываем mousemove/mouseup
-
 		const startX = e.clientX;
 		const startWidth = rect.width;
 		const helper = this._dotnetHelper;
 		const widgetId = widget.dataset.widgetId;
 
 		const onMouseMove = ( me ) => {
-			me.preventDefault(); // ← только здесь, для mousemove
+			me.preventDefault();
 			const newWidth = startWidth + ( me.clientX - startX );
 			widget.style.width = Math.max( 200, newWidth ) + 'px';
 			widget.style.gridColumn = 'auto';
@@ -168,7 +169,7 @@ window.dashboardDragDrop = {
 		document.addEventListener( 'mouseup', onMouseUp );
 		document.addEventListener( 'mouseleave', onMouseUp );
 	},
-	
+
 	getDraggedId: function () {
 		const dragged = document.querySelector( '.dragging' );
 		return dragged ? dragged.dataset.widgetId : '';

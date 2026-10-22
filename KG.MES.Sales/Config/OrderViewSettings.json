@@ -7,5 +7,7 @@
 	"showTrace": true,
 	"editTrace": false,
 	"showSupply": false,
-	"editSupply": false
+	"editSupply": false,
+	"showComment": false,
+	"editComment": false
 }

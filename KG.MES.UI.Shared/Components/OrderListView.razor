@@ -319,11 +319,12 @@
 							}
 						}
 					</h5>
-					<button type="button" class="btn-close" @onclick="() => dashboardRef!.CloseOrder()"></button>
+					@*<button type="button" class="btn-close" @onclick="() => dashboardRef!.CloseOrder()"></button>*@
+					<button type="button" class="btn-close" @onclick=CloseOrder"></button>
 				</div>
 				<div class="modal-body">
 					<OrderDashboard @ref="dashboardRef" TOrder="TCardItem" LoadItem="LoadItem"
-						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" @key="@GetOrderId(selectedOrder)" />
+						OrderId="@GetOrderId(selectedOrder!)" Settings="@Settings" OnClose="CloseOrder" @key="@GetOrderId(selectedOrder!)" />
 				</div>
 			</div>
 		</div>

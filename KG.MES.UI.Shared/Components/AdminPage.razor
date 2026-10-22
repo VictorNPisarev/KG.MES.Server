@@ -64,15 +64,17 @@
 										<td>@license.UsedDevices / @(license.MaxDevices?.ToString() ?? "∞")</td>
 										<td>@(license.ExpiresAt?.ToString("dd.MM.yyyy") ?? "—")</td>
 										<td>
-											<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenViewLicenseModal(license.Id)">
-												<i class="bi bi-eye"></i>
-											</button>
-											@if (CanRevokeLicense && license.IsActive)
-											{
-												<button class="btn btn-sm btn-outline-danger" @onclick="() => OpenRevokeModal(license.Id)">
-													<i class="bi bi-x-octagon"></i>
+											<div class="d-flex align-items-center gap-2">
+												<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenViewLicenseModal(license.Id)">
+													<i class="bi bi-eye"></i>
 												</button>
-											}
+												@if (CanRevokeLicense && license.IsActive)
+												{
+													<button class="btn btn-sm btn-outline-danger" @onclick="() => OpenRevokeModal(license.Id)">
+														<i class="bi bi-x-octagon"></i>
+													</button>
+												}
+											</div>
 										</td>
 									</tr>
 								}

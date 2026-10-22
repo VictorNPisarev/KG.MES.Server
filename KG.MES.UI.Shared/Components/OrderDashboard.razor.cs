@@ -16,7 +16,7 @@ using Microsoft.JSInterop;
 
 namespace KG.MES.UI.Shared.Components;
 
-public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
+public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 {
 	[Parameter] public Guid OrderId { get; set; }
 	[Parameter] public OrderViewSettings Settings { get; set; } = new();
@@ -46,6 +46,8 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		.ToList();
 
 	private string dashboardKey => $"dashboard_{typeof(TOrder).Name}";
+
+	public ISavableWidget[] widgets => new ISavableWidget[] { fieldsWidget!, traceWidget!, suppliesWidget! };
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -98,8 +100,11 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		var widgets = new List<WidgetSettings>
 		{
 			new() { WidgetId = WidgetType.Main, Title = "Основные данные", Order = 0 },
-			new() { WidgetId = WidgetType.Comments, Title = "Примечания", Order = 1 }
+			
 		};
+
+		if (Settings.ShowComment)
+			widgets.Add(new() { WidgetId = WidgetType.Comments, Title = "Примечания", Order = widgets.Count });
 
 		if (Settings.ShowTrace)
 			widgets.Add(new() { WidgetId = WidgetType.Trace, Title = "История прохождения", Order = widgets.Count });
@@ -175,65 +180,23 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		}
 	}
 
-	[JSInvokable]
-	public async Task OnWidgetDrop(string draggedId, string targetId)
+	public async ValueTask DisposeAsync()
 	{
-		Console.WriteLine($"OnWidgetDrop: {draggedId} -> {targetId}");
-		Console.WriteLine($"=== OnWidgetDrop ===");
-		Console.WriteLine($"draggedId: {draggedId}, targetId: {targetId}");
-
-		var dragged = dashboardSettings.Widgets.FirstOrDefault(w => w.WidgetId.ToString() == draggedId);
-		var target = dashboardSettings.Widgets.FirstOrDefault(w => w.WidgetId.ToString() == targetId);
-
-		if (dragged == null) { Console.WriteLine("dragged is null"); return; }
-		if (target == null) { Console.WriteLine("target is null"); return; }
-		if (dragged == target) { Console.WriteLine("dragged == target"); return; }
-
-		var ordered = dashboardSettings.Widgets.OrderBy(w => w.Order).ToList();
-
-		Console.WriteLine($"Before:");
-		for (int i = 0; i < ordered.Count; i++)
-			Console.WriteLine($"  [{i}] {ordered[i].Title} (Order={ordered[i].Order})");
-
-		var draggedIdx = ordered.IndexOf(dragged);
-		var targetIdx = ordered.IndexOf(target);
-
-		Console.WriteLine($"draggedIdx={draggedIdx}, targetIdx={targetIdx}");
-
-		// Вынимаем
-		ordered.RemoveAt(draggedIdx);
-
-		// Вставляем на позицию цели
-		ordered.Insert(targetIdx, dragged);
-
-		// Перенумеровываем
-		for (int i = 0; i < ordered.Count; i++)
-			ordered[i].Order = i;
-
-		Console.WriteLine($"After:");
-		for (int i = 0; i < ordered.Count; i++)
-			Console.WriteLine($"  [{i}] {ordered[i].Title} (Order={ordered[i].Order})");
-
-		await SaveDashboard();
-		StateHasChanged();
-	}
-
-	public void Dispose()
-	{
-		// 1. Очищаю JS-обработчики, чтобы они не копились и не вешали WebView2
+		// 1. Ждем завершения JS-вызова. Это гарантирует, что обработчики событий удалены
+		// ДО того, как мы уничтожим dotnetRef ниже.
 		try
 		{
-			JSRuntime.InvokeVoidAsync("dashboardDragDrop.dispose");
+			await JSRuntime.InvokeVoidAsync("dashboardDragDrop.dispose");
 		}
 		catch
 		{
-			// Игнорирую ошибки, если JS уже уничтожен
+			// Игнорируем ошибки, если соединение уже разорвано
 		}
 
-		// 2. Отписываюсь от событий
+		// 2. Отписываемся от событий
 		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
 
-		// 3. Освобождаю DotNetObjectReference
+		// 3. Освобождаем DotNetObjectReference только ПОСЛЕ успешной очистки JS
 		dotnetRef?.Dispose();
 	}
 
@@ -277,6 +240,8 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		{
 			widget.IsTabbed = true;
 			activeTab = draggedId;
+
+			await Task.Yield();
 			await SaveDashboard();
 			StateHasChanged();
 		}
@@ -292,6 +257,8 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		{
 			widget.IsTabbed = false;
 			activeTab = "main";
+
+			await Task.Yield();
 			await SaveDashboard();
 			StateHasChanged();
 		}
@@ -310,6 +277,51 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		dragged.IsTabbed = false;
 		activeTab = "main";
 
+		await Task.Yield();
+		await SaveDashboard();
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public async Task OnWidgetDrop(string draggedId, string targetId)
+	{
+		Console.WriteLine($"OnWidgetDrop: {draggedId} -> {targetId}");
+		Console.WriteLine($"=== OnWidgetDrop ===");
+		Console.WriteLine($"draggedId: {draggedId}, targetId: {targetId}");
+
+		var dragged = dashboardSettings.Widgets.FirstOrDefault(w => w.WidgetId.ToString() == draggedId);
+		var target = dashboardSettings.Widgets.FirstOrDefault(w => w.WidgetId.ToString() == targetId);
+
+		if (dragged == null) { Console.WriteLine("dragged is null"); return; }
+		if (target == null) { Console.WriteLine("target is null"); return; }
+		if (dragged == target) { Console.WriteLine("dragged == target"); return; }
+
+		var ordered = dashboardSettings.Widgets.OrderBy(w => w.Order).ToList();
+
+		Console.WriteLine($"Before:");
+		for (int i = 0; i < ordered.Count; i++)
+			Console.WriteLine($"  [{i}] {ordered[i].Title} (Order={ordered[i].Order})");
+
+		var draggedIdx = ordered.IndexOf(dragged);
+		var targetIdx = ordered.IndexOf(target);
+
+		Console.WriteLine($"draggedIdx={draggedIdx}, targetIdx={targetIdx}");
+
+		// Вынимаем
+		ordered.RemoveAt(draggedIdx);
+
+		// Вставляем на позицию цели
+		ordered.Insert(targetIdx, dragged);
+
+		// Перенумеровываем
+		for (int i = 0; i < ordered.Count; i++)
+			ordered[i].Order = i;
+
+		Console.WriteLine($"After:");
+		for (int i = 0; i < ordered.Count; i++)
+			Console.WriteLine($"  [{i}] {ordered[i].Title} (Order={ordered[i].Order})");
+
+		await Task.Yield();
 		await SaveDashboard();
 		StateHasChanged();
 	}
@@ -321,6 +333,8 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IDisposable
 		if (widget != null)
 		{
 			widget.CustomWidth = width;
+
+			await Task.Yield();
 			await SaveDashboard();
 			StateHasChanged();
 		}

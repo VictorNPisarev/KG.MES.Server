@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using KG.MES.Shared.Models.Enums;
 
 namespace KG.MES.Server.Tests.Services;
 
@@ -312,5 +313,116 @@ public class AuthServiceTests : IDisposable
 		// Assert
 		result.Success.Should().BeFalse();
 		result.Error.Should().Be("Invalid license key");
+	}
+
+	[Fact]
+	public async Task AuthenticateUserAsync_WithInvalidPassword_ShouldReturnFailure()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var user = new User
+		{
+			Id = userId,
+			Email = "test@example.com",
+			PasswordHash = "hashed_password",
+			IsActive = true,
+			IsApproved = true
+		};
+
+		_context.Users.Add(user);
+		await _context.SaveChangesAsync();
+
+		_passwordHasherMock
+			.Setup(h => h.VerifyHashedPassword(user, "hashed_password", "WrongPassword!"))
+			.Returns(PasswordVerificationResult.Failed);
+
+		var request = new LoginRequestDto
+		{
+			Email = "test@example.com",
+			Password = "WrongPassword!",
+			LicenseKey = "TEST-KEY",
+			DeviceHardwareId = "device-123"
+		};
+
+		// Act
+		var result = await _service.AuthenticateUserAsync(request);
+
+		// Assert
+		result.Success.Should().BeFalse();
+		result.Error.Should().Be("Invalid email or password");
+		result.RegistrationRequired.Should().BeFalse();  // ← важно!
+	}
+
+	[Fact]
+	public async Task AuthenticateUserAsync_WithNonExistentUserAndSingleDevice_ShouldReturnFailure()
+	{
+		// Arrange
+		var request = new LoginRequestDto
+		{
+			Email = "new@example.com",
+			Password = "Qwerty123!",
+			LicenseKey = "SINGLE-DEVICE-KEY",
+			DeviceHardwareId = "device-123"
+		};
+
+		_licenseServiceMock
+			.Setup(l => l.CanSelfRegisterAsync("SINGLE-DEVICE-KEY"))
+			.ReturnsAsync(false);
+
+		// Act
+		var result = await _service.AuthenticateUserAsync(request);
+
+		// Assert
+		result.Success.Should().BeFalse();
+		result.Error.Should().Be("Invalid email or password");
+		result.RegistrationRequired.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task AuthenticateUserAsync_WithNonExistentUserAndMultiDevice_ShouldReturnRegistrationRequired()
+	{
+		// Arrange
+		var licenseId = Guid.NewGuid();
+		var license = new License
+		{
+			Id = licenseId,
+			KeyCode = "MULTI-DEVICE-KEY",
+			LicenseType = LicenseType.MultiDevice,
+			IsActive = true
+		};
+
+		var request = new LoginRequestDto
+		{
+			Email = "new@example.com",
+			Password = "Qwerty123!",
+			LicenseKey = "MULTI-DEVICE-KEY",
+			DeviceHardwareId = "device-123",
+			DeviceName = "Test",
+			ApplicationCode = "Masters"
+		};
+
+		_licenseServiceMock
+			.Setup(l => l.CanSelfRegisterAsync("MULTI-DEVICE-KEY"))
+			.ReturnsAsync(true);
+
+		_licenseServiceMock
+			.Setup(l => l.GetByKeyAsync("MULTI-DEVICE-KEY"))
+			.ReturnsAsync(license);
+
+		_jwtServiceMock
+			.Setup(j => j.GenerateRegistrationToken(
+				licenseId,
+				"new@example.com",
+				"Masters",
+				"device-123",
+				"Test"))
+			.Returns("registration-token-xyz");
+
+		// Act
+		var result = await _service.AuthenticateUserAsync(request);
+
+		// Assert
+		result.Success.Should().BeFalse();
+		result.RegistrationRequired.Should().BeTrue();
 	}
 }

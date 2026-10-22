@@ -31,7 +31,7 @@ public partial class AdminController
 			//if (request.LicenseType == LicenseType.MultiDevice && request.MaxDevices.HasValue && request.MaxDevices < 1)
 			//	throw new ArgumentException("MaxDevices должно быть >= 1");
 
-			return await licenseService.CreateAsync();//.CreateLicenseAsync(request);
+			return await licenseService.CreateAsync(type: request.LicenseType, expiresDays: request.ExpiresDays, notes: request.Notes);//.CreateLicenseAsync(request);
 		});
 
 	public Task<IActionResult> RevokeLicenseHandler(Guid licenseId, RevokeLicenseRequestDto? request)

@@ -11,6 +11,7 @@ using KG.MES.Shared.Events;
 using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Constants;
 using System.Reflection;
+using KG.MES.UI.Shared.Interfaces;
 
 namespace KG.MES.UI.Shared.Components;
 public partial class OrderListView<TListItem, TCardItem> : ComponentBase
@@ -350,15 +351,32 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private async Task CloseOrder()
 	{
 		// Сбрасываю фокус с активного элемента ДО закрытия модалки
-		try
-		{
-			await JSRuntime.InvokeVoidAsync("eval", @"
-				document.activeElement?.blur();
-				document.body.focus();
-			");
-			await Task.Delay(30);
-		}
-		catch { }
+		//try
+		//{
+		//	await JSRuntime.InvokeVoidAsync("eval", @"
+		//		document.activeElement?.blur();
+		//		document.body.focus();
+		//	");
+		//	await Task.Delay(30);
+		//}
+		//catch { }
+
+		//if (dashboardRef != null)
+		//{
+		//	var hasChanges = dashboardRef.widgets.Any(w => w?.HasUnsavedChanges() == true);
+
+		//	if (hasChanges)
+		//	{
+		//		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Есть несохранённые изменения. Сохранить?");
+		//		Console.WriteLine($"Confirmed: {confirmed}");
+		//		if (confirmed)
+		//		{
+		//			foreach (var w in dashboardRef.widgets)
+		//				if (w != null)
+		//					await w.SaveAllAsync();
+		//		}
+		//	}
+		//}
 
 		selectedOrder = default;
 		isModalOpen = false;
