@@ -1,13 +1,21 @@
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using KG.MES.Shared.Data;
-using KG.MES.Shared.Extensions;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using KG.MES.Server.Services;
+using KG.MES.Server.Services.Interfaces;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -22,9 +30,38 @@ DateTimeExtensions.Initialize(builder.Configuration);
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ISupplyService, SupplyService>();
+builder.Services.AddScoped<ISupplyService, ServerSupplyService>();
 builder.Services.AddScoped<IWorkplaceService, WorkplaceService>();
 builder.Services.AddScoped<OrderAttributeService>();
+builder.Services.AddScoped<LeadTimeCalculationService>();
+builder.Services.AddScoped<IUserDeviceService, UserDeviceService>();
+builder.Services.AddScoped<ILicenseService, ServerLicenseService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthService, ServerAuthService>();
+
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "KG.MES.Apps";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = true,
+			ValidIssuer = jwtIssuer,
+			ValidateAudience = true,
+			ValidAudience = jwtAudience,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+			ValidateLifetime = true,
+			ClockSkew = TimeSpan.Zero, // ← Важно: не даем запас по времени
+			RoleClaimType = ClaimTypes.Role
+		};
+	});
+
+builder.Services.AddAuthorization();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)
 builder.Services.AddControllers()
@@ -35,7 +72,6 @@ builder.Services.AddControllers()
 		options.JsonSerializerOptions.Converters.Add(new TotalsDtoConverter());
 	});
 
-builder.Services.AddScoped<LeadTimeCalculationService>(); 
 builder.Services.AddHttpClient();
 
 // Добавляем SignalR
@@ -67,9 +103,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-
-app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("AllowAll");
 
 if (app.Environment.IsDevelopment())
 {

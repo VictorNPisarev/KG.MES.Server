@@ -2,24 +2,40 @@ using KG.MES.Shared.Data;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace KG.MES.Shared.Services;
 
 public class UserService : IUserService
 {
-	private readonly AppDbContext _context;
-	private readonly ILogger<UserService> _logger;
+	private readonly AppDbContext context;
+	private readonly IPasswordHasher<User> passwordHasher;
+	private readonly ILogger<UserService> logger;
 
-	public UserService(AppDbContext context, ILogger<UserService> logger)
+	public UserService(AppDbContext context, IPasswordHasher<User> passwordHasher, ILogger<UserService> logger)
 	{
-		_context = context;
-		_logger = logger;
+		this.context = context;
+		this.passwordHasher = passwordHasher;
+		this.logger = logger;
+	}
+
+	public async Task<bool> SetPasswordAsync(Guid userId, string newPassword)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
+		await context.SaveChangesAsync();
+
+		return true;
 	}
 
 	public async Task<UserDto?> GetUserByEmailAsync(string email)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Email == email);
 
@@ -40,7 +56,7 @@ public class UserService : IUserService
 
 	public async Task<UserDto?> GetUserByIdAsync(Guid userId)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -61,7 +77,7 @@ public class UserService : IUserService
 
 	public async Task<List<UserWorkplaceDto>> GetUserWorkplacesAsync(Guid userId)
 	{
-		var user = await _context.Users
+		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -72,16 +88,16 @@ public class UserService : IUserService
 
 		if (user.Role?.Level >= 40)
 		{
-			query = _context.Workplaces.Where(w => w.IsWorkplace);
+			query = context.Workplaces.Where(w => w.IsWorkplace);
 		}
 		else
 		{
-			var workplaceIds = await _context.UserWorkplaces
+			var workplaceIds = await context.UserWorkplaces
 				.Where(uw => uw.UserId == userId)
 				.Select(uw => uw.WorkplaceId)
 				.ToListAsync();
 
-			query = _context.Workplaces.Where(w => workplaceIds.Contains(w.Id) && w.IsWorkplace);
+			query = context.Workplaces.Where(w => workplaceIds.Contains(w.Id) && w.IsWorkplace);
 		}
 
 		return await query
@@ -94,5 +110,353 @@ public class UserService : IUserService
 				IsWorkplace = w.IsWorkplace
 			})
 			.ToListAsync();
+	}
+
+	/// <summary>
+	/// Получить список всех пользователей с пагинацией и поиском
+	/// </summary>
+	public async Task<PaginatedResponse<UserAdminListItemDto>> GetAllUsersAsync(
+		int page,
+		int limit,
+		string? search)
+	{
+		var query = context.Users
+			.Include(u => u.Role)
+			.AsQueryable();
+
+		// Поиск по email или имени
+		if (!string.IsNullOrEmpty(search))
+		{
+			query = query.Where(u =>
+				EF.Functions.ILike(u.Email, $"%{search}%") ||
+				(u.Name != null && EF.Functions.ILike(u.Name, $"%{search}%")));
+		}
+
+		var total = await query.CountAsync();
+
+		var items = await query
+			.OrderBy(u => u.Email)
+			.Skip((page - 1) * limit)
+			.Take(limit)
+			.Select(u => new UserAdminListItemDto
+			{
+				Id = u.Id,
+				Email = u.Email,
+				Name = u.Name,
+				RoleName = u.Role != null ? u.Role.Name : null,
+				IsActive = u.IsActive,
+				IsPasswordSet = u.IsPasswordSet,
+				CreatedAt = u.CreatedAt,
+				IsApproved = u.IsApproved,
+				ApprovalDeadline = u.ApprovalDeadline//,
+				//LastLoginAt = u.LastLoginAt
+			})
+			.ToListAsync();
+
+		return new PaginatedResponse<UserAdminListItemDto>
+		{
+			Data = items,
+			Pagination = new PaginationInfo
+			{
+				Page = page,
+				Limit = limit,
+				Total = total,
+				Pages = (int)Math.Ceiling(total / (double)limit)
+			}
+		};
+	}
+
+	/// <summary>
+	/// Получить детальную информацию о пользователе
+	/// </summary>
+	public async Task<UserAdminDetailsDto?> GetUserDetailsAsync(Guid userId)
+	{
+		var user = await context.Users
+			.Include(u => u.Role)
+			.Include(u => u.UserWorkplaces!)
+				.ThenInclude(uw => uw.Workplace)
+			.FirstOrDefaultAsync(u => u.Id == userId);
+
+		if (user == null)
+			return null;
+
+		return new UserAdminDetailsDto
+		{
+			Id = user.Id,
+			Email = user.Email,
+			Name = user.Name,
+			RoleName = user.Role?.Name,
+			RoleLevel = user.Role?.Level,
+			IsActive = user.IsActive,
+			IsPasswordSet = user.IsPasswordSet,
+			CreatedAt = user.CreatedAt,
+			IsApproved = user.IsApproved,
+			ApprovalDeadline = user.ApprovalDeadline,
+			//LastLoginAt = user.LastLoginAt,
+			Workplaces = user.UserWorkplaces?
+				.Select(uw => new UserWorkplaceDto
+				{
+					Id = uw.WorkplaceId,
+					Name = uw.Workplace != null ? uw.Workplace.Name : string.Empty
+				})
+				.ToList() ?? new()
+		};
+	}
+
+	/// <summary>
+	/// Создать нового пользователя
+	/// </summary>
+	public async Task<CreateUserResultDto> CreateUserAsync(CreateUserRequestDto request)
+	{
+		// Проверяем, не существует ли уже пользователь с таким email
+		var existingUser = await context.Users
+			.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+		if (existingUser != null)
+		{
+			return new CreateUserResultDto
+			{
+				Success = false,
+				Error = "Пользователь с таким email уже существует"
+			};
+		}
+
+		// Находим роль
+		Role? role = null;
+		if (!string.IsNullOrEmpty(request.RoleName))
+		{
+			role = await context.Roles
+				.FirstOrDefaultAsync(r => r.Name == request.RoleName);
+		}
+
+		// Если роль не найдена — используем дефолтную
+		if (role == null)
+		{
+			role = await context.Roles
+				.FirstOrDefaultAsync(r => r.Name == "User")
+				?? new Role { Id = Guid.NewGuid(), Name = "User", Level = 10 };
+		}
+
+		var user = new User
+		{
+			Id = Guid.NewGuid(),
+			Email = request.Email,
+			Name = request.Name ?? request.Email,
+			RoleId = role.Id,
+			IsActive = true,
+			IsPasswordSet = false,
+			CreatedAt = DateTime.UtcNow
+		};
+
+		// Если пароль передан — хешируем
+		if (!string.IsNullOrEmpty(request.Password))
+		{
+			user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+			user.IsPasswordSet = true;
+		}
+
+		context.Users.Add(user);
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("User {Email} created by admin", user.Email);
+
+		return new CreateUserResultDto
+		{
+			Success = true,
+			User = new UserAdminListItemDto
+			{
+				Id = user.Id,
+				Email = user.Email,
+				Name = user.Name,
+				RoleName = role.Name,
+				IsActive = user.IsActive,
+				IsPasswordSet = user.IsPasswordSet,
+				CreatedAt = user.CreatedAt,
+				IsApproved = user.IsApproved,
+				ApprovalDeadline = user.ApprovalDeadline
+			}
+		};
+	}
+
+	/// <summary>
+	/// Заблокировать пользователя
+	/// </summary>
+	public async Task<bool> BlockUserAsync(Guid userId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsActive = false;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("User {Email} blocked by admin", user.Email);
+		return true;
+	}
+
+	/// <summary>
+	/// Разблокировать пользователя
+	/// </summary>
+	public async Task<bool> UnblockUserAsync(Guid userId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsActive = true;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("User {Email} unblocked by admin", user.Email);
+		return true;
+	}
+
+	/// <summary>
+	/// Сбросить пароль пользователя (генерирует новый)
+	/// </summary>
+	public async Task<ResetPasswordResultDto> ResetPasswordAsync(Guid userId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+		{
+			return new ResetPasswordResultDto
+			{
+				Success = false,
+				Error = "Пользователь не найден"
+			};
+		}
+
+		var newPassword = GenerateRandomPassword();
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("Password reset for user {Email}", user.Email);
+
+		return new ResetPasswordResultDto
+		{
+			Success = true,
+			NewPassword = newPassword
+		};
+	}
+
+	/// <summary>
+	/// все доступные роли
+	/// </summary>
+	/// <returns></returns>
+	public async Task<List<RoleDto>> GetAllRolesAsync()
+	{
+		return await context.Roles
+			.OrderBy(r => r.Level)
+			.Select(r => new RoleDto
+			{
+				Id = r.Id,
+				Name = r.Name,
+				Level = r.Level
+			})
+			.ToListAsync();
+	}
+
+	/// <summary>
+	/// Назначить роль пользователю
+	/// </summary>
+	public async Task<bool> SetUserRoleAsync(Guid userId, string roleName)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		var role = await context.Roles
+			.FirstOrDefaultAsync(r => r.Name == roleName);
+		if (role == null)
+			return false;
+
+		user.RoleId = role.Id;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("User {Email} role changed to {Role}", user.Email, roleName);
+		return true;
+	}
+
+	public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+			return false;
+
+		var verify = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+		if (verify == PasswordVerificationResult.Failed)
+			return false;
+
+		user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
+		user.IsPasswordSet = true;
+		await context.SaveChangesAsync();
+
+		logger.LogInformation("Password changed for user {Email}", user.Email);
+		return true;
+	}
+
+	public async Task<bool> ApproveUserAsync(Guid userId, Guid adminId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsApproved = true;
+		user.ApprovedAt = DateTime.UtcNow;
+		user.ApprovedBy = adminId;
+		user.ApprovalDeadline = null;
+
+		await context.SaveChangesAsync();
+
+		logger.LogInformation(
+			"User {Email} approved by admin {AdminId}",
+			user.Email, adminId);
+
+		return true;
+	}
+
+	public async Task<bool> RevokeUserApprovalAsync(Guid userId, Guid adminId)
+	{
+		var user = await context.Users.FindAsync(userId);
+		if (user == null)
+			return false;
+
+		user.IsApproved = false;
+		user.ApprovedAt = null;
+		user.ApprovedBy = null;
+		// Опционально: дать новый дедлайн
+		user.ApprovalDeadline = DateTime.UtcNow.AddDays(7);
+
+		await context.SaveChangesAsync();
+
+		logger.LogInformation(
+			"User {Email} approval revoked by admin {AdminId}",
+			user.Email, adminId);
+
+		return true;
+	}
+
+	/// <summary>
+	/// Генерация случайного пароля
+	/// </summary>
+	private static string GenerateRandomPassword()
+	{
+		const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
+		var random = Random.Shared;
+		var length = 12;
+		var password = new char[length];
+
+		// Гарантируем хотя бы одну цифру, одну букву и один спецсимвол
+		password[0] = chars[random.Next(26)]; // буква
+		password[1] = chars[26 + random.Next(8)]; // цифра (первые 8 символов после букв)
+		password[2] = chars[34 + random.Next(4)]; // спецсимвол
+
+		for (int i = 3; i < length; i++)
+		{
+			password[i] = chars[random.Next(chars.Length)];
+		}
+
+		// Перемешиваем
+		return new string(password.OrderBy(_ => random.Next()).ToArray());
 	}
 }

@@ -1,0 +1,311 @@
+/* Custom styles */
+.card {
+	border: none;
+	border-radius: 0.5rem;
+}
+
+.list-group-item {
+	border: 1px solid #dee2e6;
+	transition: all 0.2s;
+}
+
+.list-group-item:hover {
+	background-color: #f8f9fa;
+}
+
+.list-group-item.active {
+	background-color: #0d6efd;
+	border-color: #0d6efd;
+}
+
+.table th {
+	border-top: none;
+	font-weight: 600;
+}
+
+.alert {
+	border: none;
+	border-radius: 0.5rem;
+}
+
+.btn {
+	border-radius: 0.375rem;
+}
+
+/* Стили для раскрывающихся материалов в таблице */
+.materials-container {
+	border-left: 4px solid #0d6efd;
+	border-radius: 0 0 8px 8px;
+}
+
+.item-row {
+	transition: background-color 0.2s ease;
+}
+
+.item-row:hover {
+	background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+.materials-row {
+	background-color: #f8f9fa !important;
+}
+
+.technical-data-compact .card {
+	margin-bottom: 0.5rem;
+}
+
+.technical-data-compact .card-header {
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+.technical-data-compact .card-body {
+	font-size: 0.8rem;
+}
+
+/* Улучшаем отображение в таблице */
+.table td {
+	vertical-align: middle;
+}
+
+/* Компактное отображение материалов */
+.text-truncate {
+	max-width: 150px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Плавная анимация для кнопок */
+.btn {
+	transition: all 0.2s ease-in-out;
+}
+/* Стили для материалов под товарами */
+.table-light {
+	background-color: #f8f9fa !important;
+}
+
+.technical-data {
+	border-left: 4px solid #0d6efd;
+	padding-left: 1rem;
+}
+
+.technical-data h6 {
+	color: #495057;
+	border-bottom: 1px solid #dee2e6;
+	padding-bottom: 0.5rem;
+}
+
+.technical-data .table-sm {
+	font-size: 0.875rem;
+}
+
+.technical-data .table-sm th {
+	background-color: #e9ecef;
+}
+
+/* Мягкий фон для товаров - увеличиваем специфичность */
+table.table tbody tr.product-row {
+	background-color: #fcddaf !important;
+}
+
+/* Легкий hover эффект */
+table.table tbody tr.product-row:hover {
+	background-color: #e9ecef !important;
+}
+
+/* Белый фон для материалов для контраста */
+table.table tbody tr.materials-row {
+	background-color: white !important;
+}
+
+/* === Авто-растягивание textarea === */
+textarea.auto-grow
+{
+	field-sizing: content;
+	/* Современный способ (Chrome 123+) */
+	min-height: 38px;
+	overflow: hidden;
+	resize: none;
+	transition: height 0.1s ease;
+}
+
+/* Fallback для старых браузеров */
+@supports not (field-sizing: content)
+{
+	textarea.auto-grow
+	{
+		min-height: 38px;
+		overflow-y: auto;
+		resize: vertical;
+	}
+}
+
+/* === Стили для комментария === */
+.comment-textarea
+{
+	transition: height 0.25s ease, min-height 0.25s ease, max-height 0.25s ease;
+	cursor: pointer;
+}
+
+.comment-textarea.collapsed
+{
+	height: 31px !important;
+	min-height: 31px;
+	resize: none;
+	max-height: 31px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.comment-textarea.expanded
+{
+	white-space: normal;
+	word-wrap: break-word;
+	height: auto !important;
+	min-height: 100px;
+	resize: vertical;
+	cursor: text;
+}
+
+
+.visually-hidden
+{
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	padding: 0 !important;
+	margin: -1px !important;
+	overflow: hidden !important;
+	clip: rect(0, 0, 0, 0) !important;
+	white-space: nowrap !important;
+	border: 0 !important;
+}
+
+h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, p:focus, div:focus, span:focus
+{
+	outline: none;
+}
+
+#blazor-error-ui
+{
+	display: none !important;
+}
+
+/* === Градиент для иконки === */
+.icon-double-paint-warm
+{
+	background: linear-gradient(90deg, #ff7e5f 0%, #ff7e5f 45%, #a8e063 55%, #a8e063 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* Розово-голубой */
+.icon-double-paint-cool
+{
+	background: linear-gradient(90deg, #f857a6 0%, #f857a6 45%, #4facfe 55%, #4facfe 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* Фиолетово-золотой */
+.icon-double-paint-royal
+{
+	background: linear-gradient(90deg, #8e2de2 0%, #8e2de2 45%, #ffd700 55%, #ffd700 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* Сине-красный (классика) */
+.icon-double-paint-classic
+{
+	background: linear-gradient(90deg, #0d6efd 0%, #0d6efd 45%, #dc3545 55%, #dc3545 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/*с анимацией*/
+.icon-double-paint-animation
+{
+	background: linear-gradient(90deg, #ff6b6b 0%, #ff6b6b 45%, #4ecdc4 55%, #4ecdc4 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	display: inline-block;
+	transition: all 0.3s ease;
+}
+
+.icon-double-paint:hover
+{
+	transform: scale(1.1);
+	filter: brightness(1.1);
+}
+
+/* === Sticky кнопки в правом верхнем углу === */
+.sticky-buttons-container
+{
+	position: sticky;
+	top: 7px;
+	z-index: 1000;
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 10px;
+	padding: 5px 0;
+	transition: all 0.3s ease;
+}
+
+/* Легкая тень когда кнопки "прилипают" */
+.sticky-buttons-container .btn-group
+{
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	border-radius: 0.375rem;
+	transition: box-shadow 0.3s ease;
+}
+
+.sticky-buttons-box
+{
+	position: sticky;
+	top: 89.2px;
+	z-index: 1000;
+	display: flex;
+	padding: 5px 0;
+	transition: all 0.3s ease;
+}
+
+/* Убираем тень когда кнопки в исходном положении */
+@media (min-height: 100vh)
+{
+	.sticky-buttons-container .btn-group
+	{
+		box-shadow: none;
+	}
+}
+
+.sticky-selected
+{
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+	border-left: 4px solid #0d6efd !important;
+	transition: box-shadow 0.3s ease;
+}
+
+/* Растягиваем карточки на всю высоту */
+.card.h-100
+{
+	height: 100%;
+}
+
+/* Контейнер списка заказов с прокруткой */
+.list-group-scrollable
+{
+	flex-grow: 1;
+	overflow-y: auto;
+	max-height: calc(100vh - 250px); /* Ограничение по высоте экрана */
+}

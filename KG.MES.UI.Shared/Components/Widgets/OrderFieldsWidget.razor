@@ -1,0 +1,49 @@
+@typeparam TOrder
+@using KG.MES.Shared.Models.Config
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Helpers
+@using Microsoft.JSInterop
+
+<div class="row">
+	@if (isSettingsOpen)
+	{
+		<div class="col-12 mb-3 bg-light rounded p-3">
+			<h6>Настройка полей</h6>
+			@foreach (var setting in fieldSettings.OrderBy(s => s.Order))
+			{
+				var info = fieldInfos.FirstOrDefault(i => i.PropertyName == setting.PropertyName);
+				var title = info?.Title ?? setting.PropertyName;
+				<div class="d-flex align-items-center gap-2 py-1">
+					<button class="btn btn-sm btn-link p-0" @onclick="() => MoveField(setting.PropertyName, -1)">↑</button>
+					<button class="btn btn-sm btn-link p-0" @onclick="() => MoveField(setting.PropertyName, 1)">↓</button>
+					<div class="form-check mb-0">
+						<input type="checkbox" class="form-check-input"
+							   checked="@setting.Visible"
+							   @onchange="(e) => ToggleField(setting.PropertyName, (bool)(e.Value ?? false))" />
+						<label class="form-check-label">@title</label>
+					</div>
+				</div>
+			}
+			<button class="btn btn-sm btn-outline-primary mt-2" @onclick="ResetFields">Сбросить</button>
+		</div>
+	}
+	@foreach (var field in BuildVisibleFields())
+	{
+		<div class="@GetFieldClass(field.Setting.Width)">
+			<label class="text-muted small">@field.Info.Title</label>
+			<div class="fw-bold">
+				@if (field.Info.IsBadge && Order != null)
+				{
+					var value = Order.GetType().GetProperty(field.Info.PropertyName)?.GetValue(Order);
+					<span class="badge @BadgeHelper.GetBadgeClass(value?.ToString())">
+						@BadgeHelper.GetFormattedBadgeValue(Order, field.Info)
+					</span>
+				}
+				else if (Order != null)
+				{
+					@ColumnHelper.GetFormattedValue(Order, field.Info)
+				}
+			</div>
+		</div>
+	}
+</div>

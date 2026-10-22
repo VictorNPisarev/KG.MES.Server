@@ -60,6 +60,137 @@ namespace KG.MES.Shared.Migrations
                     b.ToTable("comments");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Inn")
+                        .HasColumnType("text")
+                        .HasColumnName("inn");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("customers");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.Device", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DeviceHardwareId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("device_hardware_id");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("device_name");
+
+                    b.Property<string>("LastIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("last_ip");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<Guid>("LicenseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("license_id");
+
+                    b.Property<DateTime>("RegisteredAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("registered_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceHardwareId")
+                        .IsUnique();
+
+                    b.HasIndex("LicenseId")
+                        .IsUnique();
+
+                    b.ToTable("devices");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.License", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("KeyCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("key_code");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KeyCode")
+                        .IsUnique();
+
+                    b.ToTable("licenses");
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.OperationLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -122,6 +253,10 @@ namespace KG.MES.Shared.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int?>("ApprovedLeadDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("approved_lead_days");
+
                     b.PrimitiveCollection<List<Guid>>("CommentIds")
                         .HasColumnType("uuid[]")
                         .HasColumnName("comment_ids");
@@ -162,6 +297,18 @@ namespace KG.MES.Shared.Migrations
                     b.Property<DateTime?>("ReadyDate")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("ready_date");
+
+                    b.Property<DateTime?>("RtmDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("rtm_date");
+
+                    b.Property<DateTime?>("So8Date")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("so8_date");
+
+                    b.Property<int?>("UnapprovedLeadDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("unapproved_lead_days");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp without time zone")
@@ -238,6 +385,57 @@ namespace KG.MES.Shared.Migrations
                     b.HasIndex("WorkplaceId");
 
                     b.ToTable("order_blocks");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.OrderCommercial", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("text")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("CustomerName")
+                        .HasColumnType("text")
+                        .HasColumnName("customer_name");
+
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("manager_id");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ManagerId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("order_commercial");
                 });
 
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.OrderFootprint", b =>
@@ -399,6 +597,60 @@ namespace KG.MES.Shared.Migrations
                     b.ToTable("production_orders");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_revoked");
+
+                    b.Property<Guid>("LicenseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("license_id");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("token");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("LicenseId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("refresh_tokens", (string)null);
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -489,9 +741,6 @@ namespace KG.MES.Shared.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("expected_date");
 
-                    b.Property<Guid?>("OrderId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("OrderSupplyId")
                         .HasColumnType("uuid")
                         .HasColumnName("order_supply_id");
@@ -575,6 +824,14 @@ namespace KG.MES.Shared.Migrations
                         .HasColumnType("text")
                         .HasColumnName("email");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsPasswordSet")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_password_set");
+
                     b.Property<string>("LegacyId")
                         .HasColumnType("text")
                         .HasColumnName("legacy_id");
@@ -583,6 +840,10 @@ namespace KG.MES.Shared.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.Property<Guid?>("RoleId")
                         .HasColumnType("uuid")
@@ -602,6 +863,40 @@ namespace KG.MES.Shared.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.UserDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("UserId", "DeviceId")
+                        .IsUnique();
+
+                    b.ToTable("user_devices");
                 });
 
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.UserWorkplace", b =>
@@ -643,6 +938,10 @@ namespace KG.MES.Shared.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("text")
+                        .HasColumnName("code");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone")
@@ -738,6 +1037,17 @@ namespace KG.MES.Shared.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.Device", b =>
+                {
+                    b.HasOne("KG.MES.Shared.Models.Entities.License", "License")
+                        .WithOne("Device")
+                        .HasForeignKey("KG.MES.Shared.Models.Entities.Device", "LicenseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("License");
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.OperationLog", b =>
                 {
                     b.HasOne("KG.MES.Shared.Models.Entities.ProductionOrder", "ProductionOrder")
@@ -797,6 +1107,30 @@ namespace KG.MES.Shared.Migrations
                     b.Navigation("Workplace");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.OrderCommercial", b =>
+                {
+                    b.HasOne("KG.MES.Shared.Models.Entities.Customer", "Customer")
+                        .WithMany("OrderCommercials")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("KG.MES.Shared.Models.Entities.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerId");
+
+                    b.HasOne("KG.MES.Shared.Models.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Manager");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.OrderFootprint", b =>
                 {
                     b.HasOne("KG.MES.Shared.Models.Entities.ProductionOrder", "ProductionOrder")
@@ -845,6 +1179,33 @@ namespace KG.MES.Shared.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("KG.MES.Shared.Models.Entities.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KG.MES.Shared.Models.Entities.License", "License")
+                        .WithMany()
+                        .HasForeignKey("LicenseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KG.MES.Shared.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+
+                    b.Navigation("License");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.SupplyItem", b =>
                 {
                     b.HasOne("KG.MES.Shared.Models.Entities.Comment", "CommentEntity")
@@ -886,6 +1247,25 @@ namespace KG.MES.Shared.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.UserDevice", b =>
+                {
+                    b.HasOne("KG.MES.Shared.Models.Entities.Device", "Device")
+                        .WithMany("UserDevices")
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KG.MES.Shared.Models.Entities.User", "User")
+                        .WithMany("UserDevices")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.UserWorkplace", b =>
@@ -936,6 +1316,21 @@ namespace KG.MES.Shared.Migrations
                     b.Navigation("ToWorkplace");
                 });
 
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.Customer", b =>
+                {
+                    b.Navigation("OrderCommercials");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.Device", b =>
+                {
+                    b.Navigation("UserDevices");
+                });
+
+            modelBuilder.Entity("KG.MES.Shared.Models.Entities.License", b =>
+                {
+                    b.Navigation("Device");
+                });
+
             modelBuilder.Entity("KG.MES.Shared.Models.Entities.Order", b =>
                 {
                     b.Navigation("OrderSupply");
@@ -979,6 +1374,8 @@ namespace KG.MES.Shared.Migrations
                     b.Navigation("OperationLogs");
 
                     b.Navigation("OrderBlocks");
+
+                    b.Navigation("UserDevices");
 
                     b.Navigation("UserWorkplaces");
                 });

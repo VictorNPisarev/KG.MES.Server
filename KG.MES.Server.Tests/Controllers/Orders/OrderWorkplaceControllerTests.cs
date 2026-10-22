@@ -13,17 +13,15 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using KG.MES.Server.Tests.Helpers;
 
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrdersWorkplaceControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
-
-	public OrdersWorkplaceControllerTests(WebApplicationFactory<Program> factory)
+	public OrdersWorkplaceControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Theory]
@@ -32,15 +30,13 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetActiveAndPendingOrders_ShouldReturnCorrectFormat(string endpointTemplate)
 	{
 		// Arrange
-		var dbName = $"TestDb_InWork_{Guid.NewGuid():N}";
-		var customFactory = SetupTestFactory(dbName); 
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w =>
 			{
 				w.Id = workplaceId;
@@ -69,8 +65,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 				fp.ProductionOrderId = productionOrderId;
 				fp.WorkplaceId = workplaceId;
 				fp.Status = "pending";
-			})
-			.Build(customFactory.Services);
+			}));
 
 		// Act
 		var url = endpointTemplate.Contains("{0}")
@@ -85,14 +80,11 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 
 		var response = await client.GetAsync(url);
 
-		///var errorContent = await response.Content.ReadAsStringAsync();
-		//Console.WriteLine($"Error: {errorContent}");
-
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -123,9 +115,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetActiveOrders_ShouldReturnOnlyActiveOrders(string endpointTemplate)
 	{
 		// Arrange
-		var dbName = $"TestDb_Active_{Guid.NewGuid():N}";
-		var customFactory = SetupTestFactory(dbName);
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var orderId1 = Guid.NewGuid();
@@ -133,15 +123,14 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		var productionOrderId1 = Guid.NewGuid();
 		var productionOrderId2 = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Покраска"; w.IsWorkplace = true; })
 			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "1001"; o.WindowArea = 10.5m; })
 			.WithProductionOrder(po => { po.Id = productionOrderId1; po.OrderId = orderId1; po.CurrentWorkplaceId = workplaceId; })
 			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId1; fp.WorkplaceId = workplaceId; fp.Status = "active"; })
 			.WithOrder(o => { o.Id = orderId2; o.OrderNumber = "1002"; o.WindowArea = 20.0m; })
 			.WithProductionOrder(po => { po.Id = productionOrderId2; po.OrderId = orderId2; po.CurrentWorkplaceId = workplaceId; })
-			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId2; fp.WorkplaceId = workplaceId; fp.Status = "pending"; }) // Не active!
-			.Build(customFactory.Services);
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId2; fp.WorkplaceId = workplaceId; fp.Status = "pending"; })); // Не active!
 
 		// Act
 		var url = endpointTemplate.Contains("{0}")
@@ -154,7 +143,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -172,9 +161,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetPendingOrders_ShouldReturnOnlyPendingOrders(string endpointTemplate)
 	{
 		// Arrange
-		var dbName = $"TestDb_Pending_{Guid.NewGuid():N}";
-		var customFactory = SetupTestFactory(dbName);
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var noneId = Guid.NewGuid();
 		var previousWorkplaceId = Guid.NewGuid();
@@ -184,14 +171,14 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		var productionOrderId1 = Guid.NewGuid();
 		var productionOrderId2 = Guid.NewGuid();
 
-		new TestDataBuilder()
-			// Создаем рабочее место "none" (обязательно!)
+		BuildTestData(builder => builder
+			// рабочее место "none" (обязательно!)
 			.WithWorkplace(w => { w.Id = noneId; w.Name = "none"; w.IsWorkplace = false; })
-			// Создаем предыдущее рабочее место (например, "Торцовка")
+			// предыдущее рабочее место (например, "Торцовка")
 			.WithWorkplace(w => { w.Id = previousWorkplaceId; w.Name = "Торцовка"; w.IsWorkplace = true; })
-			// Создаем "Шлифовка" - она будет НЕ стартовой, потому что есть переход от "Торцовки"
+			// "Шлифовка" - она будет НЕ стартовой, потому что есть переход от "Торцовки"
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Шлифовка"; w.IsWorkplace = true; })
-			// ВАЖНО: добавляем переход от "Торцовки" к "Шлифовке"
+			// ВАЖНО: переход от "Торцовки" к "Шлифовке"
 			.WithWorkplaceTransition(t =>
 			{
 				t.FromWorkplaceId = noneId;
@@ -202,15 +189,13 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 				t.FromWorkplaceId = previousWorkplaceId;
 				t.ToWorkplaceId = workplaceId;
 			})
-
-			// Создаем заказы
+			// заказы
 			.WithOrder(o => { o.Id = orderId1; o.OrderNumber = "2001"; o.PlateArea = 5.25m; })
 			.WithProductionOrder(po => { po.Id = productionOrderId1; po.OrderId = orderId1; po.CurrentWorkplaceId = workplaceId; })
 			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId1; fp.WorkplaceId = workplaceId; fp.Status = "pending"; })
 			.WithOrder(o => { o.Id = orderId2; o.OrderNumber = "2002"; o.PlateArea = 8.0m; })
 			.WithProductionOrder(po => { po.Id = productionOrderId2; po.OrderId = orderId2; po.CurrentWorkplaceId = workplaceId; })
-			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId2; fp.WorkplaceId = workplaceId; fp.Status = "active"; }) // Не pending!
-			.Build(customFactory.Services);
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId2; fp.WorkplaceId = workplaceId; fp.Status = "active"; })); // Не pending!
 
 		// Act
 		var url = endpointTemplate.Contains("{0}")
@@ -223,7 +208,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});
@@ -239,19 +224,17 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 	public async Task GetOrders_WithJoineryStatus_ShouldAddEmojiToName()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Joinery");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var workplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Столярка"; w.IsWorkplace = true; w.Level = 15; })
 			.WithOrder(o => { o.Id = orderId; o.OrderNumber = "3001"; })
 			.WithProductionOrder(po => { po.Id = productionOrderId; po.OrderId = orderId; po.CurrentWorkplaceId = workplaceId; })
-			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "joinery"; })
-			.Build(customFactory.Services);
+			.WithOrderFootprint(fp => { fp.ProductionOrderId = productionOrderId; fp.WorkplaceId = workplaceId; fp.Status = "joinery"; }));
 
 		// Act
 		var response = await client.GetAsync($"/api/orders/in-work?workplaceId={workplaceId}");
@@ -260,7 +243,7 @@ public class OrdersWorkplaceControllerTests : IClassFixture<WebApplicationFactor
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<OrderWorkplaceDto>>(content, new JsonSerializerOptions
+		var result = JsonSerializer.Deserialize<List<WorkplaceOrderDto>>(content, new JsonSerializerOptions
 		{
 			PropertyNameCaseInsensitive = true
 		});

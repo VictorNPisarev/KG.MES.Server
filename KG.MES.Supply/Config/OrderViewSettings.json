@@ -1,0 +1,11 @@
+{
+	"listEndpoint": "supplies",
+	"cardEndpoint": "orders",
+	"title": "Снабжение",
+	"showActions": false,
+	"canEdit": false,
+	"showTrace": false,
+	"editTrace": false,
+	"editSupply": true,
+	"showSupply": true
+}

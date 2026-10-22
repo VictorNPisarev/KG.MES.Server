@@ -1,0 +1,200 @@
+@page "/upload"
+
+<div class="container-fluid py-4">
+	<!-- Заголовок и кнопки -->
+	<div class="row mb-4">
+		<div class="col">
+			<h2 class="display-6">
+				<i class="bi bi-file-earmark-text"></i> Загрузка заказов из XML
+			</h2>
+			<p class="text-muted">Загружайте XML файлы и экспортируйте данные в 1С</p>
+		</div>
+		<div class="col-auto">
+				<div class="d-flex justify-content-end">
+					<div class="btn-group" role="group">
+						<button class="btn btn-primary" @onclick="TriggerFileInput" disabled="@isLoading">
+							<i class="bi bi-upload"></i> 
+							@if (isLoading)
+							{
+								<span class="spinner-border spinner-border-sm" role="status"></span>
+							}
+							Загрузить XML
+						</button>
+						
+						<!-- Скрытый InputFile компонент -->
+						<InputFile OnChange="HandleFileSelected" 
+								accept=".xml" 
+								style="display: none;" 
+								id="fileInputHidden" />
+						<button class="btn btn-warning" @onclick="SendSelectedToProduction"
+							disabled="@(SelectedOrder == null || isSendingToProduction)">
+							@if (isSendingToProduction)
+							{
+								<span class="spinner-border spinner-border-sm me-2" role="status"></span>
+							}
+							В производство
+						</button>
+					</div>
+				</div>
+		</div>
+	</div>
+
+
+	<!-- Статус -->
+	@if (!string.IsNullOrEmpty(StatusMessage))
+	{
+		<div class="alert @GetAlertClass() alert-dismissible fade show" role="alert">
+			@StatusMessage
+			<button type="button" class="btn-close" @onclick="ClearStatus"></button>
+		</div>
+	}
+
+	<!-- Основной контент -->
+	<div class="row">
+		<!-- Список заказов -->
+		<div class="col-lg-4 mb-4">
+			<div class="card shadow-sm h-100">
+				<div class="card-header bg-primary text-white">
+					<h5 class="card-title mb-0">
+						<i class="bi bi-list-ul"></i> Заказы
+						@if (HasOrders)
+						{
+							<span class="badge bg-light text-dark">@Orders.Count</span>
+						}
+					</h5>
+				</div>
+				<div class="card-body p-0 d-flex flex-column">
+					@if (Orders.Any())
+					{
+						<div class="list-group list-group-flush  flex-grow-1">
+							@foreach (var order in Orders)
+							{
+								<button
+									class="list-group-item list-group-item-action @(order == SelectedOrder ? "active sticky-selected" : "")"
+										@onclick="() => SelectOrder(order)">
+									<div class="d-flex w-100 justify-content-between">
+										<h6 class="mb-1">@order.DocumentNumber</h6>
+										<small>@order.DocumentDate?.ToString("dd.MM.yyyy")</small>
+									</div>
+									<p class="mb-1">@order.CustomerData?.CustomerNumber</p>
+									<div class="d-flex justify-content-between">
+										<small>@order.DocumentAmountGross.ToString("C")</small>
+										<small>@(order.DocumentItems?.Sum(i => i.Piece) ?? 0) тов.</small>
+									</div>
+								</button>
+							}
+							<div class="sticky-buttons-box p-2 border-top">
+								<div class="btn-group" role="group">
+									<button class="btn btn-primary" @onclick="TriggerFileInput" disabled="@isLoading">
+										<i class="bi bi-upload"></i>
+										@if (isLoading)
+										{
+											<span class="spinner-border spinner-border-sm" role="status"></span>
+										}
+										Загрузить XML
+									</button>
+
+									<!-- Скрытый InputFile компонент -->
+									<InputFile OnChange="HandleFileSelected" accept=".xml" style="display: none;"
+										id="fileInputHidden" />
+									<button class="btn btn-warning" @onclick="SendSelectedToProduction"
+										disabled="@(SelectedOrder == null || isSendingToProduction)">
+										@if (isSendingToProduction)
+										{
+											<span class="spinner-border spinner-border-sm me-2" role="status"></span>
+										}
+										В производство
+									</button>
+								</div>
+							</div>
+
+						</div>
+					}
+					else
+					{
+						<div class="text-center py-5">
+							<i class="bi bi-inbox display-1 text-muted"></i>
+							<p class="text-muted mt-3">Нет загруженных заказов</p>
+							<button class="btn btn-outline-primary" @onclick="TriggerFileInput">
+								<i class="bi bi-upload"></i> Загрузить первый заказ
+							</button>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+
+		<!-- Детали заказа -->
+		<div class="col-lg-8">
+			@if (SelectedOrder != null)
+			{
+				<div class="card shadow-sm">
+					<div class="card-header bg-success text-white">
+						<h5 class="card-title mb-0">
+							<i class="bi bi-eye"></i> Детали заказа: @SelectedOrder.DocumentNumber
+						</h5>
+					</div>
+					<div class="card-body">
+						<!-- ✅ Используем @bind-Order вместо ручного OrderChanged -->
+						<OrderDetailsView @bind-Order="SelectedOrder"/>
+					</div>
+				</div>
+			}
+			else
+			{
+				<div class="card shadow-sm">
+					<div class="card-body text-center py-5">
+						<i class="bi bi-file-earmark-x display-1 text-muted"></i>
+						<h5 class="text-muted mt-3">Заказ не выбран</h5>
+						<p class="text-muted">Выберите заказ из списка для просмотра деталей</p>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+
+	<!-- Статистика -->
+	@if (HasOrders)
+	{
+		<div class="row mt-4">
+			<div class="col-12">
+				<div class="card shadow-sm">
+					<div class="card-header bg-info text-white">
+						<h5 class="card-title mb-0">
+							<i class="bi bi-bar-chart"></i> Статистика
+						</h5>
+					</div>
+					<div class="card-body">
+						<div class="row text-center">
+							<div class="col-md-3">
+								<div class="border rounded p-3 bg-light">
+									<h3 class="text-primary">@Orders.Count</h3>
+									<p class="text-muted mb-0">Заказов</p>
+								</div>
+							</div>
+							<div class="col-md-3">
+								<div class="border rounded p-3 bg-light">
+									<h3 class="text-success">@TotalAmount.ToString("C")</h3>
+									<p class="text-muted mb-0">Общая сумма</p>
+								</div>
+							</div>
+							<div class="col-md-3">
+								<div class="border rounded p-3 bg-light">
+									<h3 class="text-warning">@TotalItems</h3>
+									<p class="text-muted mb-0">Всего товаров</p>
+								</div>
+							</div>
+							<div class="col-md-3">
+								<div class="border rounded p-3 bg-light">
+									<h3 class="text-danger">@AverageOrderAmount.ToString("C")</h3>
+									<p class="text-muted mb-0">Средний заказ</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+</div>
+

@@ -7,13 +7,11 @@ namespace KG.MES.Shared.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public partial class OrderController : ControllerBase
 {
-	//-------------------------
-	//POST
-	//-------------------------
-
-
+	#region POST
+	
 	// POST: api/orders
 	[HttpPost("orders")]
 	[HttpPost("orders/create")]
@@ -22,11 +20,13 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/operations/start
 	[HttpPost("orders/operations/start")]
 	[HttpPost("operations/start")]
+	[AllowAnonymous]
 	public Task<IActionResult> BeginOrderWorkplace([FromBody] BeginWorkplaceRequestDto request) => BeginOrderWorkplaceHandler(request);
 
 	// POST: api/orders/operations/complete
 	[HttpPost("orders/operations/complete")]
 	[HttpPost("operations/complete")]
+	[AllowAnonymous]
 	public Task<IActionResult> CompleteOrderWorkplace([FromBody] CompleteWorkplaceRequestDto request) => CompleteOrderWorkplaceHandler(request);
 
 	// POST: api/orders/{orderId}/complete
@@ -49,16 +49,15 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
+	
+	#endregion POST
 
 
-
-	//-------------------------
-	//GET
-	//-------------------------
-
+	#region GET
 
 	// GET: api/orders
 	[HttpGet("orders")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null, [FromQuery] string? filters = null)
@@ -82,6 +81,7 @@ public partial class OrderController : ControllerBase
 
 	// GET: api/orders/in-work?workplaceId=...
 	[HttpGet("orders/in-work")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetActiveAndPendingOrdersCompatible([FromQuery] Guid workplaceId) => GetActiveAndPendingOrdersHandler(workplaceId);
 
 	// GET: api/orders/workplaces/{workplaceId}/in-work
@@ -90,6 +90,7 @@ public partial class OrderController : ControllerBase
 
 	// GET: api/orders/{identifier}/trace  
 	[HttpGet("orders/{identifier}/trace")]
+	[AllowAnonymous]
 	public Task<IActionResult> GetOrderTrace(string identifier) => GetOrderTraceHandler(identifier);
 
 	// GET: api/orders/{orderId}/comments
@@ -114,11 +115,10 @@ public partial class OrderController : ControllerBase
 	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
 		=> GetFilterFacetsHandler(request);
 
+	#endregion GET
 
-	//-------------------------
-	//PUT
-	//-------------------------
-
+	
+	#region PUT
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}
 	[HttpPut("orders/footprint/{productionOrderId}/workplace/{workplaceId}")]
@@ -145,16 +145,14 @@ public partial class OrderController : ControllerBase
 	[HttpPut("orders/{orderId}")]
 	public Task<IActionResult> UpdateOrder(Guid orderId, [FromBody] OrderRequestDto dto) => UpdateOrderHandler(orderId, dto);
 
+	#endregion PUT
 
-
-	//-------------------------
-	//DELETE
-	//-------------------------
-
-
+	
+	#region DELETE
+	
 	// DELETE: api/orders/{orderId}
 	[HttpDelete("orders/{orderId}")]
 	public Task<IActionResult> DeleteOrder(Guid orderId) => DeleteOrderHandler(orderId);
 
-
+	#endregion DELETE
 }

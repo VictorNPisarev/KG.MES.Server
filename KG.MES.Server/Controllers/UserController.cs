@@ -1,39 +1,36 @@
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Models.Dto;
+using KG.MES.Shared.Models.Dto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public class UsersController : ControllerBase
+public partial class UsersController : ControllerBase
 {
-	private readonly IUserService _userService;
+	#region POST
 
-	public UsersController(IUserService userService)
-	{
-		_userService = userService;
-	}
+	[HttpPost("users/{email}/set-password")]
+	public Task<IActionResult> SetPassword(string email, [FromBody] SetPasswordRequestDto request) => SetPasswordHandler(email, request);
+
+	[HttpPost("users/set-password")]
+	public Task<IActionResult> SetPasswordCompatible([FromBody] SetPasswordRequestDto request) => SetPasswordHandler(request);
+
+	[HttpPost("users/me/change-password")]
+	[Authorize]
+	public Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+	=> ChangePasswordHandler(request);
+
+	#endregion
+
+	#region GET
 
 	[HttpGet("users/by-email/{email}")]
-	public async Task<IActionResult> GetUserByEmail(string email)
-	{
-		if (string.IsNullOrEmpty(email))
-			return BadRequest(new { error = "email is required" });
-
-		var result = await _userService.GetUserByEmailAsync(email);
-		if (result == null)
-			return NotFound(new { error = "User not found" });
-
-		return Ok(result);
-	}
+	public Task<IActionResult> GetUserByEmail(string email) => GetUserByEmailHandler(email);
 
 	[HttpGet("users/{userId}/workplaces")]
-	public async Task<IActionResult> GetUserWorkplaces(Guid userId)
-	{
-		if (userId == Guid.Empty)
-			return BadRequest(new { error = "userId is required" });
+	public Task<IActionResult> GetUserWorkplaces(Guid userId) => GetUserWorkplacesHandler(userId);
 
-		var result = await _userService.GetUserWorkplacesAsync(userId);
-		return Ok(result);
-	}
+	#endregion
 }
