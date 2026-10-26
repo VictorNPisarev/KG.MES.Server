@@ -22,7 +22,13 @@
 						<div class="user-name">@Session.User.Name</div>
 						<small class="user-role">@Session.User.RoleName</small>
 					</div>
-					<i class="bi @(userMenuOpen ? "bi-chevron-up" : "bi-chevron-down") ms-auto small"></i>
+					@if (Session.LicenseExpiresAt.HasValue && (Session.LicenseExpiresAt.Value - DateTime.UtcNow).TotalDays <= 5)
+					{
+						<span class="badge bg-warning text-dark ms-auto" title="Лицензия истекает">
+							<i class="bi bi-exclamation-triangle"></i>
+						</span>
+					}
+					<i class="bi @(userMenuOpen ? "bi-chevron-up" : "bi-chevron-down") ms-1 small"></i>
 				</button>
 
 				@if (userMenuOpen)
@@ -32,6 +38,25 @@
 							<div class="fw-bold">@Session.User.Name</div>
 							<small class="text-muted d-block">@Session.User.Email</small>
 							<span class="badge bg-secondary mt-1">@Session.User.RoleName</span>
+
+							@if (Session.LicenseExpiresAt.HasValue)
+							{
+								var daysLeft = (Session.LicenseExpiresAt.Value - DateTime.UtcNow).TotalDays;
+								if (daysLeft <= 5 && daysLeft > 0)
+								{
+									<div class="alert alert-warning py-1 px-2 mt-2 mb-0 small">
+										<i class="bi bi-clock-history me-1"></i>
+										Лицензия истекает через @Math.Ceiling(daysLeft) дн.
+									</div>
+								}
+								else if (daysLeft <= 0)
+								{
+									<div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">
+										<i class="bi bi-x-circle me-1"></i>
+										Лицензия истекла
+									</div>
+								}
+							}
 						</div>
 						<div class="p-2">
 							<button class="btn btn-sm btn-outline-primary w-100 mb-1" @onclick="OpenChangePassword">
@@ -43,7 +68,7 @@
 						</div>
 					</div>
 					<div class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 999;"
-						 @onclick="() => userMenuOpen = false"></div>
+						@onclick="() => userMenuOpen = false"></div>
 				}
 			</div>
 		}

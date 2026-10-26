@@ -16,6 +16,7 @@ public class UserSessionService
 	public string? LicenseKey { get; private set; }
 	public string? DeviceId { get; private set; }
 
+
 	private readonly IJSRuntime jsRuntime;
 
 	public bool IsAuthenticated => !string.IsNullOrEmpty(AccessToken);// && User != null;
@@ -71,7 +72,8 @@ public class UserSessionService
 				AccessToken = data.AccessToken,
 				RefreshToken = data.RefreshToken,
 				ExpiresIn = (int)(data.ExpiresAt - DateTime.UtcNow).TotalSeconds,
-				User = data.User
+				User = data.User,
+				LicenseExpiresAt = data.LicenseExpiresAt
 			};
 			LicenseKey = data.LicenseKey;
 			DeviceId = data.DeviceId;
@@ -102,7 +104,8 @@ public class UserSessionService
 			ExpiresAt = expiresAt,
 			User = loginResponse.User,
 			LicenseKey = LicenseKey,
-			DeviceId = DeviceId
+			DeviceId = DeviceId,
+			LicenseExpiresAt = loginResponse.LicenseExpiresAt
 		};
 
 		await jsRuntime.InvokeVoidAsync("localStorage.setItem", "session_data",
@@ -129,5 +132,9 @@ public class UserSessionService
 
 		[JsonPropertyName("deviceId")]
 		public string? DeviceId { get; set; }
+
+		[JsonPropertyName("licenseExpiresAt")]
+		public DateTime? LicenseExpiresAt { get; set; }
+
 	}
 }

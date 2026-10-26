@@ -26,9 +26,7 @@ public class ServerLicenseService : ILicenseService
 		string? ipAddress)
 	{
 		if (string.IsNullOrEmpty(licenseKey))
-			//return LicenseValidationResult.Fail("License key is required");
 			return LicenseValidationResult.Fail("Укажите ключ лицензии");
-
 
 		if (string.IsNullOrEmpty(deviceHardwareId))
 			return LicenseValidationResult.Fail("Device hardware ID is required");
@@ -38,63 +36,44 @@ public class ServerLicenseService : ILicenseService
 			.FirstOrDefaultAsync(l => l.KeyCode == licenseKey);
 
 		if (license == null)
-			//return LicenseValidationResult.Fail("Invalid license key");
 			return LicenseValidationResult.Fail("Неверный ключ лицензии");
 
 		if (!license.IsActive)
-			//return LicenseValidationResult.Fail("License is inactive or revoked");
 			return LicenseValidationResult.Fail("Лицензия не активна или отозвана");
 
 		if (license.ExpiresAt.HasValue && license.ExpiresAt < DateTime.UtcNow)
-			//return LicenseValidationResult.Fail("License has expired");
 			return LicenseValidationResult.Fail("Лицензия истекла");
 
-		var existingDevice = license.Devices?
-			.FirstOrDefault(d => d.DeviceHardwareId == deviceHardwareId);
+		// ✅ Проверяем, есть ли у лицензии УЖЕ устройство
+		var existingDevice = license.Devices?.FirstOrDefault();
 
 		if (existingDevice != null)
 		{
-			// Устройство уже привязано — обновляю время
+			// Лицензия УЖЕ привязана к устройству
+			if (existingDevice.DeviceHardwareId != deviceHardwareId)
+			{
+				// ⚠️ Другое устройство — ОШИБКА
+				_logger.LogWarning(
+					"License {LicenseKey} is already bound to device {ExistingDevice}, " +
+					"attempt from {NewDevice}",
+					licenseKey, existingDevice.DeviceHardwareId, deviceHardwareId);
+
+				return LicenseValidationResult.Fail(
+					"Лицензия уже используется на другом устройстве");
+			}
+
+			// ✅ Та же лицензия на том же устройстве — обновляем время
 			existingDevice.LastUsedAt = DateTime.UtcNow;
 			existingDevice.LastIp = ipAddress;
 			existingDevice.DeviceName = deviceName;
 			await _context.SaveChangesAsync();
 
-			return LicenseValidationResult.Success(license.Id, existingDevice.Id, existingDevice.DeviceName);
+			return LicenseValidationResult.Success(
+				license.Id, existingDevice.Id, existingDevice.DeviceName);
 		}
 
-		// Новое устройство — проверяю лимиты
-		if (license.LicenseType == LicenseType.SingleDevice)
-		{
-			// Строгая лицензия: если уже есть устройство — отказ
-			if (license.Devices != null && license.Devices.Any())
-			{
-				var existing = license.Devices.First();
-
-				_logger.LogWarning(
-					"License {LicenseKey} already used on device '{existing.DeviceName}', " +
-					"attempt from '{NewDevice}'",
-					licenseKey, existing.DeviceHardwareId, deviceHardwareId);
-
-				//return LicenseValidationResult.Fail($"License already used on device '{existing.DeviceName}'");
-				return LicenseValidationResult.Fail($"Лицензия занята другим устройством");
-			}
-		}
-		else if (license.LicenseType == LicenseType.MultiDevice)
-		{
-			// Мультиустройственная: проверяем лимит
-			var currentCount = license.Devices?.Count ?? 0;
-
-			// Если MaxDevices == null — безлимитная
-			if (license.MaxDevices != null && license.MaxDevices > 0 && currentCount >= license.MaxDevices)
-			{
-				//return LicenseValidationResult.Fail($"Maximum devices ({license.MaxDevices}) reached for this license");
-				return LicenseValidationResult.Fail($"Достигнуто максимальное количество устройств для указанной лицензии");
-			}
-		}
-
-		// 4. Регистрируем новое устройство
-		var device = new Device
+		// ✅ Лицензия НЕ привязана — создаём новую запись
+		var newDevice = new Device
 		{
 			Id = Guid.NewGuid(),
 			DeviceHardwareId = deviceHardwareId,
@@ -105,16 +84,17 @@ public class ServerLicenseService : ILicenseService
 			LastIp = ipAddress
 		};
 
-		_context.Devices.Add(device);
+		_context.Devices.Add(newDevice);
 		await _context.SaveChangesAsync();
 
 		_logger.LogInformation(
-			"Device {DeviceId} bound to license {LicenseKey} ({Type})",
-			deviceHardwareId, licenseKey, license.LicenseType);
+			"Device {DeviceId} bound to license {LicenseKey}",
+			deviceHardwareId, licenseKey);
 
-		return LicenseValidationResult.Success(license.Id, device.Id, device.DeviceName);
+		return LicenseValidationResult.Success(
+			license.Id, newDevice.Id, newDevice.DeviceName);
 	}
-
+	
 	public async Task<License?> GetByKeyAsync(string licenseKey)
 	{
 		return await _context.Licenses

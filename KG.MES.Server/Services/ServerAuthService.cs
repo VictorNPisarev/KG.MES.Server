@@ -40,13 +40,15 @@ public class ServerAuthService : IAuthService
 
 	public async Task<LoginResultDto> AuthenticateUserAsync(LoginRequestDto request, string? ipAddress = null)
 	{
-		var sw = System.Diagnostics.Stopwatch.StartNew();
+		//var sw = System.Diagnostics.Stopwatch.StartNew();
 		// ============================================================
 		// 1. ПРОВЕРЯЕМ ПОЛЬЗОВАТЕЛЯ
 		// ============================================================
 		var user = await context.Users
 			.Include(u => u.Role)
 			.FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
+
+		var license = await licenseService.GetByKeyAsync(request.LicenseKey);
 
 		// 1.1 Пользователь не найден → возможна self-registration
 		if (user == null)
@@ -59,8 +61,7 @@ public class ServerAuthService : IAuthService
 				return LoginResultDto.CreateFailure("Invalid email or password");
 			}
 
-			// Генерируею registration-токен
-			var license = await licenseService.GetByKeyAsync(request.LicenseKey);
+			// Генерирую registration-токен
 			if (license == null)
 			{
 				logger.LogWarning("License not found: {LicenseKey}", request.LicenseKey);
@@ -193,11 +194,12 @@ public class ServerAuthService : IAuthService
 				RoleName = user.Role?.Name,
 				RoleLevel = user.Role?.Level ?? 10,
 				IsPasswordSet = user.IsPasswordSet
-			}
+			},
+			LicenseExpiresAt = license?.ExpiresAt
 		};
 
-		sw.Stop();
-		logger.LogInformation("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
+		//sw.Stop();
+		//logger.LogInformation("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
 
 		return LoginResultDto.CreateSuccess(response);
 	}
@@ -262,7 +264,8 @@ public class ServerAuthService : IAuthService
 				RoleName = user.Role?.Name,
 				RoleLevel = user.Role?.Level ?? 10,
 				IsPasswordSet = user.IsPasswordSet
-			}
+			},
+			LicenseExpiresAt = license?.ExpiresAt
 		};
 
 		return LoginResultDto.CreateSuccess(response);
@@ -417,7 +420,8 @@ public class ServerAuthService : IAuthService
 				RoleId = user.RoleId,
 				RoleName = role.Name,
 				RoleLevel = role.Level
-			}
+			},
+			LicenseExpiresAt = license.ExpiresAt
 		};
 
 		logger.LogInformation("User {Email} registered and logged in", user.Email);

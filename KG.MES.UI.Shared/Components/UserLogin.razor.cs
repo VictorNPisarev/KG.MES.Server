@@ -22,6 +22,7 @@ public partial class UserLogin : ComponentBase
 	private bool isAuthorized;
 	private bool registrationRequired;
 	private string? registrationToken;
+	private string licenseWarning = "";
 
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -89,6 +90,24 @@ public partial class UserLogin : ComponentBase
 
 			if (response != null && !string.IsNullOrEmpty(response.AccessToken))
 			{
+				if (response?.LicenseExpiresAt.HasValue == true)
+				{
+					var daysLeft = (response.LicenseExpiresAt.Value - DateTime.UtcNow).TotalDays;
+
+					if (daysLeft < 0)
+					{
+						error = "Лицензия истекла. Обратитесь к администратору.";
+						return;
+					}
+					else if (daysLeft <= 5)
+					{
+						// Показываем предупреждение, но не блокируем вход
+						licenseWarning = $"Внимание! Лицензия истекает через {Math.Ceiling(daysLeft)} дн.";
+						// даем пользователю 2 секунды прочитать и продолжаем
+						await Task.Delay(2000);
+					}
+				}
+
 				var deviceId = await LicenseService.GetDeviceIdAsync();
 				Session.SetSession(response, licenseKey, deviceId);
 

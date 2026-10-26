@@ -25,4 +25,6 @@ public class LoginResponseDto
 	[JsonPropertyName("registrationToken")]
 	public string? RegistrationToken { get; set; }
 
+	[JsonPropertyName("licenseExpiresAt")]
+	public DateTime? LicenseExpiresAt { get; set; }
 }

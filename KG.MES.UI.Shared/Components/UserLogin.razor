@@ -59,3 +59,10 @@
 	<div class="modal-backdrop fade show"></div>
 }
 
+@if (!string.IsNullOrEmpty(licenseWarning))
+{
+	<div class="alert alert-warning py-2">
+		<i class="bi bi-exclamation-triangle me-1"></i>
+		@licenseWarning
+	</div>
+}
