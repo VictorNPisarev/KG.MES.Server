@@ -5,12 +5,12 @@ using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 /// <summary>
 /// Обработчики запросов
 /// </summary>
-public partial class OrderController
+public partial class OrderController : BaseController
 {
 	private readonly IOrderService orderService;
 	private readonly ILogger<OrderController> logger;
@@ -48,7 +48,9 @@ public partial class OrderController
 			}
 		}
 
-		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber, filterConditions);
+		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, 
+														workplaceIds, orderNumber, CurrentUserId,
+														CurrentRoleName, filterConditions);
 
 		return Ok(result);
 	}

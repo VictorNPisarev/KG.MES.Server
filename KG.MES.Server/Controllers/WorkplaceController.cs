@@ -3,11 +3,11 @@ using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public partial class WorkplaceController : ControllerBase
+public partial class WorkplaceController : BaseController
 {
 	// GET: api/workplaces/active
 	[HttpGet("workplaces/active")]

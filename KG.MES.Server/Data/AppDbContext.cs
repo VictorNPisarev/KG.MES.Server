@@ -30,6 +30,8 @@ public class AppDbContext : DbContext
 	public DbSet<UserDevice> UserDevices { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
 	public DbSet<SupplyLog> SupplyLogs { get; set; }
+	public DbSet<OrderNotification> OrderNotifications { get; set; }
+	public DbSet<OrderNotificationRead> OrderNotificationReads { get; set; }
 
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -289,12 +291,28 @@ public class AppDbContext : DbContext
 			.HasForeignKey(sl => sl.ConditionId)
 			.OnDelete(DeleteBehavior.SetNull);
 
+		//Notifications
 		modelBuilder.Entity<SupplyLog>()
 			.HasOne(sl => sl.User)
 			.WithMany()
 			.HasForeignKey(sl => sl.UserId)
 			.OnDelete(DeleteBehavior.SetNull);
-			
+
+		modelBuilder.Entity<OrderNotificationRead>()
+			.HasKey(r => new { r.NotificationId, r.UserId });
+
+		modelBuilder.Entity<OrderNotificationRead>()
+			.HasOne(r => r.Notification)
+			.WithMany()
+			.HasForeignKey(r => r.NotificationId)
+			.OnDelete(DeleteBehavior.Cascade);
+
+		modelBuilder.Entity<OrderNotificationRead>()
+			.HasOne(r => r.User)
+			.WithMany()
+			.HasForeignKey(r => r.UserId)
+			.OnDelete(DeleteBehavior.Cascade);
+
 		base.OnModelCreating(modelBuilder);
 	}
 }

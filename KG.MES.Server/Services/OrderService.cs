@@ -12,27 +12,31 @@ using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
 using KG.MES.Shared.Extensions;
+using KG.MES.Server.Services;
 
 namespace KG.MES.Shared.Services;
 
 public partial class OrderService : IOrderService
 {
-	private readonly AppDbContext _context;
-	private readonly ILogger<OrderService> _logger;
-	private readonly OrderAttributeService _orderAttributeService;
+	private readonly AppDbContext context;
+	private readonly ILogger<OrderService> logger;
+	private readonly OrderAttributeService orderAttributeService;
+	private readonly NotificationService notificationService;
 
-	public OrderService(AppDbContext context, ILogger<OrderService> logger, OrderAttributeService orderAttributeService)
+
+	public OrderService(AppDbContext context, ILogger<OrderService> logger, OrderAttributeService orderAttributeService, NotificationService notificationService)
 	{
-		_context = context;
-		_logger = logger;
-		_orderAttributeService = orderAttributeService;
+		this.context = context;
+		this.logger = logger;
+		this.orderAttributeService = orderAttributeService;
+		this.notificationService = notificationService;
 	}
 
 	private IQueryable<OrderDetailDto> GetOrderByIdentifierQuery()
 	{
-		return _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
+		return context.Orders
+			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -58,8 +62,8 @@ public partial class OrderService : IOrderService
 
 	// Основной метод GetOrdersAsync
 	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber,
-		List<FilterCondition>? filters = null)
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, 
+		Guid? currentUserId, string? currentRoleName, List<FilterCondition>? filters = null)
 	{
 		var query = BuildBaseQuery();
 
@@ -113,6 +117,33 @@ public partial class OrderService : IOrderService
 			})
 			.FirstOrDefaultAsync();
 
+		// ✅ Помечаем новые заказы
+		if (currentUserId.HasValue && !string.IsNullOrEmpty(currentRoleName))
+		{
+			var orderIds = items.Select(i => i.Id).ToList();
+
+			// Заказы, по которым есть непрочитанные уведомления
+			var newOrderIds = await context.OrderNotifications
+				.Where(n => orderIds.Contains(n.OrderId))
+				.Where(n =>
+					n.AudienceType == "ALL" ||
+					(n.AudienceType == "ROLE" && n.AudienceValue == currentRoleName) ||
+					(n.AudienceType == "USER" && n.AudienceValue == currentUserId.Value.ToString()))
+				.Where(n => !context.OrderNotificationReads
+					.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId.Value))
+				.Select(n => n.OrderId)
+				.Distinct()
+				.ToListAsync();
+
+			var newOrderSet = newOrderIds.ToHashSet();
+
+			foreach (var item in items)
+			{
+				item.IsNew = newOrderSet.Contains(item.Id);
+			}
+		}
+
+
 		return new PaginatedResponse<OrderDto>
 		{
 			Data = items,
@@ -135,7 +166,7 @@ public partial class OrderService : IOrderService
 	public async Task<SetOrderStatusResultDto> SetOrderStatusAsync(
 		Guid orderId, string targetStatusName, Guid? userId, string? notes)
 	{
-		var status = await _context.Workplaces
+		var status = await context.Workplaces
 			.FirstOrDefaultAsync(w => w.Name == targetStatusName);
 
 		if (status == null)
@@ -147,7 +178,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		var productionOrder = await _context.ProductionOrders
+		var productionOrder = await context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
 		if (productionOrder == null)
@@ -176,8 +207,13 @@ public partial class OrderService : IOrderService
 			CreatedAt = DateTime.UtcNow
 		};
 
-		_context.OperationLogs.Add(operationLog);
-		await _context.SaveChangesAsync();
+		context.OperationLogs.Add(operationLog);
+		await context.SaveChangesAsync();
+
+		if (targetStatusName == OrderStatus.CommonStatus.Complete)
+		{
+			await notificationService.CreateForRoleAsync(orderId, "ORDER_READY", "Sales");
+		}
 
 		return new SetOrderStatusResultDto
 		{
@@ -189,10 +225,10 @@ public partial class OrderService : IOrderService
 	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
 		Guid orderId, Guid? userId, string? notes)
 	{
-		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
 		if (!orderExists)
 		{
-			_logger.LogWarning($"Order {orderId} not found");
+			logger.LogWarning($"Order {orderId} not found");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -200,7 +236,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -213,7 +249,7 @@ public partial class OrderService : IOrderService
 			}
 			// Меняю все следы заказа (footprint) на completed
 
-			var order = await _context.Orders
+			var order = await context.Orders
 				.Include(o => o.ProductionOrder)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
@@ -229,7 +265,7 @@ public partial class OrderService : IOrderService
 
 
 
-			var footprints = await _context.OrderFootprints
+			var footprints = await context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == order!.ProductionOrder!.Id)
 				.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
 				.ToListAsync();
@@ -238,7 +274,7 @@ public partial class OrderService : IOrderService
 			{
 				footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
 
-				_context.OperationLogs.Add(
+				context.OperationLogs.Add(
 					new OperationLog
 					{
 						Id = Guid.NewGuid(),
@@ -254,7 +290,7 @@ public partial class OrderService : IOrderService
 				);
 			}
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
 			return new SetOrderStatusResultDto
@@ -265,7 +301,7 @@ public partial class OrderService : IOrderService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error in SetOrderCompleteAsync");
+			logger.LogError(ex, "Error in SetOrderCompleteAsync");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -278,10 +314,10 @@ public partial class OrderService : IOrderService
 		Guid orderId, Guid? userId, string? notes)
 	{
 
-		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
 		if (!orderExists)
 		{
-			_logger.LogWarning($"Order {orderId} not found");
+			logger.LogWarning($"Order {orderId} not found");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -289,7 +325,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -302,22 +338,22 @@ public partial class OrderService : IOrderService
 			}
 			// Удаляю следы заказа (footprint)
 
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
-			var Order = await _context.Orders
+			var Order = await context.Orders
 				.Include(o => o.ProductionOrder)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
 
-			var footprints = await _context.OrderFootprints
+			var footprints = await context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
 				.ToListAsync();
 
 			if (footprints.Any())
 			{
-				_context.OrderFootprints.RemoveRange(footprints);
-				await _context.SaveChangesAsync();
+				context.OrderFootprints.RemoveRange(footprints);
+				await context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
@@ -331,7 +367,7 @@ public partial class OrderService : IOrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in SetOrderDepartureAsync");
+			logger.LogError(ex, "Error in SetOrderDepartureAsync");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -347,16 +383,16 @@ public partial class OrderService : IOrderService
 	{
 		// Находим наиболее поздний участок со статусом active или completed
 		// Берём последний по дате обновления или по уровню (если уровень есть)
-		var latestFootprint = await _context.OrderFootprints
+		var latestFootprint = await context.OrderFootprints
 			.Where(fp => fp.ProductionOrderId == productionOrderId)
 			.Where(fp => fp.Status == OrderStatus.WorkplaceStatus.Active ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Completed)
-			.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new { fp, w })
+			.Join(context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new { fp, w })
 			.OrderByDescending(x => x.w.Level)  // ← по уровню
 			.Select(x => x.fp)
 			.FirstOrDefaultAsync();
 
-		var productionOrder = await _context.ProductionOrders
+		var productionOrder = await context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 
 		if (productionOrder == null)
@@ -374,7 +410,7 @@ public partial class OrderService : IOrderService
 			productionOrder.UpdatedAt = DateTime.UtcNow;
 		}
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 	}
 
 	public async Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(
@@ -414,9 +450,9 @@ public partial class OrderService : IOrderService
 
 	private IQueryable<OrderDto> BuildBaseQuery()
 	{
-		return _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+		return context.Orders
+			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -444,9 +480,9 @@ public partial class OrderService : IOrderService
 		// В зависимости от типа — свой базовый query
 		if (typeof(TDto) == typeof(OrderDto))
 		{
-			return (IQueryable<TDto>)_context.Orders
-				.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-				.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+			return (IQueryable<TDto>)context.Orders
+				.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+				.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 				{
 					Id = x.o.Id,
 					OrderNumber = x.o.OrderNumber,

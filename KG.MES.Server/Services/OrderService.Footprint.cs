@@ -11,10 +11,10 @@ public partial class OrderService
 {
 	public async Task<List<WorkplaceOrderDto>> GetActiveOrdersForWorkplaceAsync(Guid workplaceId)
 	{
-		var activeOrders = await _context.OrderFootprints
+		var activeOrders = await context.OrderFootprints
 			.Where(fp => fp.WorkplaceId == workplaceId && fp.Status == OrderStatus.WorkplaceStatus.Active)
-			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
+			.Join(context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
+			.Join(context.Orders, x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
 			{
 				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
@@ -40,15 +40,15 @@ public partial class OrderService
 
 	public async Task<List<WorkplaceOrderDto>> GetPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
-		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
+		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(context, workplaceId);
 
 		if (isStart)
 		{
-			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
+			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(context);
 
-			var newOrders = await _context.ProductionOrders
+			var newOrders = await context.ProductionOrders
 				.Where(po => po.CurrentWorkplaceId == noneId)
-				.Join(_context.Orders.Where(o => !o.IsOnlyPaid), po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
+				.Join(context.Orders.Where(o => !o.IsOnlyPaid), po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
 				{
 					ProductionOrderId = po.Id,
 					WorkplaceId = workplaceId,
@@ -72,12 +72,12 @@ public partial class OrderService
 			return newOrders;
 		}
 
-		var pendingOrders = await _context.OrderFootprints
+		var pendingOrders = await context.OrderFootprints
 			.Where(fp => fp.WorkplaceId == workplaceId &&
 						(fp.Status == OrderStatus.WorkplaceStatus.Pending ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Joinery))
-			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders.Where(o => !o.IsOnlyPaid), x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
+			.Join(context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
+			.Join(context.Orders.Where(o => !o.IsOnlyPaid), x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
 			{
 				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
@@ -104,17 +104,17 @@ public partial class OrderService
 
 	public async Task<List<WorkplaceOrderDto>> GetActiveAndPendingOrdersForWorkplaceAsync(Guid workplaceId)
 	{
-		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(_context, workplaceId);
-		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(_context, workplaceId);
+		var isStart = await OrderServiceHelper.IsStartWorkplaceAsync(context, workplaceId);
+		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(context, workplaceId);
 		var result = new List<WorkplaceOrderDto>();
 
 		if (isStart)
 		{
-			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
+			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(context);
 
-			var newOrders = await _context.ProductionOrders
+			var newOrders = await context.ProductionOrders
 				.Where(po => po.CurrentWorkplaceId == noneId)
-				.Join(_context.Orders.Where(o => !o.IsOnlyPaid), po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
+				.Join(context.Orders.Where(o => !o.IsOnlyPaid), po => po.OrderId, o => o.Id, (po, o) => new WorkplaceOrderDto
 				{
 					ProductionOrderId = po.Id,
 					WorkplaceId = workplaceId,
@@ -144,13 +144,13 @@ public partial class OrderService
 			result.RemoveAll(x => x.IsEconom);
 		}
 
-		var allOrders = await _context.OrderFootprints
+		var allOrders = await context.OrderFootprints
 			.Where(fp => fp.WorkplaceId == workplaceId &&
 						(fp.Status == OrderStatus.WorkplaceStatus.Pending ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Joinery ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Active))
-			.Join(_context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
-			.Join(_context.Orders.Where(o => !o.IsOnlyPaid), x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
+			.Join(context.ProductionOrders, fp => fp.ProductionOrderId, po => po.Id, (fp, po) => new { fp, po })
+			.Join(context.Orders.Where(o => !o.IsOnlyPaid), x => x.po.OrderId, o => o.Id, (x, o) => new WorkplaceOrderDto
 			{
 				ProductionOrderId = x.fp.ProductionOrderId,
 				WorkplaceId = x.fp.WorkplaceId,
@@ -174,12 +174,12 @@ public partial class OrderService
 		result.AddRange(allOrders);
 
 		// Получаем блокировки для этого участка
-		var blocks = await _context.OrderBlocks
+		var blocks = await context.OrderBlocks
 			.Where(b => b.WorkplaceId == workplaceId && b.ResolvedAt == null)
 			.ToListAsync();
 
 		// Получаем атрибуты
-		var attributesMap = await _orderAttributeService.GetAttributesForWorkplace(workplaceId, result);
+		var attributesMap = await orderAttributeService.GetAttributesForWorkplace(workplaceId, result);
 
 		// Обогащаем каждый заказ
 		foreach (var order in result)
@@ -210,11 +210,11 @@ public partial class OrderService
 	public async Task<SetFootprintResultDto> SetOrderFootprintStatusAsync(
 		Guid productionOrderId, Guid workplaceId, string status, Guid? userId, string notes)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var hasExisting = await _context.OrderFootprints
+			var hasExisting = await context.OrderFootprints
 				.AnyAsync(fp => fp.ProductionOrderId == productionOrderId);
 
 			string? oldStatus = null;
@@ -234,11 +234,11 @@ public partial class OrderService
 
 			await SetProductionOrderCurrentWorkplaceAsync(productionOrderId, workplaceId);
 
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.Include(po => po.CurrentWorkplace)
 				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 
-			var workplace = await _context.Workplaces
+			var workplace = await context.Workplaces
 				.FirstOrDefaultAsync(w => w.Id == workplaceId);
 
 			if (productionOrder!= null && workplace?.Code == WorkplaceCodes.Packing && status == Constants.OrderStatus.WorkplaceStatus.Completed)
@@ -246,7 +246,7 @@ public partial class OrderService
 				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
 			}
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 
 			if (true || userId.HasValue) //TODO Убрать TRUE после внедрения аутентификации/авторизации
 			{
@@ -261,8 +261,8 @@ public partial class OrderService
 					Notes = $"Статус изменён мастером. {notes}",
 					Source = "API"
 				};
-				_context.OperationLogs.Add(operationLog);
-				await _context.SaveChangesAsync();
+				context.OperationLogs.Add(operationLog);
+				await context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
@@ -278,14 +278,14 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in SetOrderFootprintStatus");
+			logger.LogError(ex, "Error in SetOrderFootprintStatus");
 			throw;
 		}
 	}
 
 	private async Task BuildFullPathAsync(Guid productionOrderId, Guid startWorkplaceId)
 	{
-		var allWorkplaces = await _context.Workplaces
+		var allWorkplaces = await context.Workplaces
 			.Where(w => w.IsWorkplace)
 			.Select(w => w.Id)
 			.ToListAsync();
@@ -306,10 +306,10 @@ public partial class OrderService
 				UpdatedAt = DateTime.UtcNow
 			};
 
-			_context.OrderFootprints.Add(footprint);
+			context.OrderFootprints.Add(footprint);
 		}
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
 		await ActivateNextWorkplacesAsync(productionOrderId, startWorkplaceId);
 		await ActivateParallelWorkplacesAsync(productionOrderId, startWorkplaceId);
@@ -317,8 +317,8 @@ public partial class OrderService
 
 	private async Task ActivateNextWorkplacesAsync(Guid productionOrderId, Guid startedWorkplaceId)
 	{
-		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(_context, startedWorkplaceId);
-		var nextWorkplaces = await OrderServiceHelper.GetNextWorkplacesAsync(_context, startedWorkplaceId);
+		var isJoinery = await OrderServiceHelper.IsJoineryWorkplaceAsync(context, startedWorkplaceId);
+		var nextWorkplaces = await OrderServiceHelper.GetNextWorkplacesAsync(context, startedWorkplaceId);
 
 		foreach (var workplaceId in nextWorkplaces)
 		{
@@ -332,7 +332,7 @@ public partial class OrderService
 
 	private async Task ActivateParallelWorkplacesAsync(Guid productionOrderId, Guid startedWorkplaceId)
 	{
-		var parallelWorkplaces = await OrderServiceHelper.GetParallelWorkplacesAsync(_context, startedWorkplaceId);
+		var parallelWorkplaces = await OrderServiceHelper.GetParallelWorkplacesAsync(context, startedWorkplaceId);
 
 		foreach (var workplaceId in parallelWorkplaces)
 		{
@@ -345,7 +345,7 @@ public partial class OrderService
 
 	private async Task UpdateStatusAsync(Guid productionOrderId, Guid workplaceId, string newStatus, bool canDowngrade = false)
 	{
-		var footprint = await _context.OrderFootprints
+		var footprint = await context.OrderFootprints
 			.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId && fp.WorkplaceId == workplaceId);
 
 		if (footprint == null)
@@ -355,7 +355,7 @@ public partial class OrderService
 		{
 			footprint.Status = newStatus;
 			footprint.UpdatedAt = DateTime.UtcNow;
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 		}
 
 		// Публикую события в SignalR
@@ -369,14 +369,14 @@ public partial class OrderService
 				// 2. Оповещение для рабочего места (обновятся списки в приложениях)
 				await NotificationHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, newStatus);
 
-				_logger.LogInformation(
+				logger.LogInformation(
 					"SignalR: order {OrderId}, workplace {WorkplaceId}, status → {NewStatus}",
 					productionOrderId, workplaceId, newStatus);
 			}
 		}
 		catch (Exception ex)
 		{
-			_logger.LogWarning(ex, "Failed to send SignalR notification for status change");
+			logger.LogWarning(ex, "Failed to send SignalR notification for status change");
 		}
 
 	}

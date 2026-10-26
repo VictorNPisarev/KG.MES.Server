@@ -39,6 +39,7 @@ builder.Services.AddScoped<ILicenseService, ServerLicenseService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, ServerAuthService>();
+builder.Services.AddScoped<NotificationService>();
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";

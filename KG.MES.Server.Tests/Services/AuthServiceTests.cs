@@ -1,6 +1,5 @@
 using FluentAssertions;
 using KG.MES.Shared.Data;
-using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
@@ -12,6 +11,7 @@ using Moq;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using KG.MES.Shared.Models.Enums;
+using KG.MES.Server.Controllers;
 
 namespace KG.MES.Server.Tests.Services;
 

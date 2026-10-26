@@ -9,7 +9,7 @@ public partial class OrderService
 {
 	public async Task<OrderCommercialDto?> GetOrderCommercialAsync(Guid orderId)
 	{
-		var commercial = await _context.OrderCommercials
+		var commercial = await context.OrderCommercials
 			.Include(oc => oc.Manager)
 			.Include(oc => oc.Customer)
 			.FirstOrDefaultAsync(oc => oc.OrderId == orderId);
@@ -32,12 +32,12 @@ public partial class OrderService
 	public async Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
-		var orderQuery = _context.Orders.AsQueryable();
+		var orderQuery = context.Orders.AsQueryable();
 
 		if (!string.IsNullOrEmpty(orderNumber))
 			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
 
-		var wProductionOrderQuery = orderQuery.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
+		var wProductionOrderQuery = orderQuery.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
 
 		if (
 			//string.IsNullOrEmpty(orderNumber) && 
@@ -47,10 +47,10 @@ public partial class OrderService
 		}
 
 		var query = wProductionOrderQuery
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
-			.LeftJoin(_context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
-			.LeftJoin(_context.Users, x => x.s != null ? x.s.ManagerId : (Guid?)null, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
-			.LeftJoin(_context.Customers, x => x.s != null ? x.s.CustomerId : (Guid?)null, c => c.Id, (x, c) => 
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
+			.LeftJoin(context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
+			.LeftJoin(context.Users, x => x.s != null ? x.s.ManagerId : (Guid?)null, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
+			.LeftJoin(context.Customers, x => x.s != null ? x.s.CustomerId : (Guid?)null, c => c.Id, (x, c) => 
 			new SalesOrderDto
 			{
 				Id = x.o.Id,
@@ -131,14 +131,14 @@ public partial class OrderService
 		string? customerName,
 		Guid? managerId)
 	{
-		var query = from o in _context.Orders
-					join po in _context.ProductionOrders on o.Id equals po.OrderId into poGroup
+		var query = from o in context.Orders
+					join po in context.ProductionOrders on o.Id equals po.OrderId into poGroup
 					from po in poGroup.DefaultIfEmpty()
-					join w in _context.Workplaces on po.CurrentWorkplaceId equals w.Id into wGroup
+					join w in context.Workplaces on po.CurrentWorkplaceId equals w.Id into wGroup
 					from w in wGroup.DefaultIfEmpty()
-					join oc in _context.OrderCommercials on o.Id equals oc.OrderId into ocGroup
+					join oc in context.OrderCommercials on o.Id equals oc.OrderId into ocGroup
 					from oc in ocGroup.DefaultIfEmpty()
-					join u in _context.Users on oc.ManagerId equals u.Id into uGroup
+					join u in context.Users on oc.ManagerId equals u.Id into uGroup
 					from u in uGroup.DefaultIfEmpty()
 					select new SalesOrderDto
 					{
@@ -240,18 +240,18 @@ public partial class OrderService
 	public async Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto)
 	{
 		// Проверяем существование заказа
-		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
 		if (!orderExists)
 			throw new Exception($"Заказ {orderId} не найден");
 
 		// Ищем существующую запись
-		var existing = await _context.OrderCommercials
+		var existing = await context.OrderCommercials
 			.FirstOrDefaultAsync(oc => oc.OrderId == orderId);
 
 		// Если есть контрагент по ID — проверим его существование
 		if (dto.CustomerId.HasValue)
 		{
-			var customerExists = await _context.Customers.AnyAsync(c => c.Id == dto.CustomerId.Value);
+			var customerExists = await context.Customers.AnyAsync(c => c.Id == dto.CustomerId.Value);
 			if (!customerExists)
 				throw new Exception($"Контрагент {dto.CustomerId} не найден");
 		}
@@ -272,12 +272,12 @@ public partial class OrderService
 				UpdatedAt = DateTime.UtcNow
 			};
 
-			_context.OrderCommercials.Add(commercial);
-			await _context.SaveChangesAsync();
+			context.OrderCommercials.Add(commercial);
+			await context.SaveChangesAsync();
 
 			// Загружаем менеджера и контрагента для ответа
-			await _context.Entry(commercial).Reference(oc => oc.Manager).LoadAsync();
-			await _context.Entry(commercial).Reference(oc => oc.Customer).LoadAsync();
+			await context.Entry(commercial).Reference(oc => oc.Manager).LoadAsync();
+			await context.Entry(commercial).Reference(oc => oc.Customer).LoadAsync();
 
 			return new OrderCommercialDto
 			{
@@ -299,11 +299,11 @@ public partial class OrderService
 			existing.Currency = dto.Currency ?? existing.Currency;
 			existing.UpdatedAt = DateTime.UtcNow;
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 
 			// Загружаем менеджера и контрагента для ответа
-			await _context.Entry(existing).Reference(oc => oc.Manager).LoadAsync();
-			await _context.Entry(existing).Reference(oc => oc.Customer).LoadAsync();
+			await context.Entry(existing).Reference(oc => oc.Manager).LoadAsync();
+			await context.Entry(existing).Reference(oc => oc.Customer).LoadAsync();
 
 			return new OrderCommercialDto
 			{
@@ -322,7 +322,7 @@ public partial class OrderService
 	/// </summary>
 	public async Task<List<CustomerDto>> GetCustomersAsync(string? search = null)
 	{
-		var query = _context.Customers.AsQueryable();
+		var query = context.Customers.AsQueryable();
 
 		if (!string.IsNullOrEmpty(search))
 		{

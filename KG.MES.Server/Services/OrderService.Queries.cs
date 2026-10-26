@@ -9,10 +9,10 @@ public partial class OrderService
 {
 	public async Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId)
 	{
-		var result = await _context.Orders
+		var result = await context.Orders
 			.Where(o => o.Id == orderId)
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
+			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -50,7 +50,7 @@ public partial class OrderService
 	{
 		var isUuid = Guid.TryParse(identifier, out var orderId);
 
-		var orders = await _context.Orders
+		var orders = await context.Orders
 			.Where(o => isUuid ? o.Id == orderId : o.OrderNumber == identifier)
 			.ToListAsync();
 
@@ -58,7 +58,7 @@ public partial class OrderService
 
 		foreach (var order in orders)
 		{
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.Include(po => po.CurrentWorkplace)
 				.FirstOrDefaultAsync(po => po.OrderId == order.Id);
 
@@ -67,9 +67,9 @@ public partial class OrderService
 				continue;
 			}
 
-			var footprints = await _context.OrderFootprints
+			var footprints = await context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == productionOrder.Id)
-				.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new {fp, w})
+				.Join(context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new {fp, w})
 				.OrderBy(x => x.w.Level)
 				.Select(x => new WorkplaceTraceDto
 				{
@@ -106,12 +106,12 @@ public partial class OrderService
 	private async Task<OrderTraceDto> CreateVirtualTraces(Order order, ProductionOrder productionOrder)
 	{
 
-			var fromWorkplaces = _context.WorkplaceTransitions
+			var fromWorkplaces = context.WorkplaceTransitions
 			 .Select(wt => wt.FromWorkplaceId)
 			 .Distinct()
 			 .ToList();
 
-			var toWorkplaces = _context.WorkplaceTransitions
+			var toWorkplaces = context.WorkplaceTransitions
 				.Select(wt => wt.ToWorkplaceId)
 				.Distinct()
 				.ToList();
@@ -123,13 +123,13 @@ public partial class OrderService
 			// Если граф пустой — берём все рабочие места
 			if (!allWorkplaceIds.Any())
 			{
-				allWorkplaceIds = _context.Workplaces
+				allWorkplaceIds = context.Workplaces
 					.Where(w => w.IsWorkplace)
 					.Select(w => w.Id)
 					.ToList();
 			}
 
-			var workplaces = _context.Workplaces
+			var workplaces = context.Workplaces
 				.Where(w => allWorkplaceIds.Contains(w.Id) && w.IsWorkplace)
 				.OrderBy(w => w.Level)
 				.Select(w => new WorkplaceTraceDto

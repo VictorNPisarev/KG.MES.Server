@@ -3,9 +3,9 @@ using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
-public partial class SalesController : ControllerBase
+public partial class SalesController : BaseController
 {
 	private readonly IOrderService _orderService;
 	private readonly ILogger<SalesController> _logger;

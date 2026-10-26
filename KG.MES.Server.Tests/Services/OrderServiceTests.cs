@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
+using KG.MES.Server.Services;
 
 namespace KG.MES.Server.Tests.Services;
 
@@ -17,6 +18,8 @@ public class OrderServiceTests : IDisposable
 	private readonly OrderService _service;
 	private readonly Mock<ILogger<OrderService>> _loggerMock;
 	private readonly OrderAttributeService _attributeService;
+
+	private readonly NotificationService _notificationService;
 
 	public OrderServiceTests()
 	{
@@ -29,10 +32,11 @@ public class OrderServiceTests : IDisposable
 		_context = new AppDbContext(options);
 
 		_loggerMock = new Mock<ILogger<OrderService>>();
-		_attributeService = new OrderAttributeService(_context,
-			new Mock<ILogger<OrderAttributeService>>().Object);
+		_attributeService = new OrderAttributeService(_context, new Mock<ILogger<OrderAttributeService>>().Object);
 
-		_service = new OrderService(_context, _loggerMock.Object, _attributeService);
+		_notificationService = new NotificationService(_context, new Mock<ILogger<NotificationService>>().Object);
+
+		_service = new OrderService(_context, _loggerMock.Object, _attributeService, _notificationService);
 	}
 
 	public void Dispose()
@@ -132,7 +136,7 @@ public class OrderServiceTests : IDisposable
 		await _context.SaveChangesAsync();
 
 		// Act
-		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, null);
+		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, null, null, null);
 
 		// Assert
 		result.Should().NotBeNull();
@@ -158,7 +162,7 @@ public class OrderServiceTests : IDisposable
 		await _context.SaveChangesAsync();
 
 		// Act
-		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, "001");
+		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, null, null, "001");
 
 		// Assert
 		result.Data.Should().HaveCount(1);

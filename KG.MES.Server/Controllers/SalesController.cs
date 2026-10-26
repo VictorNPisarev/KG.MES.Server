@@ -4,11 +4,11 @@ using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public partial class SalesController : ControllerBase
+public partial class SalesController : BaseController
 {
 	// GET: api/sales/orders
 	[HttpGet("orders")]

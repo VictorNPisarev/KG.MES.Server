@@ -3,12 +3,12 @@ using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
 [Authorize]
-public partial class OrderController : ControllerBase
+public partial class OrderController : BaseController
 {
 	#region POST
 	
