@@ -115,9 +115,12 @@ public partial class OrderController : BaseController
 	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
 		=> GetFilterFacetsHandler(request);
 
+	[HttpGet("orders/new")]
+	public Task<IActionResult> GetNewOrders() => GetNewOrdersHandler();
+	
 	#endregion GET
 
-	
+
 	#region PUT
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}

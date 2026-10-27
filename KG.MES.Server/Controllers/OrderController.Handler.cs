@@ -281,4 +281,19 @@ public partial class OrderController : BaseController
 		var result = await orderService.GetFilterFacetsAsync<OrderDto>(request);
 		return Ok(result);
 	}
+
+	public async Task<IActionResult> GetNewOrdersHandler()
+	{
+		Console.WriteLine("GetNewOrdersHandler");
+		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+		{
+			Console.WriteLine($"GetNewOrdersHandler :: crush");
+			return Ok(new List<OrderDto>());
+		}
+
+		Console.WriteLine($"GetNewOrdersHandler :: {CurrentUserId} :: {CurrentRoleName}");
+
+		var result = await orderService.GetNewOrdersAsync(CurrentUserId.Value, CurrentRoleName);
+		return Ok(result);
+	}
 }

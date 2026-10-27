@@ -775,4 +775,35 @@ public partial class OrderService : IOrderService
 			.Select(v => new FacetValueDto { Value = v })
 			.ToList();
 	}
+
+	public async Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, string roleName)
+	{
+		var newOrderIds = await context.OrderNotifications
+			.Where(n =>
+				n.AudienceType == "ALL" ||
+				(n.AudienceType == "ROLE" && n.AudienceValue == roleName) ||
+				(n.AudienceType == "USER" && n.AudienceValue == userId.ToString()))
+			.Where(n => !context.OrderNotificationReads
+				.Any(r => r.NotificationId == n.Id && r.UserId == userId))
+			.Where(n => n.EventType == "NEW_ORDER")
+			.Select(n => n.OrderId)
+			.Distinct()
+			.ToListAsync();
+
+		Console.WriteLine($"newOrderIds :: {newOrderIds.Count}");
+
+		if (!newOrderIds.Any())
+			return new List<OrderDto>();
+
+		Console.WriteLine($"newOrderIds :: {newOrderIds.First()}");
+
+		var result = await BuildBaseQuery()
+			.Where(o => newOrderIds.Contains(o.Id))
+			.OrderBy(o => o.ReadyDate)
+			.ToListAsync();
+
+		Console.WriteLine($"newOrders result :: {result.Count}");
+
+		return result;
+	}
 }

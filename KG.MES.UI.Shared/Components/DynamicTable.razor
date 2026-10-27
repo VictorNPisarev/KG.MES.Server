@@ -9,6 +9,8 @@
 	{
 		@RowActions
 	}
+	@if (ShowSettings)
+	{
 	@*<div class="d-flex gap-2">*@
 		<div class="position-relative">
 			<button class="btn btn-sm btn-outline-secondary" @onclick="() => isColumnsOpen = !isColumnsOpen" type="button">
@@ -56,8 +58,8 @@
 				@onclick="ToggleResizeMode" title="Настроить ширину колонок">
 			<i class="bi bi-arrows"></i>
 		</button>
-
 	@*</div>*@
+	}
 </div>
 
 <div class="row g-0 d-flex w-100" style="flex-wrap: nowrap;">
@@ -172,69 +174,49 @@
 							</tr>
 						}
 					</tbody>
-					@if (columnInfos.Any(c => c.ShowTotal))
+					@if (ShowTotal && columnInfos.Any(c => c.ShowTotal))
 					{
-						@if (CalculateTotal)
-						{
-							<tfoot class="table-light fw-bold">
-								<tr>
-									@foreach (var col in BuildVisibleColumns())
-									{
-											<td>
-												@if (col.Info.ShowTotal)
+						<tfoot class="table-light fw-bold">
+							<tr>
+								@foreach (var col in BuildVisibleColumns())
+								{
+									<td>
+										@if (col.Info.ShowTotal)
+										{
+											@if (Totals != null)
+											{
+												// Серверные итоги
+												@GetTotalValue(col.Info)
+											}
+											else
+											{
+												// Клиентские итоги
+												var total = GetColumnTotal(col.Info);
+												@if (col.Info.DisplayFormat == "F2")
 												{
-														var total = GetColumnTotal(col.Info);
-														@if (col.Info.DisplayFormat == "F2")
-														{
-																@total.ToString("F2")
-														}
-														else
-														{
-																@total.ToString("0")
-														}
+													@total.ToString("F2")
 												}
 												else
 												{
-													@if (col == visibleData.First())
-													{
-														<text>Итого:</text>
-													}
-
-														@* Пустая ячейка для несуммируемых колонок *@
+													@total.ToString("0")
 												}
-											</td>
-									}
-									@if (ShowActions && RowTemplate != null)
-									{
-											<td></td>
-									}
-								</tr>
-							</tfoot>
-						}
-						else if (ShowTotal)
-						{
-							<tfoot class="table-light fw-bold">
-								<tr>
-									@foreach (var col in BuildVisibleColumns())
-									{
-										<td>
-											@if (col == BuildVisibleColumns().First())
+											}
+										}
+										else
+										{
+											@if (col == visibleData.First())
 											{
 												<text>Итого:</text>
 											}
-											else if (col.Info.ShowTotal && Totals != null)
-											{
-												@GetTotalValue(col.Info)
-											}
-										</td>
-									}
-									@if (ShowActions && RowTemplate != null)
-									{
-										<td></td>
-									}
-								</tr>
-							</tfoot>
-						}
+										}
+									</td>
+								}
+								@if (ShowActions && RowTemplate != null)
+								{
+									<td></td>
+								}
+							</tr>
+						</tfoot>
 					}
 				</table>
 			}

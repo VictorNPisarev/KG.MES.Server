@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
 
-public partial class NotificationsController : ControllerBase
+public partial class NotificationsController
 {
 	private readonly NotificationService _notificationService;
 
@@ -29,6 +29,28 @@ public partial class NotificationsController : ControllerBase
 		return Ok();
 	}
 
+	public async Task<IActionResult> MarkOrderNotificationsReadHandler(Guid orderId)
+	{
+		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+			return Unauthorized();
+
+		await _notificationService.MarkAllOrderNotificationsReadAsync(
+			orderId, CurrentUserId.Value, CurrentRoleName);
+
+		return Ok();
+	}
+
+	public async Task<IActionResult> MarkAllOrderNotificationsReadHandler()
+	{
+		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+			return Unauthorized();
+
+		var count = await _notificationService.MarkAllOrderNotificationsReadAsync(
+			CurrentUserId.Value, CurrentRoleName);
+
+		return Ok(new { markedCount = count });
+	}
+
 	// Вспомогательные методы
 	private Guid GetCurrentUserId()
 	{
@@ -37,4 +59,5 @@ public partial class NotificationsController : ControllerBase
 			throw new UnauthorizedAccessException("User ID not found in token");
 		return userId;
 	}
+
 }

@@ -18,11 +18,12 @@ public partial class DynamicTable<TListItem> : ComponentBase
 	[Parameter] public bool ShowActions { get; set; }
 	[Parameter] public RenderFragment? RowActions { get; set; }
 	[Parameter] public RenderFragment<TListItem>? RowTemplate { get; set; }
-	[Parameter] public bool CalculateTotal { get; set; } = true;
 	[Parameter] public string? TotalDistinctBy { get; set; } // Чтобы в итого не попадали одинаковые заказы 
 															 // (например, если в таблице один и тот же заказ с разными статусами - история операций)
 	[Parameter] public bool AllowSorting { get; set; } = false;
 	[Parameter] public EventCallback<(string SortBy, bool Ascending)> OnSortChanged { get; set; }
+	[Parameter] public bool ShowSettings { get; set; } = true;
+
 
 	private List<ColumnInfo> columnInfos = [];
 	private List<ColumnSetting> columnSettings = [];
@@ -33,8 +34,6 @@ public partial class DynamicTable<TListItem> : ComponentBase
 
 	protected override async Task OnInitializedAsync()
 	{
-		//ShowTotal &= CalculateTotal;
-
 		columnInfos = ColumnHelper.GetColumns<TListItem>();
 
 		columnSettings = ColumnSettings?.Any() == true

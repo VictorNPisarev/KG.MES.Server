@@ -156,6 +156,50 @@
 		</div>
 	</div>
 
+	<!-- Новые заказы -->
+	@if (newOrders.Any())
+	{
+		<div class="card mt-3 mb-4 border-danger shadow-sm overflow-hidden">
+			<div class="card-header bg-danger bg-opacity-25 text-danger py-1 d-flex justify-content-between align-items-center"
+				style="cursor: pointer;" @onclick="() => isNewOrdersExpanded = !isNewOrdersExpanded">
+
+				<div>
+					<small class="fw-bold">
+						<i class="bi bi-exclamation-circle-fill me-1"></i>
+						Новые заказы (@newOrders.Count)
+					</small>
+				</div>
+
+				<div class="d-flex gap-3 align-items-center">
+					@if (isNewOrdersExpanded)
+					{
+						<button class="btn btn-sm btn-outline-danger py-0" style="font-size: 0.75rem;"
+							@onclick="() => showConfirmMarkAllRead = true" @onclick:stopPropagation="true">
+							Все просмотрены
+						</button>
+					}
+					<i class="bi @(isNewOrdersExpanded ? "bi-chevron-up" : "bi-chevron-down") small"></i>
+				</div>
+			</div>
+			@if (isNewOrdersExpanded)
+			{
+				<div class="card-body p-0">
+					<DynamicTable TListItem="TListItem" Items="newOrders" ColumnInfos="columnInfos"
+						ColumnSettings="columnSettings" TableKey="@tableKey" ShowActions="true" AllowSorting="false"
+						ShowTotal="false" ShowSettings="false">
+						<RowTemplate>
+							<div class="d-flex flex-row gap-2">
+								<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenOrder(context!)">
+									<i class="bi bi-eye"></i>
+								</button>
+							</div>
+						</RowTemplate>
+					</DynamicTable>
+				</div>
+			}
+		</div>
+	}
+
 	<!-- Таблица -->
 	@if (isLoading)
 	{
@@ -176,7 +220,7 @@
 				@*<DynamicTable TListItem="TListItem" Items="FilteredItems" ColumnInfos="columnInfos"*@
 				<DynamicTable TListItem="TListItem" Items="orders.Data" ColumnInfos="columnInfos"
 					ColumnSettings="columnSettings" TableKey="@tableKey" ShowActions="true"
-					OnSortChanged="HandleSortChanged" AllowSorting="true" Totals="totals" ShowTotal="true" CalculateTotal="false">
+					OnSortChanged="HandleSortChanged" AllowSorting="true" Totals="totals" ShowTotal="true">
 					<RowActions>
 						<div class="text-muted me-auto">
 							@if (orders.Data.Any())
@@ -330,4 +374,28 @@
 		</div>
 	</div>
 	<div class="modal-backdrop fade show" @onclick="() => dashboardRef!.CloseOrder()"></div>
+}
+
+@* Модалка подтверждения "Все просмотрены" *@
+@if (showConfirmMarkAllRead)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Подтверждение</h5>
+					<button type="button" class="btn-close" @onclick="() => showConfirmMarkAllRead = false"></button>
+				</div>
+				<div class="modal-body">
+					<p>Отметить все новые заказы (@newOrders.Count шт.) как просмотренные?</p>
+					<p class="text-muted small mb-0">Уведомления о них исчезнут.</p>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="() => showConfirmMarkAllRead = false">Отмена</button>
+					<button class="btn btn-danger" @onclick="ConfirmMarkAllAsRead">Отметить</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
 }

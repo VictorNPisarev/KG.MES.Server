@@ -25,7 +25,10 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	[Parameter] public EventCallback<TListItem> OnDeleteOrder { get; set; }
 	[Parameter] public RenderFragment? HeaderActions { get; set; }
 	[Parameter] public Func<Guid?, Guid[]?, string?, int, int, string?, string?, List<FilterCondition>, Task<PaginatedResponse<TListItem>>>? LoadItems { get; set; }
+	[Parameter] public Func<Task<List<TListItem>>>? LoadNewItems { get; set; }
+
 	[Parameter] public Func<Guid, Task<TCardItem>>? LoadItem { get; set; }
+	[Parameter] public bool ShowOnlyNewFilter { get; set; } = false;
 
 
 	[Inject] private ProductionApiService ApiService { get; set; } = null!;
@@ -41,6 +44,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private string Title => Settings.Title;
 	private bool ShowActions => Settings.ShowActions;
 	private PaginatedResponse<TListItem> orders = new();
+	private List<TListItem> newOrders = [];
+
 	private List<WorkplaceDto> workplaces = [];
 	private List<ColumnInfo> columnInfos = [];
 	private List<ColumnSetting> columnSettings = [];
@@ -71,8 +76,9 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private List<ColumnInfo> filterableColumns => columnInfos.Where(c => c.Filterable).ToList();
 	private Dictionary<string, List<FacetValueDto>> facets = [];
 	private ITotalsDto? totals;
-
 	private string debugMessage = string.Empty;
+	private bool isNewOrdersExpanded = true;
+	private bool showConfirmMarkAllRead;
 
 	private IconInfo testIcon = new IconInfo
 	{
@@ -89,6 +95,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		workplaces = await ApiService.GetAllWorkplacesAsync();
 		await LoadFacetsAsync();
 		await LoadOrders();
+		await LoadNewOrders();
 
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
 	}
@@ -96,6 +103,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private async void OnOrderUpdated(OrderUpdatedEvent e)
 	{
 		await LoadOrders();
+		await LoadNewOrders();
 		StateHasChanged();
 	}
 
@@ -219,18 +227,12 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	
 	private async Task LoadOrders()
 	{
-		debugMessage += "\r\nLoadOrders() in";
 		isLoading = true;
 		StateHasChanged();
 
 		try
 		{
-			debugMessage += "\r\nLoadOrders() try in";
-			//ApiService.Session = Session;
-
-			debugMessage += "\r\nLoadOrders() before filters";
 			var filters = BuildFilterConditionsForIn();
-			debugMessage += "\r\nLoadOrders() after filters";
 
 			if (LoadItems != null)
 			{
@@ -255,8 +257,21 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		finally
 		{
 			isLoading = false;
-			debugMessage += "\r\nLoadOrders() finally";
 			StateHasChanged();
+		}
+	}
+
+	private async Task LoadNewOrders()
+	{
+		if (LoadNewItems == null) return;
+
+		try
+		{
+			newOrders = await LoadNewItems();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading new orders: {ex.Message}");
 		}
 	}
 
@@ -304,7 +319,22 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	{
 		selectedOrder = order;
 
-		debugMessage = $"order: {GetOrderId(selectedOrder)}";
+		// Отмечаю оповещение, как прочитанное
+		var orderId = GetOrderId(order);
+		if (orderId != Guid.Empty)
+		{
+			// Вызов асинхронный, не блокируем UI
+			_ = ApiService.MarkOrderNotificationsAsReadAsync(orderId);
+
+			// Убираем заказ из блока "новых" (или помечаем прочитанным)
+			var newOrder = newOrders.FirstOrDefault(o => GetOrderId(o) == orderId);
+			if (newOrder != null)
+			{
+				newOrders.Remove(newOrder);
+				StateHasChanged();
+			}
+		}
+
 
 		if (useSplitView)
 		{
@@ -390,6 +420,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		else
 		{
 			await LoadOrders();
+			await LoadNewOrders();
 			StateHasChanged();
 
 			// Восстанавливаем позицию скролла
@@ -817,5 +848,31 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 			return result;
 		}
+	}
+
+	private async Task MarkAllAsRead()
+	{
+		if (!newOrders.Any()) return;
+
+		try
+		{
+			var success = await ApiService.MarkAllOrdersNotificationsAsReadAsync();
+
+			if (success)
+			{
+				newOrders.Clear();
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking all orders as read: {ex.Message}");
+		}
+	}
+
+	private void ConfirmMarkAllAsRead()
+	{
+		showConfirmMarkAllRead = false;
+		_ = MarkAllAsRead(); // fire-and-forget
 	}
 }

@@ -37,4 +37,5 @@ public interface IOrderService
 	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
 	Task<bool> DeleteOrderAsync(Guid orderId);
 	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
+	Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, string roleName);
 }
