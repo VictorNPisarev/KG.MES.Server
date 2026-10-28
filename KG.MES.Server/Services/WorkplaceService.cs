@@ -1,6 +1,6 @@
 // KG.MES.Server/Services/WorkplaceService.cs
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;

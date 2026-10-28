@@ -1,27 +1,33 @@
 // KG.MES.Server/Services/SupplyService.cs
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Shared.Models.Entities;
 using KG.MES.Server.Extensions;
+using KG.MES.Server.Services;
+using KG.MES.Shared.Model.Enums;
 
 namespace KG.MES.Shared.Services;
 
 public class ServerSupplyService : ISupplyService
 {
-	private readonly AppDbContext _context;
-	private readonly ILogger<ServerSupplyService> _logger;
+	private readonly AppDbContext context;
+	private readonly ILogger<ServerSupplyService> logger;
 
-	public ServerSupplyService(AppDbContext context, ILogger<ServerSupplyService> logger)
+	private readonly NotificationService notificationService;
+
+
+	public ServerSupplyService(AppDbContext context, ILogger<ServerSupplyService> logger, NotificationService notificationService)
 	{
-		_context = context;
-		_logger = logger;
+		this.context = context;
+		this.logger = logger;
+		this.notificationService = notificationService;
 	}
 
 	public async Task<List<SupplyTypeDto>> GetSupplyTypesAsync()
 	{
-		return await _context.SupplyTypes
+		return await context.SupplyTypes
 			.Where(st => st.IsActive)
 			.Select(st => new SupplyTypeDto
 			{
@@ -36,7 +42,7 @@ public class ServerSupplyService : ISupplyService
 
 	public async Task<List<SupplyConditionDto>> GetSupplyConditionsAsync()
 	{
-		return await _context.SupplyConditions
+		return await context.SupplyConditions
 			.OrderBy(sc => sc.SortOrder)
 			.Select(sc => new SupplyConditionDto
 			{
@@ -49,13 +55,13 @@ public class ServerSupplyService : ISupplyService
 
 	public async Task<List<OrderSupplyDto>> GetOrderSupplyItemsAsync(Guid orderId)
 	{
-		return await _context.OrderSupplies
+		return await context.OrderSupplies
 			.Where(os => os.OrderId == orderId)
 			.SelectMany(os => os.SupplyItems!)
-			.Join(_context.SupplyTypes, si => si.SupplyTypeId, st => st.Id, (si, st) => new { si, st })
-			.GroupJoin(_context.SupplyConditions, x => x.si.ConditionId, sc => sc.Id, (x, sc) => new { x.si, x.st, sc })
+			.Join(context.SupplyTypes, si => si.SupplyTypeId, st => st.Id, (si, st) => new { si, st })
+			.GroupJoin(context.SupplyConditions, x => x.si.ConditionId, sc => sc.Id, (x, sc) => new { x.si, x.st, sc })
 			.SelectMany(x => x.sc.DefaultIfEmpty(), (x, sc) => new { x.si, x.st, sc })
-			.GroupJoin(_context.Comments, x => x.si.CommentId, c => c.Id, (x, c) => new { x.si, x.st, x.sc, c })
+			.GroupJoin(context.Comments, x => x.si.CommentId, c => c.Id, (x, c) => new { x.si, x.st, x.sc, c })
 			.SelectMany(x => x.c.DefaultIfEmpty(), (x, c) => new OrderSupplyDto
 			{
 				OrderSupplyId = x.si.OrderSupplyId,
@@ -76,13 +82,13 @@ public class ServerSupplyService : ISupplyService
 			Guid supplyTypeId,
 			UpdateSupplyItemRequest request)
 	{
-		var orderSupply = await _context.OrderSupplies
+		var orderSupply = await context.OrderSupplies
 			.FirstOrDefaultAsync(os => os.OrderId == orderId);
 
 		if (orderSupply == null)
 			return new OperationResultDto { Success = false, Message = "Order supply not found" };
 
-		var supplyItem = await _context.SupplyItems
+		var supplyItem = await context.SupplyItems
 			.FirstOrDefaultAsync(si => si.OrderSupplyId == orderSupply.Id && si.SupplyTypeId == supplyTypeId);
 
 		if (supplyItem == null)
@@ -94,7 +100,7 @@ public class ServerSupplyService : ISupplyService
 		supplyItem.Comment = request.Comment;
 		supplyItem.UpdatedAt = DateTime.UtcNow;
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
 		// Оборачиваем уведомления в try-catch, чтобы тесты с InMemory не падали
 		//try
@@ -113,7 +119,7 @@ public class ServerSupplyService : ISupplyService
 		Guid orderId,
 		List<UpdateSupplyItemRequest> updates)
 	{
-		var orderSupply = await _context.OrderSupplies
+		var orderSupply = await context.OrderSupplies
 			.FirstOrDefaultAsync(os => os.OrderId == orderId);
 
 		if (orderSupply == null)
@@ -121,7 +127,7 @@ public class ServerSupplyService : ISupplyService
 
 		foreach (var update in updates)
 		{
-			var supplyItem = await _context.SupplyItems
+			var supplyItem = await context.SupplyItems
 				.FirstOrDefaultAsync(si => si.OrderSupplyId == orderSupply.Id
 											&& si.SupplyTypeId == update.SupplyTypeId);
 
@@ -140,7 +146,7 @@ public class ServerSupplyService : ISupplyService
 			{
 				if (supplyItem.CommentId.HasValue)
 				{
-					var existingComment = await _context.Comments
+					var existingComment = await context.Comments
 						.FirstOrDefaultAsync(c => c.Id == supplyItem.CommentId.Value);
 					if (existingComment != null)
 					{
@@ -160,7 +166,7 @@ public class ServerSupplyService : ISupplyService
 						CreatedAt = DateTime.UtcNow,
 						UpdatedAt = DateTime.UtcNow
 					};
-					_context.Comments.Add(newComment);
+					context.Comments.Add(newComment);
 					supplyItem.CommentId = newComment.Id;
 				}
 			}
@@ -172,7 +178,7 @@ public class ServerSupplyService : ISupplyService
 			supplyItem.UpdatedAt = DateTime.UtcNow;
 		}
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
 		return new OperationResultDto
 		{
@@ -184,87 +190,7 @@ public class ServerSupplyService : ISupplyService
 	public async Task<PaginatedResponse<SupplyDto>> GetAllSupplyItemsAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
 	{
-		var orderQuery = _context.Orders.Where(o => !o.IsOnlyPaid).AsQueryable();
-
-		if (!string.IsNullOrEmpty(orderNumber))
-			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
-
-		var wProductionOrderQuery = orderQuery.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
-
-		if (
-			//string.IsNullOrEmpty(orderNumber) && 
-			workplaceIds != null && workplaceIds.Any())
-		{
-			wProductionOrderQuery = wProductionOrderQuery.Where(o => workplaceIds.Contains(o.po.CurrentWorkplaceId ?? Guid.Empty));
-		}
-
-		var query = wProductionOrderQuery
-			.Join(_context.OrderSupplies, x => x.o.Id, os => os.OrderId, (x, os) => new { x.o, x.po, os })
-			.Join(_context.SupplyItems, x => x.os.Id, si => si.OrderSupplyId, (x, si) => new { x.o, x.po, x.os, si })
-			.Join(_context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, st })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, x.os, x.si, x.st, w })
-			.GroupBy(x => new { x.o.Id, x.o.OrderNumber, x.o.ReadyDate, x.o.RtmDate, x.o.IsClaim, x.o.IsEconom, x.o.IsOnlyPaid, 
-								x.po.Machine, ProductionOrderId = x.po.Id, x.po.CurrentWorkplaceId, x.po.IsTwoSidePaint,
-								WorkplaceName = x.w.Name})
-			.Select(g => new SupplyDto
-			{
-				Id = g.Key.Id,
-				OrderNumber = g.Key.OrderNumber,
-				ReadyDate = g.Key.ReadyDate,
-				RtmDate = g.Key.RtmDate,
-				Machine = g.Key.Machine,
-				ProductionOrderId = g.Key.ProductionOrderId,
-				CurrentWorkplaceId = g.Key.CurrentWorkplaceId,
-				Status = g.Key.WorkplaceName,
-				IsClaim = g.Key.IsClaim,
-				IsEconom = g.Key.IsEconom,
-				IsOnlyPaid = g.Key.IsOnlyPaid,
-				IsTwoSidePaint = g.Key.IsTwoSidePaint,
-				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "lumber").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				Paint = g.FirstOrDefault(x => x.st.Name == "paint")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "paint").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				Glass = g.FirstOrDefault(x => x.st.Name == "glass")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "glass").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				Furniture = g.FirstOrDefault(x => x.st.Name == "furniture")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "furniture").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				AlumWaterShield = g.FirstOrDefault(x => x.st.Name == "alumWaterShield")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "alumWaterShield").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				Windowsill = g.FirstOrDefault(x => x.st.Name == "windowsill")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "windowsill").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				WoodAlum = g.FirstOrDefault(x => x.st.Name == "woodAlum")!.si.ConditionId == null ? null :
-					_context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "woodAlum").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
-				// Комментарии
-				LumberComment = g.Where(x => x.st.Name == "lumber")
-								 .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-								 .FirstOrDefault(),
-				PaintComment = g.Where(x => x.st.Name == "paint")
-								.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-								.FirstOrDefault(),
-				GlassComment = g.Where(x => x.st.Name == "glass")
-								.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-								.FirstOrDefault(),
-				FurnitureComment = g.Where(x => x.st.Name == "furniture")
-									.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-									.FirstOrDefault(),
-				AlumWaterShieldComment = g.Where(x => x.st.Name == "alumWaterShield")
-										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-										  .FirstOrDefault(),
-				WindowsillComment = g.Where(x => x.st.Name == "windowsill")
-										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-										  .FirstOrDefault(),
-				WoodAlumComment = g.Where(x => x.st.Name == "woodAlum")
-										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
-										  .FirstOrDefault()
-			});
-
-		if (workplaceIds != null && workplaceIds.Any())
-		{
-			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
-		}
-
-		if (!string.IsNullOrEmpty(orderNumber))
-			query = query.Where(s => EF.Functions.ILike(s.OrderNumber, $"%{orderNumber}%"));
+		var query = BuildSupplyQuery(workplaceIds, orderNumber);
 
 		var total = await query.CountAsync();
 
@@ -298,7 +224,7 @@ public class ServerSupplyService : ISupplyService
 		string source = "API")
 	{
 		// Получаем последний лог
-		var lastLog = await _context.SupplyLogs
+		var lastLog = await context.SupplyLogs
 			.Where(sl => sl.SupplyItemId == supplyItemId)
 			.OrderByDescending(sl => sl.OperationTime)
 			.FirstOrDefaultAsync();
@@ -310,7 +236,7 @@ public class ServerSupplyService : ISupplyService
 		if (!conditionChanged && !commentChanged)
 			return;
 
-		_context.SupplyLogs.Add(new SupplyLog
+		context.SupplyLogs.Add(new SupplyLog
 		{
 			Id = Guid.NewGuid(),
 			SupplyItemId = supplyItemId,
@@ -324,7 +250,7 @@ public class ServerSupplyService : ISupplyService
 
 	public async Task<List<SupplyItemHistoryDto>> GetSupplyHistoryAsync(Guid supplyItemId)
 	{
-		var logs = await _context.SupplyLogs
+		var logs = await context.SupplyLogs
 			.Where(sl => sl.SupplyItemId == supplyItemId)
 			.OrderByDescending(sl => sl.OperationTime)
 			.Select(sl => new SupplyItemHistoryDto
@@ -344,5 +270,104 @@ public class ServerSupplyService : ISupplyService
 			log.OperationTime = log.OperationTime.ToProductionTime();
 
 		return logs;
+	}
+
+	private IQueryable<SupplyDto> BuildSupplyQuery(List<Guid>? workplaceIds = null, string? orderNumber = null)
+	{
+		var orderQuery = context.Orders.Where(o => !o.IsOnlyPaid).AsQueryable();
+
+		if (!string.IsNullOrEmpty(orderNumber))
+			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+
+		var wProductionOrderQuery = orderQuery.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
+
+		if (workplaceIds != null && workplaceIds.Any())
+			wProductionOrderQuery = wProductionOrderQuery.Where(o => workplaceIds.Contains(o.po.CurrentWorkplaceId ?? Guid.Empty));
+
+		return wProductionOrderQuery
+			.Join(context.OrderSupplies, x => x.o.Id, os => os.OrderId, (x, os) => new { x.o, x.po, os })
+			.Join(context.SupplyItems, x => x.os.Id, si => si.OrderSupplyId, (x, si) => new { x.o, x.po, x.os, si })
+			.Join(context.SupplyTypes, x => x.si.SupplyTypeId, st => st.Id, (x, st) => new { x.si, x.os, x.o, x.po, st })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, x.os, x.si, x.st, w })
+			.GroupBy(x => new
+			{
+				x.o.Id,
+				x.o.OrderNumber,
+				x.o.ReadyDate,
+				x.o.RtmDate,
+				x.o.IsClaim,
+				x.o.IsEconom,
+				x.o.IsOnlyPaid,
+				x.po.Machine,
+				ProductionOrderId = x.po.Id,
+				x.po.CurrentWorkplaceId,
+				x.po.IsTwoSidePaint,
+				WorkplaceName = x.w.Name
+			})
+			.Select(g => new SupplyDto
+			{
+				Id = g.Key.Id,
+				OrderNumber = g.Key.OrderNumber,
+				ReadyDate = g.Key.ReadyDate,
+				RtmDate = g.Key.RtmDate,
+				Machine = g.Key.Machine,
+				ProductionOrderId = g.Key.ProductionOrderId,
+				CurrentWorkplaceId = g.Key.CurrentWorkplaceId,
+				Status = g.Key.WorkplaceName,
+				IsClaim = g.Key.IsClaim,
+				IsEconom = g.Key.IsEconom,
+				IsOnlyPaid = g.Key.IsOnlyPaid,
+				IsTwoSidePaint = g.Key.IsTwoSidePaint,
+				Lumber = g.FirstOrDefault(x => x.st.Name == "lumber")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "lumber").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				Paint = g.FirstOrDefault(x => x.st.Name == "paint")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "paint").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				Glass = g.FirstOrDefault(x => x.st.Name == "glass")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "glass").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				Furniture = g.FirstOrDefault(x => x.st.Name == "furniture")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "furniture").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				AlumWaterShield = g.FirstOrDefault(x => x.st.Name == "alumWaterShield")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "alumWaterShield").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				Windowsill = g.FirstOrDefault(x => x.st.Name == "windowsill")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "windowsill").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				WoodAlum = g.FirstOrDefault(x => x.st.Name == "woodAlum")!.si.ConditionId == null ? null :
+					context.SupplyConditions.Where(sc => sc.Id == g.First(x => x.st.Name == "woodAlum").si.ConditionId).Select(sc => sc.ConditionCode).FirstOrDefault(),
+				// Комментарии
+				LumberComment = g.Where(x => x.st.Name == "lumber")
+								 .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+								 .FirstOrDefault(),
+				PaintComment = g.Where(x => x.st.Name == "paint")
+								.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+								.FirstOrDefault(),
+				GlassComment = g.Where(x => x.st.Name == "glass")
+								.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+								.FirstOrDefault(),
+				FurnitureComment = g.Where(x => x.st.Name == "furniture")
+									.Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+									.FirstOrDefault(),
+				AlumWaterShieldComment = g.Where(x => x.st.Name == "alumWaterShield")
+										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+										  .FirstOrDefault(),
+				WindowsillComment = g.Where(x => x.st.Name == "windowsill")
+										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+										  .FirstOrDefault(),
+				WoodAlumComment = g.Where(x => x.st.Name == "woodAlum")
+										  .Select(x => x.si.CommentEntity != null ? x.si.CommentEntity.Content : null)
+										  .FirstOrDefault()
+			});
+	}
+
+	public async Task<List<SupplyDto>> GetNewSupplyOrdersAsync(Guid userId, Guid? roleId)
+	{
+		// 1. Получаем ID новых заказов (событие NEW_ORDER)
+		var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(userId, roleId, NotificationEventType.NewOrder);
+
+		if (!newOrderIds.Any()) return new List<SupplyDto>();
+
+		// 2. Возвращаем их в формате снабжения
+		return await BuildSupplyQuery() // твой базовый запрос для снабжения
+			.Where(x => newOrderIds.Contains(x.Id))
+			.OrderByDescending(x => x.ReadyDate) // или по дате создания уведомления
+			.ToListAsync();
 	}
 }

@@ -21,12 +21,13 @@ public class JwtService : IJwtService
 		_audience = configuration["Jwt:Audience"] ?? "KG.MES.Apps";
 	}
 
-	public string GenerateToken(Guid userId, string email, string role)
+	public string GenerateToken(Guid userId, string email, Guid roleId, string role)
 	{
 		var claims = new[]
 		{
 			new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
 			new Claim(ClaimTypes.Email, email),
+			new Claim("role_id", roleId.ToString()),            
 			new Claim(ClaimTypes.Role, role),
 			new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
 		};

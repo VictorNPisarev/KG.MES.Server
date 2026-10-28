@@ -1,7 +1,7 @@
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Data;
+namespace KG.MES.Server.Data;
 
 public class AppDbContext : DbContext
 {
@@ -30,9 +30,10 @@ public class AppDbContext : DbContext
 	public DbSet<UserDevice> UserDevices { get; set; }
 	public DbSet<RefreshToken> RefreshTokens { get; set; }
 	public DbSet<SupplyLog> SupplyLogs { get; set; }
+	public DbSet<NotificationEvent> NotificationEvents { get; set; }
+	public DbSet<NotificationSubscription> NotificationSubscriptions { get; set; }
 	public DbSet<OrderNotification> OrderNotifications { get; set; }
 	public DbSet<OrderNotificationRead> OrderNotificationReads { get; set; }
-
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -291,13 +292,13 @@ public class AppDbContext : DbContext
 			.HasForeignKey(sl => sl.ConditionId)
 			.OnDelete(DeleteBehavior.SetNull);
 
-		//Notifications
 		modelBuilder.Entity<SupplyLog>()
 			.HasOne(sl => sl.User)
 			.WithMany()
 			.HasForeignKey(sl => sl.UserId)
 			.OnDelete(DeleteBehavior.SetNull);
 
+		//Notifications
 		modelBuilder.Entity<OrderNotificationRead>()
 			.HasKey(r => new { r.NotificationId, r.UserId });
 

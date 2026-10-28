@@ -13,17 +13,18 @@ public class OrderNotification
 	[Column("order_id")]
 	public Guid OrderId { get; set; }
 
-	[Column("event_type")]
-	[MaxLength(50)]
-	public string EventType { get; set; } = string.Empty;
+	[Column("event_id")]
+	public Guid EventId { get; set; }
 
-	[Column("audience_type")]
-	[MaxLength(50)]
-	public string AudienceType { get; set; } = string.Empty;  // "ROLE", "USER", "ALL"
+	[Column("role_id")]
+	public Guid? RoleId { get; set; }
 
-	[Column("audience_value")]
-	[MaxLength(100)]
-	public string? AudienceValue { get; set; }  // "Supply", "Masters", userId, null для ALL
+	[Column("user_id")]
+	public Guid? UserId { get; set; }
+
+	[Column("severity")]
+	[MaxLength(20)]
+	public string Severity { get; set; } = "Info";
 
 	[Column("created_at")]
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -31,4 +32,13 @@ public class OrderNotification
 	// Навигация
 	[ForeignKey(nameof(OrderId))]
 	public Order? Order { get; set; }
+
+	[ForeignKey(nameof(EventId))]
+	public NotificationEvent? Event { get; set; }
+
+	[ForeignKey(nameof(RoleId))]
+	public Role? Role { get; set; }
+
+	[ForeignKey(nameof(UserId))]
+	public User? User { get; set; }
 }

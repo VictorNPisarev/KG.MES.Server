@@ -1,4 +1,4 @@
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;

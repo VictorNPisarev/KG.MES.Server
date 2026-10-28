@@ -15,38 +15,40 @@ public partial class NotificationsController
 
 	public async Task<IActionResult> GetUnreadOrderNotificationsHandler()
 	{
-		var userId = GetCurrentUserId();
-		var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
+			return Unauthorized();
 
-		var notifications = await _notificationService.GetUnreadAsync(userId, roleName);
+		var notifications = await _notificationService.GetUnreadAsync(CurrentUserId.Value, CurrentRoleId.Value);
 		return Ok(notifications);
 	}
 
 	public async Task<IActionResult> MarkOrderNotificationReadHandler(Guid notificationId)
 	{
-		var userId = GetCurrentUserId();
-		await _notificationService.MarkReadAsync(notificationId, userId);
+		if (!CurrentUserId.HasValue)
+			return Unauthorized(); 
+		
+		await _notificationService.MarkReadAsync(notificationId, CurrentUserId.Value);
 		return Ok();
 	}
 
 	public async Task<IActionResult> MarkOrderNotificationsReadHandler(Guid orderId)
 	{
-		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
 			return Unauthorized();
 
-		await _notificationService.MarkAllOrderNotificationsReadAsync(
-			orderId, CurrentUserId.Value, CurrentRoleName);
+		await _notificationService.MarkOrderNotificationsReadAsync(
+			orderId, CurrentUserId.Value, CurrentRoleId.Value);
 
 		return Ok();
 	}
 
-	public async Task<IActionResult> MarkAllOrderNotificationsReadHandler()
+	public async Task<IActionResult> MarkAllOrdersNotificationsReadHandler()
 	{
-		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
 			return Unauthorized();
 
-		var count = await _notificationService.MarkAllOrderNotificationsReadAsync(
-			CurrentUserId.Value, CurrentRoleName);
+		var count = await _notificationService.MarkAllOrdersNotificationsReadAsync(
+			CurrentUserId.Value, CurrentRoleId.Value);
 
 		return Ok(new { markedCount = count });
 	}

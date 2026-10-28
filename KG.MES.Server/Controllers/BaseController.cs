@@ -14,6 +14,14 @@ public abstract class BaseController : ControllerBase
 		}
 	}
 
+	protected Guid? CurrentRoleId
+	{
+		get
+		{
+			var claim = User.FindFirst("role_id")?.Value;
+			return Guid.TryParse(claim, out var roleId) ? roleId : null;
+		}
+	}
 	protected string? CurrentRoleName =>
 		User.FindFirst(ClaimTypes.Role)?.Value;
 }

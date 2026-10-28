@@ -2,7 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Extensions;
 using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Serialization;
@@ -26,6 +26,10 @@ ConfigureDatabase(builder.Services, builder.Configuration);
 
 // Инициализация часового пояса через конфиг
 DateTimeExtensions.Initialize(builder.Configuration);
+
+//Регистрация сервиса автоматической синхронизации enums и соответствующих таблиц в БД. Достаточно добавить новый элемент только в enum.
+//работает для: NotificationEvent, 
+builder.Services.AddHostedService<NotificationEventSeeder>();
 
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();

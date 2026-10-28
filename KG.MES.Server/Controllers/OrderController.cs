@@ -49,7 +49,13 @@ public partial class OrderController : BaseController
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
-	
+
+	// POST: api/orders/fasets
+	[HttpPost("orders/facets")]
+	[AllowAnonymous]
+	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
+
 	#endregion POST
 
 
@@ -108,12 +114,6 @@ public partial class OrderController : BaseController
 	// GET: api/orders/{identifier}
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
-
-	// GET: api/orders/fasets
-	[HttpPost("orders/facets")]
-	[AllowAnonymous]
-	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
-		=> GetFilterFacetsHandler(request);
 
 	[HttpGet("orders/new")]
 	public Task<IActionResult> GetNewOrders() => GetNewOrdersHandler();

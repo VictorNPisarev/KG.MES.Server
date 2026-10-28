@@ -39,9 +39,10 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var email = "test@example.com";
 		var role = "Admin";
+		var roleId = Guid.NewGuid();
 
 		// Act
-		var token = _jwtService.GenerateToken(userId, email, role);
+		var token = _jwtService.GenerateToken(userId, email, roleId, role);
 
 		// Assert
 		token.Should().NotBeNullOrEmpty();
@@ -66,9 +67,10 @@ public class JwtServiceTests
 		// Arrange
 		var userId = Guid.NewGuid();
 		var email = "user@example.com";
+		var roleId = Guid.NewGuid();
 
 		// Act
-		var token = _jwtService.GenerateToken(userId, email, "Manager");
+		var token = _jwtService.GenerateToken(userId, email, roleId, "Manager");
 		var handler = new JwtSecurityTokenHandler();
 		var jsonToken = handler.ReadJwtToken(token);
 
@@ -103,8 +105,9 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var email = "test@example.com";
 		var role = "User";
+		var roleId = Guid.NewGuid();
 
-		var token = _jwtService.GenerateToken(userId, email, role);
+		var token = _jwtService.GenerateToken(userId, email, roleId, role);
 
 		// Act
 		var principal = _jwtService.ValidateToken(token);
@@ -142,8 +145,9 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var email = "test@example.com";
 		var role = "User";
+		var roleId = Guid.NewGuid();
 
-		var token = _jwtService.GenerateToken(userId, email, role);
+		var token = _jwtService.GenerateToken(userId, email, roleId, role);
 
 		// Tamper: меняем последний символ
 		var tamperedToken = token.Substring(0, token.Length - 1) + "X";
@@ -162,9 +166,10 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var email = "test@example.com";
 		var role = "User";
+		var roleId = Guid.NewGuid();
 
 		// Act
-		var token = _jwtService.GenerateToken(userId, email, role);
+		var token = _jwtService.GenerateToken(userId, email, roleId, role);
 		var handler = new JwtSecurityTokenHandler();
 		var jsonToken = handler.ReadJwtToken(token);
 
@@ -184,9 +189,10 @@ public class JwtServiceTests
 		var userId = Guid.NewGuid();
 		var email = "test@example.com";
 		var role = "User";
+		var roleId = Guid.NewGuid();
 
 		// Act
-		var token = service.GenerateToken(userId, email, role);
+		var token = service.GenerateToken(userId, email, roleId, role);
 
 		// Assert
 		token.Should().NotBeNullOrEmpty();

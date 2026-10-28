@@ -1,6 +1,6 @@
 using System.Globalization;
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Extensions;
 
 //using KG.MES.Server.Extensions;
@@ -13,6 +13,7 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using KG.MES.Shared.Extensions;
 using KG.MES.Server.Services;
+using KG.MES.Shared.Model.Enums;
 
 namespace KG.MES.Shared.Services;
 
@@ -61,22 +62,125 @@ public partial class OrderService : IOrderService
 	}
 
 	// Основной метод GetOrdersAsync
+	//public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
+	//	int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, 
+	//	Guid? currentUserId, Guid? currentRoleId, List<FilterCondition>? filters = null)
+	//{
+	//	var query = BuildBaseQuery();
+
+	//	if (!string.IsNullOrEmpty(orderNumber))
+	//	{
+	//		//query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+	//		var lowerFilter = orderNumber.ToLower();
+	//		query = query.Where(o => o.OrderNumber != null && o.OrderNumber.ToLower().Contains(lowerFilter));
+	//	}
+
+	//	if (
+	//		//string.IsNullOrEmpty(orderNumber) &&
+	//		workplaceIds != null && workplaceIds.Any())
+	//	{
+	//		query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+	//	}
+
+	//	if (filters != null && filters.Any())
+	//	{
+	//		query = ApplyFilters(query, filters);
+	//	}
+
+
+
+	//	var total = await query.CountAsync();
+
+	//	// Сортировка
+	//	IOrderedQueryable<OrderDto> orderedQuery;
+
+	//	orderedQuery = query.OrderByProperty(sortBy, sortOrder);
+
+	//	//Пагинация
+	//	var items = await orderedQuery
+	//		.Skip((page - 1) * limit)
+	//		.Take(limit)
+	//		.ToListAsync();
+
+	//	foreach (var item in items)
+	//	{
+	//		item.CreatedAt = item.CreatedAt.ToProductionTime();
+	//	}
+
+	//	var totals = await query
+	//		.GroupBy(x => 1)
+	//		.Select(g => new OrderTotalsDto
+	//		{
+	//			WindowCountTotal = g.Sum(x => x.WindowCount),
+	//			WindowAreaTotal = g.Sum(x => x.WindowArea),
+	//			PlateCountTotal = g.Sum(x => x.PlateCount),
+	//			PlateAreaTotal = g.Sum(x => x.PlateArea)
+	//		})
+	//		.FirstOrDefaultAsync();
+
+	//	// ✅ Помечаем новые заказы
+	//	if (currentUserId.HasValue && currentRoleId.HasValue)
+	//	{
+	//		var orderIds = items.Select(i => i.Id).ToList();
+
+	//		// Заказы, по которым есть непрочитанные уведомления
+	//		var newOrderIds = await context.OrderNotifications
+	//			.Where(n => orderIds.Contains(n.OrderId))
+	//			.Where(n =>
+	//			(n.RoleId == null && n.UserId == null) ||
+	//			(n.RoleId != null && n.RoleId == currentRoleId) ||
+	//			(n.RoleId == null && n.UserId != null && n.UserId == currentUserId))
+	//			.Where(n => !context.OrderNotificationReads
+	//				.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
+	//			.Select(n => n.OrderId)
+	//			.Distinct()
+	//			.ToListAsync();
+
+	//		var newOrderSet = newOrderIds.ToHashSet();
+
+	//		foreach (var item in items)
+	//		{
+	//			item.IsNew = newOrderSet.Contains(item.Id);
+	//		}
+	//	}
+
+
+	//	return new PaginatedResponse<OrderDto>
+	//	{
+	//		Data = items,
+	//		Pagination = new PaginationInfo
+	//		{
+	//			Page = page,
+	//			Limit = limit,
+	//			Total = total,
+	//			Pages = (int)Math.Ceiling(total / (double)limit)
+	//		},
+	//		Sort = new SortInfo
+	//		{
+	//			By = sortBy ?? "ready_date",
+	//			Order = sortOrder ?? "asc"
+	//		},
+	//		Totals = totals
+	//	};
+	//}
+
 	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, 
-		Guid? currentUserId, string? currentRoleName, List<FilterCondition>? filters = null)
+	int page, int limit, string? sortBy, string? sortOrder,
+	List<Guid>? workplaceIds, string? orderNumber,
+	Guid? currentUserId, Guid? currentRoleId,
+	List<FilterCondition>? filters = null)
 	{
+		// Базовый запрос
 		var query = BuildBaseQuery();
 
+		// Фильтры
 		if (!string.IsNullOrEmpty(orderNumber))
 		{
-			//query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
 			var lowerFilter = orderNumber.ToLower();
 			query = query.Where(o => o.OrderNumber != null && o.OrderNumber.ToLower().Contains(lowerFilter));
 		}
 
-		if (
-			//string.IsNullOrEmpty(orderNumber) &&
-			workplaceIds != null && workplaceIds.Any())
+		if (workplaceIds != null && workplaceIds.Any())
 		{
 			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
 		}
@@ -86,26 +190,60 @@ public partial class OrderService : IOrderService
 			query = ApplyFilters(query, filters);
 		}
 
-
-
+		// Общее количество (для пагинации)
 		var total = await query.CountAsync();
 
-		// Применяем сортировку
-		IOrderedQueryable<OrderDto> orderedQuery;
+		// Сортировка
+		var orderedQuery = query.OrderByProperty(sortBy, sortOrder);
 
-		orderedQuery = query.OrderByProperty(sortBy, sortOrder);
-
-
-		var items = await orderedQuery
+		// Пагинация
+		var pagedQuery = orderedQuery
 			.Skip((page - 1) * limit)
-			.Take(limit)
+			.Take(limit);
+
+		// Проекция с вычислением IsNew прямо в SQL
+		var items = await pagedQuery
+			.Select(o => new OrderDto
+			{
+				// --- Копируем все поля из OrderDto ---
+				Id = o.Id,
+				OrderNumber = o.OrderNumber,
+				ReadyDate = o.ReadyDate,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
+				IsEconom = o.IsEconom,
+				IsClaim = o.IsClaim,
+				IsOnlyPaid = o.IsOnlyPaid,
+				IsTwoSidePaint = o.IsTwoSidePaint,
+				CreatedAt = o.CreatedAt,
+				ProductionOrderId = o.ProductionOrderId,
+				CurrentWorkplaceId = o.CurrentWorkplaceId,
+				CurrentStatus = o.CurrentStatus,
+				Machine = o.Machine,
+				RtmDate = o.RtmDate,
+				IsNew = currentUserId.HasValue && currentRoleId.HasValue
+							? context.OrderNotifications
+								.Where(n => n.OrderId == o.Id)
+								.Where(n =>
+									(n.RoleId == null && n.UserId == null) ||
+									(n.RoleId != null && n.RoleId == currentRoleId) ||
+									(n.RoleId == null && n.UserId != null && n.UserId == currentUserId))
+								.Where(n => !context.OrderNotificationReads
+												.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
+								.Any()
+							: false
+			})
 			.ToListAsync();
 
+		// Конвертация времени
 		foreach (var item in items)
 		{
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
+		// Подсчет итогов (Totals)
 		var totals = await query
 			.GroupBy(x => 1)
 			.Select(g => new OrderTotalsDto
@@ -116,33 +254,6 @@ public partial class OrderService : IOrderService
 				PlateAreaTotal = g.Sum(x => x.PlateArea)
 			})
 			.FirstOrDefaultAsync();
-
-		// ✅ Помечаем новые заказы
-		if (currentUserId.HasValue && !string.IsNullOrEmpty(currentRoleName))
-		{
-			var orderIds = items.Select(i => i.Id).ToList();
-
-			// Заказы, по которым есть непрочитанные уведомления
-			var newOrderIds = await context.OrderNotifications
-				.Where(n => orderIds.Contains(n.OrderId))
-				.Where(n =>
-					n.AudienceType == "ALL" ||
-					(n.AudienceType == "ROLE" && n.AudienceValue == currentRoleName) ||
-					(n.AudienceType == "USER" && n.AudienceValue == currentUserId.Value.ToString()))
-				.Where(n => !context.OrderNotificationReads
-					.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId.Value))
-				.Select(n => n.OrderId)
-				.Distinct()
-				.ToListAsync();
-
-			var newOrderSet = newOrderIds.ToHashSet();
-
-			foreach (var item in items)
-			{
-				item.IsNew = newOrderSet.Contains(item.Id);
-			}
-		}
-
 
 		return new PaginatedResponse<OrderDto>
 		{
@@ -210,11 +321,10 @@ public partial class OrderService : IOrderService
 		context.OperationLogs.Add(operationLog);
 		await context.SaveChangesAsync();
 
-		if (targetStatusName == OrderStatus.CommonStatus.Complete)
+		if (targetStatusName == Constants.OrderStatus.CommonStatus.Complete)
 		{
-			await notificationService.CreateForRoleAsync(orderId, "ORDER_READY", "Sales");
+			await notificationService.PublishAsync(NotificationEventType.OrderReady, orderId);
 		}
-
 		return new SetOrderStatusResultDto
 		{
 			Success = true,
@@ -776,19 +886,20 @@ public partial class OrderService : IOrderService
 			.ToList();
 	}
 
-	public async Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, string roleName)
+	public async Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, Guid roleId)
 	{
-		var newOrderIds = await context.OrderNotifications
-			.Where(n =>
-				n.AudienceType == "ALL" ||
-				(n.AudienceType == "ROLE" && n.AudienceValue == roleName) ||
-				(n.AudienceType == "USER" && n.AudienceValue == userId.ToString()))
-			.Where(n => !context.OrderNotificationReads
-				.Any(r => r.NotificationId == n.Id && r.UserId == userId))
-			.Where(n => n.EventType == "NEW_ORDER")
-			.Select(n => n.OrderId)
-			.Distinct()
-			.ToListAsync();
+		//var newOrderIds = await context.OrderNotifications
+		//	.Where(n =>
+		//		(n.RoleId == null && n.UserId == null) ||
+		//		(n.RoleId != null && n.RoleId == roleId) ||
+		//		(n.RoleId == null && n.UserId != null && n.UserId == userId))
+		//	.Where(n => !context.OrderNotificationReads
+		//		.Any(r => r.NotificationId == n.Id && r.UserId == userId))
+		//	.Select(n => n.OrderId)
+		//	.Distinct()
+		//	.ToListAsync();
+
+		var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(userId, roleId, NotificationEventType.NewOrder);
 
 		Console.WriteLine($"newOrderIds :: {newOrderIds.Count}");
 

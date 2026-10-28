@@ -57,4 +57,7 @@ public class MastersOrderDto
 
 	[JsonPropertyName("machine")]
 	public string? Machine { get; set; }
+
+	[JsonPropertyName("is_new")]
+	public bool IsNew { get; set; }
 }

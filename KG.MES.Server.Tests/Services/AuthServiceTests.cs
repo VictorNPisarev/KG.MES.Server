@@ -1,5 +1,5 @@
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Services;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
@@ -116,7 +116,7 @@ public class AuthServiceTests : IDisposable
 		};
 
 		_jwtServiceMock
-			.Setup(s => s.GenerateToken(userId, user.Email, "Admin"))
+			.Setup(s => s.GenerateToken(userId, user.Email, user.Role.Id, "Admin"))
 			.Returns("new-access-token");
 
 		// Act

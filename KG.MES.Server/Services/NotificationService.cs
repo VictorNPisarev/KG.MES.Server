@@ -1,4 +1,6 @@
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
+using KG.MES.Shared.Model.Enums;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -20,59 +22,39 @@ public class NotificationService
 	// СОЗДАНИЕ УВЕДОМЛЕНИЙ
 	// ============================================================
 
-	/// <summary>
-	/// Создать уведомление по заказу для роли
-	/// </summary>
-	public async Task CreateForRoleAsync(Guid orderId, string eventType, string roleName)
-	{
-		_context.OrderNotifications.Add(new OrderNotification
-		{
-			Id = Guid.NewGuid(),
-			OrderId = orderId,
-			EventType = eventType,
-			AudienceType = "ROLE",
-			AudienceValue = roleName,
-			CreatedAt = DateTime.UtcNow
-		});
-		await _context.SaveChangesAsync();
 
-		_logger.LogInformation(
-			"Order notification: {EventType} for role {RoleName} (OrderId: {OrderId})",
-			eventType, roleName, orderId);
-	}
-
-	/// <summary>
-	/// Создать уведомление по заказу для конкретного пользователя
-	/// </summary>
-	public async Task CreateForUserAsync(Guid orderId, string eventType, Guid userId)
+	public async Task PublishAsync(NotificationEventType eventType, Guid orderId)
 	{
-		_context.OrderNotifications.Add(new OrderNotification
-		{
-			Id = Guid.NewGuid(),
-			OrderId = orderId,
-			EventType = eventType,
-			AudienceType = "USER",
-			AudienceValue = userId.ToString(),
-			CreatedAt = DateTime.UtcNow
-		});
-		await _context.SaveChangesAsync();
-	}
+		var eventCode = eventType.ToCode();
+		var @event = await _context.NotificationEvents
+			.FirstOrDefaultAsync(e => e.EventCode == eventCode);
 
-	/// <summary>
-	/// Создать уведомление для всех
-	/// </summary>
-	public async Task CreateForAllAsync(Guid orderId, string eventType)
-	{
-		_context.OrderNotifications.Add(new OrderNotification
+		if (@event == null)
 		{
-			Id = Guid.NewGuid(),
-			OrderId = orderId,
-			EventType = eventType,
-			AudienceType = "ALL",
-			AudienceValue = null,
-			CreatedAt = DateTime.UtcNow
-		});
+			_logger.LogWarning("Event {EventCode} not found in database", eventCode);
+			return;
+		}
+
+		var subscriptions = await _context.NotificationSubscriptions
+			.Where(s => s.EventId == @event.Id && s.IsActive)
+			.ToListAsync();
+
+		foreach (var sub in subscriptions)
+		{
+			_context.OrderNotifications.Add(new OrderNotification
+			{
+				Id = Guid.NewGuid(),
+				OrderId = orderId,
+				EventId = @event.Id,
+				RoleId = sub.RoleId,
+				UserId = sub.UserId,
+				Severity = sub.Severity,
+				CreatedAt = DateTime.UtcNow
+			});
+		}
+
 		await _context.SaveChangesAsync();
+		_logger.LogInformation("Published {EventCode} for order {OrderId} to {Count} subscribers", eventCode, orderId, subscriptions.Count);
 	}
 
 	// ============================================================
@@ -82,27 +64,21 @@ public class NotificationService
 	/// <summary>
 	/// Получить непрочитанные уведомления для пользователя
 	/// </summary>
-	public async Task<List<OrderNotificationDto>> GetUnreadAsync(Guid userId, string? roleName)
+	public async Task<List<OrderNotificationDto>> GetUnreadAsync(Guid userId, Guid? roleId)
 	{
-		var query = _context.OrderNotifications.AsQueryable();
-
-		// Фильтр по аудитории
-		query = query.Where(n =>
-			n.AudienceType == "ALL" ||
-			(n.AudienceType == "ROLE" && n.AudienceValue == roleName) ||
-			(n.AudienceType == "USER" && n.AudienceValue == userId.ToString()));
-
-		// Исключаем прочитанные
-		query = query.Where(n => !_context.OrderNotificationReads
-			.Any(r => r.NotificationId == n.Id && r.UserId == userId));
-
-		return await query
+		return await _context.OrderNotifications
+			.Where(n =>
+				(n.RoleId == null && n.UserId == null) ||
+				(n.RoleId != null && n.RoleId == roleId) ||
+				(n.RoleId == null && n.UserId != null && n.UserId == userId))
+			.Where(n => !_context.OrderNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == userId))
 			.OrderByDescending(n => n.CreatedAt)
 			.Select(n => new OrderNotificationDto
 			{
 				Id = n.Id,
 				OrderId = n.OrderId,
-				EventType = n.EventType,
+				EventType = n.Event!.EventCode,
+				Severity = n.Severity,
 				CreatedAt = n.CreatedAt
 			})
 			.ToListAsync();
@@ -132,25 +108,23 @@ public class NotificationService
 			notificationId, userId);
 	}
 
-	public async Task MarkAllOrderNotificationsReadAsync(
-	Guid orderId, Guid userId, string roleName)
+	public async Task MarkOrderNotificationsReadAsync(Guid orderId, Guid userId, Guid? roleId)
 	{
 		var unreadIds = await _context.OrderNotifications
 			.Where(n => n.OrderId == orderId)
 			.Where(n =>
-				n.AudienceType == "ALL" ||
-				(n.AudienceType == "ROLE" && n.AudienceValue == roleName) ||
-				(n.AudienceType == "USER" && n.AudienceValue == userId.ToString()))
-			.Where(n => !_context.OrderNotificationReads
-				.Any(r => r.NotificationId == n.Id && r.UserId == userId))
+				(n.RoleId == null && n.UserId == null) ||
+				(n.RoleId != null && n.RoleId == roleId) ||
+				(n.RoleId == null && n.UserId != null && n.UserId == userId))
+			.Where(n => !_context.OrderNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == userId))
 			.Select(n => n.Id)
 			.ToListAsync();
 
-		foreach (var notificationId in unreadIds)
+		foreach (var id in unreadIds)
 		{
 			_context.OrderNotificationReads.Add(new OrderNotificationRead
 			{
-				NotificationId = notificationId,
+				NotificationId = id,
 				UserId = userId,
 				ReadAt = DateTime.UtcNow
 			});
@@ -159,41 +133,45 @@ public class NotificationService
 		await _context.SaveChangesAsync();
 	}
 
-	/// <summary>
-	/// Пометить все непрочитанные уведомления по заказам прочитанными
-	/// </summary>
-	/// <returns>Количество помеченных уведомлений</returns>
-	public async Task<int> MarkAllOrderNotificationsReadAsync(Guid userId, string roleName)
+	public async Task<int> MarkAllOrdersNotificationsReadAsync(Guid userId, Guid? roleId)
 	{
-		// 1. Находим все непрочитанные уведомления для пользователя
-		var unreadNotificationIds = await _context.OrderNotifications
+		var unreadIds = await _context.OrderNotifications
 			.Where(n =>
-				n.AudienceType == "ALL" ||
-				(n.AudienceType == "ROLE" && n.AudienceValue == roleName) ||
-				(n.AudienceType == "USER" && n.AudienceValue == userId.ToString()))
-			.Where(n => !_context.OrderNotificationReads
-				.Any(r => r.NotificationId == n.Id && r.UserId == userId))
+				(n.RoleId == null && n.UserId == null) ||
+				(n.RoleId != null && n.RoleId == roleId) ||
+				(n.RoleId == null && n.UserId != null && n.UserId == userId))
+			.Where(n => !_context.OrderNotificationReads.Any(r => r.NotificationId == n.Id && r.UserId == userId))
 			.Select(n => n.Id)
 			.ToListAsync();
 
-		if (!unreadNotificationIds.Any())
-			return 0;
-
-		// 2. Добавляем отметки о прочтении
-		var reads = unreadNotificationIds.Select(id => new OrderNotificationRead
+		foreach (var id in unreadIds)
 		{
-			NotificationId = id,
-			UserId = userId,
-			ReadAt = DateTime.UtcNow
-		});
+			_context.OrderNotificationReads.Add(new OrderNotificationRead
+			{
+				NotificationId = id,
+				UserId = userId,
+				ReadAt = DateTime.UtcNow
+			});
+		}
 
-		_context.OrderNotificationReads.AddRange(reads);
 		await _context.SaveChangesAsync();
+		return unreadIds.Count;
+	}
 
-		_logger.LogInformation(
-			"User {UserId} marked {Count} order notifications as read",
-			userId, unreadNotificationIds.Count);
+	public async Task<List<Guid>> GetUnreadOrderIdsAsync(Guid userId, Guid? roleId, NotificationEventType eventCode)
+	{
+		var newOrderIds = await _context.OrderNotifications
+			.Where(n => n.Event!.EventCode == eventCode.ToCode())
+			.Where(n =>
+				(n.RoleId == null && n.UserId == null) ||
+				(n.RoleId != null && n.RoleId == roleId) ||
+				(n.RoleId == null && n.UserId != null && n.UserId == userId))
+			.Where(n => !_context.OrderNotificationReads
+				.Any(r => r.NotificationId == n.Id && r.UserId == userId))
+			.Select(n => n.OrderId)
+			.Distinct()
+			.ToListAsync();
 
-		return unreadNotificationIds.Count;
+		return newOrderIds;
 	}
 }

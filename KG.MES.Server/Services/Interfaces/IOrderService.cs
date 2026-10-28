@@ -6,7 +6,7 @@ public interface IOrderService
 {
 	Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, Guid? currentUserId, 
-		string? currentRoleName, List<FilterCondition>? filters = null);
+		Guid? currentRoleId, List<FilterCondition>? filters = null);
 
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
@@ -37,5 +37,5 @@ public interface IOrderService
 	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
 	Task<bool> DeleteOrderAsync(Guid orderId);
 	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
-	Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, string roleName);
+	Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, Guid roleId);
 }

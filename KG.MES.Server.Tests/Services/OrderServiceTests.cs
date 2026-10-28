@@ -1,5 +1,5 @@
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Models.Entities;
@@ -162,7 +162,7 @@ public class OrderServiceTests : IDisposable
 		await _context.SaveChangesAsync();
 
 		// Act
-		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, null, null, "001");
+		var result = await _service.GetOrdersAsync(1, 10, "ready_date", "asc", null, "001", null, null);
 
 		// Assert
 		result.Data.Should().HaveCount(1);

@@ -50,7 +50,7 @@ public partial class OrderController : BaseController
 
 		var result = await orderService.GetOrdersAsync(page, limit, sortBy, sortOrder, 
 														workplaceIds, orderNumber, CurrentUserId,
-														CurrentRoleName, filterConditions);
+														CurrentRoleId, filterConditions);
 
 		return Ok(result);
 	}
@@ -285,15 +285,15 @@ public partial class OrderController : BaseController
 	public async Task<IActionResult> GetNewOrdersHandler()
 	{
 		Console.WriteLine("GetNewOrdersHandler");
-		if (!CurrentUserId.HasValue || string.IsNullOrEmpty(CurrentRoleName))
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
 		{
 			Console.WriteLine($"GetNewOrdersHandler :: crush");
 			return Ok(new List<OrderDto>());
 		}
 
-		Console.WriteLine($"GetNewOrdersHandler :: {CurrentUserId} :: {CurrentRoleName}");
+		Console.WriteLine($"GetNewOrdersHandler :: {CurrentUserId} :: {CurrentRoleId}");
 
-		var result = await orderService.GetNewOrdersAsync(CurrentUserId.Value, CurrentRoleName);
+		var result = await orderService.GetNewOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
 		return Ok(result);
 	}
 }

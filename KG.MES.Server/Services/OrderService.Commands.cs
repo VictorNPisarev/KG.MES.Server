@@ -4,6 +4,7 @@ using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Shared.Hubs;
 using KG.MES.Server.Services;
+using KG.MES.Shared.Model.Enums;
 
 namespace KG.MES.Shared.Services;
 
@@ -144,9 +145,8 @@ public partial class OrderService
 			}
 
 			//Добавляю уведомление о новом заказе
-			await notificationService.CreateForRoleAsync(order.Id, "NEW_ORDER", "Supply");
-			await notificationService.CreateForRoleAsync(order.Id, "NEW_ORDER", "Masters");
-
+			await notificationService.PublishAsync(NotificationEventType.NewOrder, order.Id);
+			
 			return new CreateOrderResultDto
 			{
 				Success = true,

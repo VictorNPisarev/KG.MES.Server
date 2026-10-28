@@ -1,4 +1,4 @@
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -148,6 +148,7 @@ public class ServerAuthService : IAuthService
 		var token = jwtService.GenerateToken(
 			user.Id,
 			user.Email,
+			user.RoleId ?? Guid.Empty,
 			user.Role?.Name ?? "user"
 		);
 
@@ -241,6 +242,7 @@ public class ServerAuthService : IAuthService
 		var newAccessToken = jwtService.GenerateToken(
 			user.Id,
 			user.Email,
+			user.RoleId ?? Guid.Empty,
 			user.Role?.Name ?? "user"
 		);
 
@@ -382,6 +384,7 @@ public class ServerAuthService : IAuthService
 		var accessToken = jwtService.GenerateToken(
 			user.Id,
 			user.Email,
+			user.RoleId ?? Guid.Empty,
 			role.Name);
 
 		// 9. Генерируем refresh-токен

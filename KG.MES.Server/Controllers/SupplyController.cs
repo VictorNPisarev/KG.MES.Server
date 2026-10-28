@@ -34,6 +34,9 @@ public partial class SupplyController : BaseController
 	public Task<IActionResult> GetSupplyHistory(Guid supplyItemId)
 		=> GetSupplyHistoryHandler(supplyItemId);
 
+	[HttpGet("supplies/new")]
+	public Task<IActionResult> GetNewSupplyOrders() => GetNewSupplyOrdersHandler();
+
 	#endregion GET
 
 	#region POST

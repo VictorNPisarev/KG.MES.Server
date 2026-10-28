@@ -51,4 +51,10 @@ public partial class Home
 		return null;
 	}
 
+	private async Task<List<MastersOrderViewModel>> LoadNewOrdersList()
+	{
+		var dtos = await ApiService.GetNewOrdersAsync<MastersOrderDto>(Endpoint);
+		return dtos.Select(d => d.Adapt<MastersOrderViewModel>()).ToList();
+	}
+
 }

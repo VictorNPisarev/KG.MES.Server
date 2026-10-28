@@ -61,6 +61,8 @@ public class SalesOrderViewModel
 	public decimal? Amount { get; set; }
 
 	public string? Currency { get; set; }
+	
+	public bool IsNew { get; set; }
 
 	[Column("***", Order = 2, Visible = false, IconConditions = new[] { "IsClaim:Claim",
 																		"IsEconom:Econom",

@@ -53,7 +53,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private string searchNumber = "";
 	private int currentPage = 1;
 	private int pageSize = 50;
-	private string sortBy = "ready_date";
+	private string sortBy = "ReadyDate";
 	private string sortOrder = "asc";
 	private Guid? selectedWorkplaceId;
 	private string tableKey => $"{Endpoint}_{typeof(TListItem).Name}";
@@ -218,7 +218,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 			if (!string.IsNullOrEmpty(json))
 			{
 				var data = JsonSerializer.Deserialize<SortData>(json);
-				sortBy = data?.SortBy ?? "ready_date";
+				sortBy = data?.SortBy ?? "ReadyDate";
 				sortOrder = data?.Ascending == true ? "asc" : "desc";
 			}
 		}

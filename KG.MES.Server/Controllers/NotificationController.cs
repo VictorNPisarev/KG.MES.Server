@@ -18,5 +18,5 @@ public partial class NotificationsController : BaseController
 	public Task<IActionResult> MarkOrderNotificationsRead(Guid orderId) => MarkOrderNotificationsReadHandler(orderId);
 
 	[HttpPost("orders/read-all")]
-	public Task<IActionResult> MarkAllOrderNotificationsRead() => MarkAllOrderNotificationsReadHandler();
+	public Task<IActionResult> MarkAllOrderNotificationsRead() => MarkAllOrdersNotificationsReadHandler();
 }
