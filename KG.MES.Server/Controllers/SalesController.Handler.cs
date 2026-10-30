@@ -28,7 +28,7 @@ public partial class SalesController : BaseController
 		}
 
 		var result = await _orderService.GetSalesOrdersAsync(
-			page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+			page, limit, sortBy, sortOrder, workplaceIds, orderNumber, customerName, managerId, CurrentUserId, CurrentRoleId);
 
 		return Ok(result);
 	}
@@ -108,6 +108,22 @@ public partial class SalesController : BaseController
 			return BadRequest(new { error = "Fields are required" });
 
 		var result = await _orderService.GetFilterFacetsAsync<SalesOrderDto>(request);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> GetNewSalesOrdersHandler()
+	{
+		Console.WriteLine(":::: GetNewSalesOrdersHandler ::::");
+
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
+			return Ok(new List<SalesOrderDto>());
+
+		Console.WriteLine($":::: GetNewSalesOrdersHandler :: CurrentUserId - {CurrentUserId} :: CurrentRoleId - {CurrentRoleId} ::::");
+
+		var result = await _orderService.GetNewSalesOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
+
+		Console.WriteLine($":::: GetNewSalesOrdersHandler :: result.Count - {result.Count} ::::");
+
 		return Ok(result);
 	}
 }

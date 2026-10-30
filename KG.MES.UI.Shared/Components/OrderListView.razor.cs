@@ -12,12 +12,15 @@ using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Constants;
 using System.Reflection;
 using KG.MES.UI.Shared.Interfaces;
+using Mapster;
+using Microsoft.Extensions.Options;
 
 namespace KG.MES.UI.Shared.Components;
-public partial class OrderListView<TListItem, TCardItem> : ComponentBase
+public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto> : ComponentBase
 	where TListItem : class
 	where TCardItem : class
-
+	where TListItemDto : class
+	where TCardDto : class
 {
 	[Parameter] public OrderViewSettings Settings { get; set; } = new();
 	[Parameter] public EventCallback<TListItem> OnOrderClick { get; set; }
@@ -36,6 +39,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	[Inject] private IEventAggregator EventAggregator { get; set; } = null!;
 	[Inject] private NavigationManager NavManager { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
+	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
 
 
 	private OrderDashboard<TCardItem>? dashboardRef;
@@ -60,7 +64,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private bool isColumnsOpen = false;
 	private bool useSplitView;
 	private string savedPanelWidth = "66%";
-	private DotNetObjectReference<OrderListView<TListItem, TCardItem>>? panelResizeRef;
+	private DotNetObjectReference<OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>>? panelResizeRef;
 	private string? lastReportedWidth;
 	private bool _panelResizeInitialized = false;
 	//private List<Guid> selectedWorkplaceIds = [];
@@ -79,6 +83,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private string debugMessage = string.Empty;
 	private bool isNewOrdersExpanded = true;
 	private bool showConfirmMarkAllRead;
+	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
+
 
 	private IconInfo testIcon = new IconInfo
 	{
@@ -95,7 +101,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		workplaces = await ApiService.GetAllWorkplacesAsync();
 		await LoadFacetsAsync();
 		await LoadOrders();
-		await LoadNewOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
 
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
 	}
@@ -103,7 +110,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private async void OnOrderUpdated(OrderUpdatedEvent e)
 	{
 		await LoadOrders();
-		await LoadNewOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
 		StateHasChanged();
 	}
 
@@ -420,7 +428,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		else
 		{
 			await LoadOrders();
-			await LoadNewOrders();
+			//await LoadNewOrders();
+			await LoadNotifications();
 			StateHasChanged();
 
 			// Восстанавливаем позицию скролла
@@ -874,5 +883,80 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	{
 		showConfirmMarkAllRead = false;
 		_ = MarkAllAsRead(); // fire-and-forget
+	}
+
+	private async Task LoadNotifications()
+	{
+		var groups = await ApiService.GetOrderNotificationsAsync<TListItemDto>(Endpoint);
+
+		notificationGroups = groups
+			.Select(g => new NotificationGroupDto<TListItem>
+			{
+				EventCode = g.EventCode,
+				EventDescription = g.EventDescription,
+				Severity = g.Severity,
+				Items = g.Items.Select(d => d.Adapt<TListItem>()).ToList()
+			})
+			.Where(g => g.Items.Any())
+			.ToList();
+
+		foreach (var group in notificationGroups)
+		{
+			if (expandedGroups.Contains(group.EventCode))
+				continue;
+
+			var expandByDefault = NotificationSettings.Value
+				.ExpandByDefault
+				.GetValueOrDefault(group.Severity, false);
+
+			if (expandByDefault)
+				expandedGroups.Add(group.EventCode);
+		}
+
+		StateHasChanged();
+	}
+
+	private bool IsGroupExpanded(string eventCode) => expandedGroups.Contains(eventCode);
+	private void ToggleGroup(string eventCode)
+	{
+		if (expandedGroups.Contains(eventCode))
+			expandedGroups.Remove(eventCode);
+		else
+			expandedGroups.Add(eventCode);
+	}
+
+	private string GetSeverityColor(string severity) => severity switch
+	{
+		"Danger" => "danger",
+		"Warning" => "warning",
+		"Success" => "success",
+		_ => "info"
+	};
+
+	private string GetSeverityIcon(string severity) => severity switch
+	{
+		"Danger" => "bi-exclamation-circle-fill",
+		"Warning" => "bi-exclamation-triangle-fill",
+		"Success" => "bi-check-circle-fill",
+		_ => "bi-info-circle-fill"
+	};
+
+	private async Task MarkGroupAsRead(NotificationGroupDto<TListItem> group)
+	{
+		try
+		{
+			var success = await ApiService.MarkNotificationsReadByEventAsync(group.EventCode);
+
+			if (success)
+			{
+				notificationGroups.Remove(group);
+				expandedGroups.Remove(group.EventCode);
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking group as read: {ex.Message}");
+		}
 	}
 }

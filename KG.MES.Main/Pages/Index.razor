@@ -4,7 +4,8 @@
 @using KG.MES.Shared.Models.ViewModels
 
 <AuthorizedPage>
-	<OrderListView TListItem="OrderViewModel" LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList" TCardItem="OrderViewModel" LoadItem="LoadOrderDetails" Settings="@AppSettings">
+	<OrderListView TListItem="OrderViewModel" TCardItem="OrderViewModel" TListItemDto="OrderDto" TCardDto="OrderDto"
+			LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList" LoadItem="LoadOrderDetails" Settings="@AppSettings">
 		<HeaderActions>
 			<NavLink href="/upload" class="btn btn-primary">
 				<i class="bi bi-upload"></i> Загрузить XML

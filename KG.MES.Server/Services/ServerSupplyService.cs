@@ -7,6 +7,7 @@ using KG.MES.Shared.Models.Entities;
 using KG.MES.Server.Extensions;
 using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
+using KG.MES.Shared.Common.Extensions;
 
 namespace KG.MES.Shared.Services;
 
@@ -256,7 +257,7 @@ public class ServerSupplyService : ISupplyService
 			.Select(sl => new SupplyItemHistoryDto
 			{
 				Id = sl.Id,
-				SupplyTypeName = sl.SupplyItem.SupplyType.Name,
+				SupplyTypeName = sl.SupplyItem != null ? sl.SupplyItem.SupplyType.Name : null,
 				ConditionCode = sl.Condition != null ? sl.Condition.ConditionCode : null,
 				Comment = sl.Comment,
 				UserId = sl.UserId,
@@ -357,17 +358,29 @@ public class ServerSupplyService : ISupplyService
 			});
 	}
 
-	public async Task<List<SupplyDto>> GetNewSupplyOrdersAsync(Guid userId, Guid? roleId)
+	public async Task<List<NotificationGroupDto<SupplyDto>>> GetNewSupplyOrdersAsync(
+	Guid userId, Guid? roleId)
 	{
-		// 1. Получаем ID новых заказов (событие NEW_ORDER)
-		var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(userId, roleId, NotificationEventType.NewOrder);
+		var notifications = await notificationService.GetUnreadOrderNotificationsAsync(userId, roleId);
 
-		if (!newOrderIds.Any()) return new List<SupplyDto>();
+		if (!notifications.Any())
+			return new List<NotificationGroupDto<SupplyDto>>();
 
-		// 2. Возвращаем их в формате снабжения
-		return await BuildSupplyQuery() // твой базовый запрос для снабжения
-			.Where(x => newOrderIds.Contains(x.Id))
-			.OrderByDescending(x => x.ReadyDate) // или по дате создания уведомления
-			.ToListAsync();
+		var orderIds = notifications.Select(n => n.OrderId).Distinct().ToList();
+		var supplies = await BuildSupplyQuery().Where(o => orderIds.Contains(o.Id)).ToListAsync();
+		var supplyDict = supplies.ToDictionary(s => s.Id);
+
+		return notifications
+			.Where(n => supplyDict.ContainsKey(n.OrderId))
+			.GroupBy(n => new { n.EventCode, n.EventDescription, n.Severity, severityOrder = n.GetSeverityOrder() })
+			.OrderBy(g => g.Key.severityOrder)
+			.Select(g => new NotificationGroupDto<SupplyDto>
+			{
+				EventCode = g.Key.EventCode,
+				EventDescription = g.Key.EventDescription,
+				Severity = g.Key.Severity,
+				Items = g.Select(n => supplyDict[n.OrderId]).ToList()
+			})
+			.ToList();
 	}
 }

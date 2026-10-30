@@ -989,6 +989,22 @@ public class ProductionApiService : AuthorizedApiService
 		}
 	}
 
+	public async Task<List<NotificationGroupDto<T>>> GetOrderNotificationsAsync<T>(string endpoint)
+	{
+		try
+		{
+			EnsureAuthorization();
+			//var url = $"{BaseUrl}/notifications/orders"; // или ваш endpoint
+			var url = $"{BaseUrl}/{endpoint}/new";
+			return await httpClient.GetFromJsonAsync<List<NotificationGroupDto<T>>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching notifications");
+			return [];
+		}
+	}
+
 	public async Task<bool> MarkOrderNotificationsAsReadAsync(Guid orderId)
 	{
 		try
@@ -1019,6 +1035,25 @@ public class ProductionApiService : AuthorizedApiService
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error marking all orders as read");
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Пометить группу уведомлений (по коду события) как прочитанную
+	/// </summary>
+	public async Task<bool> MarkNotificationsReadByEventAsync(string eventCode)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var url = $"{BaseUrl}/notifications/orders/read-by-event/{Uri.EscapeDataString(eventCode)}";
+			var response = await httpClient.PostAsync(url, null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error marking notifications as read for event {EventCode}", eventCode);
 			return false;
 		}
 	}

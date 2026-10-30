@@ -6,6 +6,6 @@
 <PageTitle>@AppSettings.Title</PageTitle>
 
 <AuthorizedPage>
-	<OrderListView TListItem="SalesOrderViewModel" LoadItems="LoadOrderViewModels" LoadNewItems="LoadNewOrdersList"
-		TCardItem="OrderViewModel" LoadItem="LoadOrderViewModel" Settings="@AppSettings" />
+	<OrderListView TListItem="SalesOrderViewModel" TCardItem="OrderViewModel" TListItemDto="SalesOrderDto" TCardDto="OrderDto" LoadItems="LoadOrderViewModels" LoadNewItems="LoadNewOrdersList"
+		LoadItem="LoadOrderViewModel" Settings="@AppSettings" />
 </AuthorizedPage>

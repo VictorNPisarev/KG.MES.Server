@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace KG.MES.Server.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public partial class SalesController : BaseController
@@ -105,4 +106,7 @@ public partial class SalesController : BaseController
 		//return Ok(managers);
 		return Ok();
 	}
+
+	[HttpGet("orders/new")]
+	public Task<IActionResult> GetNewSalesOrders() => GetNewSalesOrdersHandler();
 }

@@ -3,6 +3,8 @@
 @using KG.MES.UI.Shared.Enums
 @typeparam TListItem
 @typeparam TCardItem
+@typeparam TListItemDto
+@typeparam TCardDto
 
 
 <PageTitle>@Title</PageTitle>
@@ -157,34 +159,34 @@
 	</div>
 
 	<!-- Новые заказы -->
-	@if (newOrders.Any())
+	@foreach (var group in notificationGroups)
 	{
-		<div class="card mt-3 mb-4 border-danger shadow-sm overflow-hidden">
-			<div class="card-header bg-danger bg-opacity-25 text-danger py-1 d-flex justify-content-between align-items-center"
-				style="cursor: pointer;" @onclick="() => isNewOrdersExpanded = !isNewOrdersExpanded">
-
-				<div>
+		<div class="card mt-3 mb-3 border-@GetSeverityColor(group.Severity) shadow-sm overflow-hidden">
+			<div class="card-header bg-@GetSeverityColor(group.Severity) bg-opacity-25 text-@GetSeverityColor(group.Severity) py-1 d-flex justify-content-between align-items-center"
+				@onclick="() => ToggleGroup(group.EventCode)">
+				<div style="cursor: pointer;">
 					<small class="fw-bold">
-						<i class="bi bi-exclamation-circle-fill me-1"></i>
-						Новые заказы (@newOrders.Count)
+						<i class="bi @GetSeverityIcon(group.Severity) me-1"></i>
+						@group.EventDescription (@group.Items.Count)
 					</small>
 				</div>
-
-				<div class="d-flex gap-3 align-items-center">
-					@if (isNewOrdersExpanded)
+				<div class="d-flex gap-2 align-items-center">
+					@if (IsGroupExpanded(group.EventCode))
 					{
-						<button class="btn btn-sm btn-outline-danger py-0" style="font-size: 0.75rem;"
-							@onclick="() => showConfirmMarkAllRead = true" @onclick:stopPropagation="true">
+						<button class="btn btn-sm btn-outline-@GetSeverityColor(group.Severity) py-0"
+							style="font-size: 0.75rem;" @onclick="() => MarkGroupAsRead(group)" @onclick:stopPropagation="true">
 							Все просмотрены
 						</button>
 					}
-					<i class="bi @(isNewOrdersExpanded ? "bi-chevron-up" : "bi-chevron-down") small"></i>
+					<i class="bi @(IsGroupExpanded(group.EventCode) ? "bi-chevron-up" : "bi-chevron-down") small"
+						style="cursor: pointer;" @onclick="() => ToggleGroup(group.EventCode)"></i>
 				</div>
 			</div>
-			@if (isNewOrdersExpanded)
+
+			@if (IsGroupExpanded(group.EventCode))
 			{
 				<div class="card-body p-0">
-					<DynamicTable TListItem="TListItem" Items="newOrders" ColumnInfos="columnInfos"
+					<DynamicTable TListItem="TListItem" Items="group.Items" ColumnInfos="columnInfos"
 						ColumnSettings="columnSettings" TableKey="@tableKey" ShowActions="true" AllowSorting="false"
 						ShowTotal="false" ShowSettings="false">
 						<RowTemplate>
@@ -199,7 +201,7 @@
 			}
 		</div>
 	}
-
+	
 	<!-- Таблица -->
 	@if (isLoading)
 	{

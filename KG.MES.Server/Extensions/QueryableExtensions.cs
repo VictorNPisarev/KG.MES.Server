@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace KG.MES.Shared.Extensions;
+namespace KG.MES.Server.Extensions;
 
 public static class QueryableExtensions
 {

@@ -1,9 +1,6 @@
-using System.Globalization;
 using KG.MES.Shared.Constants;
 using KG.MES.Server.Data;
 using KG.MES.Server.Extensions;
-
-//using KG.MES.Server.Extensions;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -11,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
-using KG.MES.Shared.Extensions;
+using KG.MES.Shared.Common.Extensions;
 using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
 
@@ -886,34 +883,33 @@ public partial class OrderService : IOrderService
 			.ToList();
 	}
 
-	public async Task<List<OrderDto>> GetNewOrdersAsync(Guid userId, Guid roleId)
+	public async Task<List<NotificationGroupDto<OrderDto>>> GetNewOrdersAsync(
+		Guid userId, Guid? roleId)
 	{
-		//var newOrderIds = await context.OrderNotifications
-		//	.Where(n =>
-		//		(n.RoleId == null && n.UserId == null) ||
-		//		(n.RoleId != null && n.RoleId == roleId) ||
-		//		(n.RoleId == null && n.UserId != null && n.UserId == userId))
-		//	.Where(n => !context.OrderNotificationReads
-		//		.Any(r => r.NotificationId == n.Id && r.UserId == userId))
-		//	.Select(n => n.OrderId)
-		//	.Distinct()
-		//	.ToListAsync();
+		// 1. Получаем плоский список уведомлений
+		var notifications = await notificationService.GetUnreadOrderNotificationsAsync(userId, roleId);
 
-		var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(userId, roleId, NotificationEventType.NewOrder);
+		if (!notifications.Any())
+			return new List<NotificationGroupDto<OrderDto>>();
 
-		Console.WriteLine($"newOrderIds :: {newOrderIds.Count}");
+		// 2. Получаем заказы
+		var orderIds = notifications.Select(n => n.OrderId).Distinct().ToList();
+		var orders = await BuildBaseQuery().Where(o => orderIds.Contains(o.Id)).ToListAsync();
+		var orderDict = orders.ToDictionary(o => o.Id);
 
-		if (!newOrderIds.Any())
-			return new List<OrderDto>();
-
-		Console.WriteLine($"newOrderIds :: {newOrderIds.First()}");
-
-		var result = await BuildBaseQuery()
-			.Where(o => newOrderIds.Contains(o.Id))
-			.OrderBy(o => o.ReadyDate)
-			.ToListAsync();
-
-		Console.WriteLine($"newOrders result :: {result.Count}");
+		// 3. Группируем по (EventCode, Severity)
+		var result = notifications
+			.Where(n => orderDict.ContainsKey(n.OrderId))
+			.GroupBy(n => new { n.EventCode, n.EventDescription, n.Severity, SeverityOrder = n.GetSeverityOrder() })
+			.OrderBy(g => g.Key.SeverityOrder)
+			.Select(g => new NotificationGroupDto<OrderDto>
+			{
+				EventCode = g.Key.EventCode,
+				EventDescription = g.Key.EventDescription,
+				Severity = g.Key.Severity,
+				Items = g.Select(n => orderDict[n.OrderId]).ToList()
+			})
+			.ToList();
 
 		return result;
 	}

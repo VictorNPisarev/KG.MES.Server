@@ -19,6 +19,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 	options.Cookie.Path = "/main";
 });
 
+builder.Services.Configure<NotificationSettings>(
+	builder.Configuration.GetSection("Notifications"));
+
 builder.Services.AddSession(options =>
 {
 	options.Cookie.Name = ".Session.Main";

@@ -4,6 +4,6 @@
 @using KG.MES.UI.Shared.Components
 
 <AuthorizedPage>
-	<OrderListView TListItem="MastersOrderViewModel" LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList"
-		TCardItem="OrderViewModel" LoadItem="LoadOrderDetails" Settings="@AppSettings" />
+	<OrderListView TListItem="MastersOrderViewModel" TCardItem="OrderViewModel" TListItemDto="MastersOrderDto" TCardDto="OrderDto" LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList"
+		LoadItem="LoadOrderDetails" Settings="@AppSettings" />
 </AuthorizedPage>

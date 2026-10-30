@@ -53,6 +53,21 @@ public partial class NotificationsController
 		return Ok(new { markedCount = count });
 	}
 
+	public async Task<IActionResult> MarkByEventReadHandler(string eventCode)
+	{
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
+			return Unauthorized();
+
+		if (string.IsNullOrEmpty(eventCode))
+			return BadRequest(new { error = "eventCode is required" });
+
+		var count = await _notificationService.MarkAllByEventReadAsync(
+			CurrentUserId.Value, CurrentRoleId, eventCode);
+
+		return Ok(new { markedCount = count });
+	}
+
+
 	// Вспомогательные методы
 	private Guid GetCurrentUserId()
 	{

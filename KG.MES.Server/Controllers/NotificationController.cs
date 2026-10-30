@@ -19,4 +19,7 @@ public partial class NotificationsController : BaseController
 
 	[HttpPost("orders/read-all")]
 	public Task<IActionResult> MarkAllOrderNotificationsRead() => MarkAllOrdersNotificationsReadHandler();
+
+	[HttpPost("orders/read-by-event/{eventCode}")]
+	public Task<IActionResult> MarkByEventRead(string eventCode) => MarkByEventReadHandler(eventCode);
 }

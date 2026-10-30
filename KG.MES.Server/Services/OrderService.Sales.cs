@@ -1,4 +1,6 @@
 using KG.MES.Server.Extensions;
+using KG.MES.Shared.Common.Extensions;
+using KG.MES.Shared.Model.Enums;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -30,186 +32,47 @@ public partial class OrderService
 
 	// Основной метод GetOrdersAsync
 	public async Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
+		int page, int limit, string? sortBy, string? sortOrder,
+		List<Guid>? workplaceIds, string? orderNumber,
+		string? customerName, Guid? managerId,
+		Guid? currentUserId, Guid? currentRoleId) // <-- Добавляем для уведомлений
 	{
-		var orderQuery = context.Orders.AsQueryable();
+		var query = BuildSalesQuery();
 
-		if (!string.IsNullOrEmpty(orderNumber))
-			orderQuery = orderQuery.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
-
-		var wProductionOrderQuery = orderQuery.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po });
-
-		if (
-			//string.IsNullOrEmpty(orderNumber) && 
-			workplaceIds != null && workplaceIds.Any())
-		{
-			wProductionOrderQuery = wProductionOrderQuery.Where(o => workplaceIds.Contains(o.po.CurrentWorkplaceId ?? Guid.Empty));
-		}
-
-		var query = wProductionOrderQuery
-			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
-			.LeftJoin(context.OrderCommercials, x => x.o.Id, s => s.OrderId, (x, s) => new {x.o, x.po, x.w, s})
-			.LeftJoin(context.Users, x => x.s != null ? x.s.ManagerId : (Guid?)null, m => m.Id, (x, m) => new {x.o, x.po, x.w, x.s, m})
-			.LeftJoin(context.Customers, x => x.s != null ? x.s.CustomerId : (Guid?)null, c => c.Id, (x, c) => 
-			new SalesOrderDto
-			{
-				Id = x.o.Id,
-				OrderNumber = x.o.OrderNumber,
-				ReadyDate = x.o.ReadyDate,
-				WindowCount = x.o.WindowCount,
-				WindowArea = x.o.WindowArea,
-				PlateCount = x.o.PlateCount,
-				PlateArea = x.o.PlateArea,
-				IsEconom = x.o.IsEconom,
-				IsClaim = x.o.IsClaim,
-				IsOnlyPaid = x.o.IsOnlyPaid,
-				CreatedAt = x.o.CreatedAt,
-				ProductionOrderId = x.po != null ? x.po.Id : (Guid?)null,
-				CurrentWorkplaceId = x.po != null ? x.po.CurrentWorkplaceId : (Guid?)null,
-				CurrentStatus = x.w != null ? x.w.Name : null,
-				CustomerName = c != null ? c.Name : null,
-				ManagerName = x.m != null ? x.m.Name : null,
-				Amount = x.s != null ? x.s.Amount : null,
-				Currency = x.s != null ? x.s.Currency : null
-			});
-
-		var total = await query.CountAsync();
-
-		// Применяем сортировку
-		var orderedQuery = query.OrderBy(o => o.ReadyDate);
-
-		var items = await orderedQuery
-			.Skip((page - 1) * limit)
-			.Take(limit)
-			.ToListAsync();
-
-		var totals = await query
-			.GroupBy(x => 1)
-			.Select(g => new OrderTotalsDto
-			{
-				WindowCountTotal = g.Sum(x => x.WindowCount),
-				WindowAreaTotal = g.Sum(x => x.WindowArea),
-				PlateCountTotal = g.Sum(x => x.PlateCount),
-				PlateAreaTotal = g.Sum(x => x.PlateArea)
-			})
-			.FirstOrDefaultAsync();
-
-
-		foreach (var item in items)
-		{
-			item.CreatedAt = item.CreatedAt.ToProductionTime();
-		}
-
-		return new PaginatedResponse<SalesOrderDto>
-		{
-			Data = items,
-			Pagination = new PaginationInfo
-			{
-				Page = page,
-				Limit = limit,
-				Total = total,
-				Pages = (int)Math.Ceiling(total / (double)limit)
-			},
-			Sort = new SortInfo
-			{
-				By = sortBy ?? "ready_date",
-				Order = sortOrder ?? "asc"
-			},
-			Totals = totals
-		};
-	}
-
-	/// <summary>
-	/// Получить список заказов с коммерческой информацией (для отдела продаж)
-	/// </summary>
-	public async Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
-		int page,
-		int limit,
-		string? sortBy,
-		string? sortOrder,
-		string? orderNumber,
-		string? customerName,
-		Guid? managerId)
-	{
-		var query = from o in context.Orders
-					join po in context.ProductionOrders on o.Id equals po.OrderId into poGroup
-					from po in poGroup.DefaultIfEmpty()
-					join w in context.Workplaces on po.CurrentWorkplaceId equals w.Id into wGroup
-					from w in wGroup.DefaultIfEmpty()
-					join oc in context.OrderCommercials on o.Id equals oc.OrderId into ocGroup
-					from oc in ocGroup.DefaultIfEmpty()
-					join u in context.Users on oc.ManagerId equals u.Id into uGroup
-					from u in uGroup.DefaultIfEmpty()
-					select new SalesOrderDto
-					{
-						Id = o.Id,
-						OrderNumber = o.OrderNumber,
-						ReadyDate = o.ReadyDate,
-						WindowCount = o.WindowCount,
-						WindowArea = o.WindowArea,
-						PlateCount = o.PlateCount,
-						PlateArea = o.PlateArea,
-						IsEconom = o.IsEconom,
-						IsClaim = o.IsClaim,
-						IsOnlyPaid = o.IsOnlyPaid,
-						CreatedAt = o.CreatedAt,
-						ProductionOrderId = po != null ? po.Id : (Guid?)null,
-						CurrentWorkplaceId = po != null ? po.CurrentWorkplaceId : (Guid?)null,
-						CurrentStatus = w != null ? w.Name : null,
-						CustomerName = oc != null ? oc.CustomerName : null,
-						ManagerName = u != null ? u.Name : null,
-						Amount = oc != null ? oc.Amount : null,
-						Currency = oc != null ? oc.Currency : null
-					};
-
-		// Фильтры
+		// 1. Фильтры
 		if (!string.IsNullOrEmpty(orderNumber))
 			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
 
+		if (workplaceIds != null && workplaceIds.Any())
+			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+
 		if (!string.IsNullOrEmpty(customerName))
-			query = query.Where(o => EF.Functions.ILike(o.CustomerName ?? "", $"%{customerName}%"));
+			query = query.Where(o => o.CustomerName != null && EF.Functions.ILike(o.CustomerName, $"%{customerName}%"));
 
 		if (managerId.HasValue)
-			query = query.Where(o => o.ManagerName != null); // или сравнивать с ID
+			query = query.Where(o => o.ManagerId == managerId); // Если есть ManagerId в DTO
 
-		var total = await query.CountAsync();
+		// 2. Сортировка
+		var orderedQuery = query.OrderByProperty(sortBy ?? "ReadyDate", sortOrder);
 
-		// Сортировка
-		IOrderedQueryable<SalesOrderDto> orderedQuery;
-
-		switch (sortBy?.ToLower())
-		{
-			case "order_number":
-				orderedQuery = sortOrder == "desc"
-					? query.OrderByDescending(o => o.OrderNumber)
-					: query.OrderBy(o => o.OrderNumber);
-				break;
-			case "customer_name":
-				orderedQuery = sortOrder == "desc"
-					? query.OrderByDescending(o => o.CustomerName)
-					: query.OrderBy(o => o.CustomerName);
-				break;
-			case "amount":
-				orderedQuery = sortOrder == "desc"
-					? query.OrderByDescending(o => o.Amount)
-					: query.OrderBy(o => o.Amount);
-				break;
-			case "ready_date":
-			default:
-				orderedQuery = sortOrder == "desc"
-					? query.OrderByDescending(o => o.ReadyDate)
-					: query.OrderBy(o => o.ReadyDate);
-				break;
-		}
-
+		// 3. Пагинация
+		var total = await orderedQuery.CountAsync();
 		var items = await orderedQuery
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
 
-		foreach (var item in items)
+		// 4. Пометка новых (если нужно)
+		if (currentUserId.HasValue && currentRoleId.HasValue)
 		{
-			item.CreatedAt = item.CreatedAt.ToProductionTime();
+			var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(
+				currentUserId.Value, currentRoleId, NotificationEventType.OrderReady);
+
+			var newSet = newOrderIds.ToHashSet();
+			foreach (var item in items)
+			{
+				item.IsNew = newSet.Contains(item.Id);
+			}
 		}
 
 		return new PaginatedResponse<SalesOrderDto>
@@ -222,16 +85,34 @@ public partial class OrderService
 				Total = total,
 				Pages = (int)Math.Ceiling(total / (double)limit)
 			},
-			Sort = new SortInfo
-			{
-				By = sortBy ?? "ready_date",
-				Order = sortOrder ?? "asc"
-			},
-			Filters = new FilterInfo
-			{
-				OrderNumber = orderNumber
-			}
+			Sort = new SortInfo { By = sortBy ?? "ReadyDate", Order = sortOrder ?? "asc" }
 		};
+	}
+
+	public async Task<List<NotificationGroupDto<SalesOrderDto>>> GetNewSalesOrdersAsync(
+		Guid userId, Guid? roleId)
+	{
+		var notifications = await notificationService.GetUnreadOrderNotificationsAsync(userId, roleId);
+
+		if (!notifications.Any())
+			return new List<NotificationGroupDto<SalesOrderDto>>();
+
+		var orderIds = notifications.Select(n => n.OrderId).Distinct().ToList();
+		var orders = await BuildSalesQuery().Where(o => orderIds.Contains(o.Id)).ToListAsync();
+		var orderDict = orders.ToDictionary(o => o.Id);
+
+		return notifications
+			.Where(n => orderDict.ContainsKey(n.OrderId))
+			.GroupBy(n => new { n.EventCode, n.EventDescription, n.Severity, severityOrder = n.GetSeverityOrder() })
+			.OrderBy(g => g.Key.severityOrder)
+			.Select(g => new NotificationGroupDto<SalesOrderDto>
+			{
+				EventCode = g.Key.EventCode,
+				EventDescription = g.Key.EventDescription,
+				Severity = g.Key.Severity,
+				Items = g.Select(n => orderDict[n.OrderId]).ToList()
+			})
+			.ToList();
 	}
 
 	/// <summary>
@@ -346,5 +227,44 @@ public partial class OrderService
 			})
 			.Take(50)  // ограничиваем количество
 			.ToListAsync();
+	}
+
+	/// <summary>
+	/// Базовый запрос для списка продаж (без фильтров и пагинации)
+	/// </summary>
+	private IQueryable<SalesOrderDto> BuildSalesQuery()
+	{
+		return from o in context.Orders
+			join po in context.ProductionOrders on o.Id equals po.OrderId into poGroup
+			from po in poGroup.DefaultIfEmpty()
+			join w in context.Workplaces on po.CurrentWorkplaceId equals w.Id into wGroup
+			from w in wGroup.DefaultIfEmpty()
+			join oc in context.OrderCommercials on o.Id equals oc.OrderId into ocGroup
+			from oc in ocGroup.DefaultIfEmpty()
+			join u in context.Users on oc.ManagerId equals u.Id into uGroup
+			from u in uGroup.DefaultIfEmpty()
+			join c in context.Customers on oc.CustomerId equals c.Id into cGroup
+			from c in cGroup.DefaultIfEmpty()
+			select new SalesOrderDto
+			{
+				Id = o.Id,
+				OrderNumber = o.OrderNumber,
+				ReadyDate = o.ReadyDate,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
+				IsEconom = o.IsEconom,
+				IsClaim = o.IsClaim,
+				IsOnlyPaid = o.IsOnlyPaid,
+				CreatedAt = o.CreatedAt,
+				ProductionOrderId = po != null ? po.Id : (Guid?)null,
+				CurrentWorkplaceId = po != null ? po.CurrentWorkplaceId : (Guid?)null,
+				CurrentStatus = w != null ? w.Name : null,
+				CustomerName = c != null ? c.Name : oc != null ? oc.CustomerName : null,
+				ManagerName = u != null ? u.Name : null,
+				Amount = oc != null ? oc.Amount : null,
+				Currency = oc != null ? oc.Currency : null
+			};
 	}
 }
