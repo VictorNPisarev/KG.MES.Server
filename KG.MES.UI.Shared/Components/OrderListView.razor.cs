@@ -41,6 +41,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
 	[Inject] private ISocketService SocketService { get; set; } = null!;
+	[Inject] private NotificationStateService NotificationState { get; set; } = null!;
 
 
 	private TListItem? selectedOrder;
@@ -118,22 +119,28 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 		try
 		{
-			debugMessage += "Подписываемся на SocketService.OnMessage\n";
-			SocketService.OnMessage += OnSocketMessage;
-			StateHasChanged();
+			//debugMessage += "Подписываемся на SocketService.OnMessage\n";
+			//SocketService.OnMessage += OnSocketMessage;
+			//StateHasChanged();
 
-			debugMessage += "Вызываем ConnectAsync...\n";
-			StateHasChanged();
+			//debugMessage += "Вызываем ConnectAsync...\n";
+			//StateHasChanged();
 
-			await SocketService.ConnectAsync();
+			//await SocketService.ConnectAsync();
 
-			debugMessage += "ConnectAsync завершен успешно!\n";
-			StateHasChanged();
+			//debugMessage += "ConnectAsync завершен успешно!\n";
+			//StateHasChanged();
 
+			//await SocketService.SubscribeAsync("notifications");
+
+			//debugMessage += "SubscribeAsync to notifications успешно!\n";
+			//StateHasChanged();
+
+			// ✅ 1. Подписываемся на событие
+			NotificationState.OnNewOrders += HandleNewOrders;
+
+			// ✅ 2. Подключаемся и подписываемся только на нужный канал
 			await SocketService.SubscribeAsync("notifications");
-
-			debugMessage += "SubscribeAsync to notifications успешно!\n";
-			StateHasChanged();
 		}
 		catch (Exception ex)
 		{
@@ -159,9 +166,12 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 		panelResizeRef?.Dispose();
 
-		SocketService.OnMessage -= OnSocketMessage;
+		//SocketService.OnMessage -= OnSocketMessage;
+		//SocketService.UnsubscribeAsync("notifications");
+
+		NotificationState.OnNewOrders -= HandleNewOrders;
+		// Опционально: отписаться от канала, если компонент уничтожен
 		SocketService.UnsubscribeAsync("notifications");
-		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
 
 	}
 
@@ -1016,6 +1026,17 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 			await LoadNotifications();
 		}
 	}
+
+	private async void HandleNewOrders()
+	{
+		debugMessage += $"🟢 Вызываем HandleNewOrders...\n";
+		await InvokeAsync(async () =>
+		{
+			await LoadNotifications();
+			StateHasChanged();
+		});
+	}
+
 
 	private async Task TestSignalR()
 	{

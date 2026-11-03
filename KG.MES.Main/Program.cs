@@ -44,11 +44,12 @@ builder.Services.AddSingleton<MaterialTypeConfigService>();
 builder.Services.AddSingleton<HolidayCalendarService>();
 builder.Services.AddSingleton<IMaterialFactory, MaterialFactory>();
 builder.Services.AddSingleton(LoadViewSettings(builder.Environment));
+builder.Services.AddSingleton<NotificationStateService>();
+builder.Services.AddSingleton<ISocketService, SignalRService>();
 builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 //builder.Services.AddScoped<ISocketService, SocketService>();
-builder.Services.AddScoped<ISocketService, SignalRService>();
 
 var app = builder.Build();
 

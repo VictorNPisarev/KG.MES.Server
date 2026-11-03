@@ -9,19 +9,19 @@ namespace KG.MES.Shared.Services; // Или KG.MES.Shared.Services, где у т
 public class SignalRService : ISocketService, IAsyncDisposable
 {
 	private readonly HubConnection hubConnection;
+	private readonly NotificationStateService state;
 	private readonly ILogger<SignalRService> logger;
-	private readonly IJSRuntime _jsRuntime;
-	private bool isInitialized;
+	private bool isConnected;
 
 	public event Action<string, object?>? OnMessage;
 
 	public static string GlobalDebugLog { get; set; } = "";
 	public static string GlobalLog { get; private set; } = "";
 
-	public SignalRService(IConfiguration configuration, ILogger<SignalRService> logger, IJSRuntime jsRuntime)
+	public SignalRService(NotificationStateService state, IConfiguration configuration, ILogger<SignalRService> logger)
 	{
+		this.state = state;
 		this.logger = logger;
-		this._jsRuntime = jsRuntime;
 
 		var serverUrl = configuration["SignalR:Url"] ?? "http://192.168.0.179:3031/notificationHub";
 
@@ -76,7 +76,6 @@ public class SignalRService : ISocketService, IAsyncDisposable
 		hubConnection.On<object>("new-orders-available", async (data) =>
 		{
 			// Пишем НАПРЯМУЮ в консоль браузера
-			await _jsRuntime.InvokeVoidAsync("console.log", "🔥🔥🔥 SIGNALR: ПОЛУЧЕНО СООБЩЕНИЕ new-orders-available! 🔥🔥🔥");
 
 			GlobalDebugLog += $":::: [SignalRService] Получено new-orders-available в {DateTime.Now:HH:mm:ss}\n ::::";
 			Log("📡 Получено new-orders-available");
@@ -88,10 +87,10 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task ConnectAsync()
 	{
-		if (hubConnection.State == HubConnectionState.Disconnected)
+		if (!isConnected)
 		{
 			await hubConnection.StartAsync();
-			isInitialized = true;
+			isConnected = true;
 			logger.LogInformation("SignalR connected");
 		}
 	}
@@ -103,7 +102,7 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task SubscribeAsync(string channel, string? id = null)
 	{
-		if (!isInitialized) await ConnectAsync();
+		if (!isConnected) await ConnectAsync();
 
 		switch (channel.ToLower())
 		{
@@ -134,7 +133,7 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task UnsubscribeAsync(string channel)
 	{
-		if (!isInitialized) return;
+		if (!isConnected) return;
 
 		switch (channel.ToLower())
 		{
@@ -166,7 +165,7 @@ public class SignalRService : ISocketService, IAsyncDisposable
 		if (hubConnection.State == HubConnectionState.Connected)
 		{
 			await hubConnection.StopAsync();
-			isInitialized = false;
+			isConnected = false;
 			logger.LogInformation("SignalR disconnected");
 		}
 	}
@@ -179,7 +178,7 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task TestSendToMeAsync()
 	{
-		if (!isInitialized) await ConnectAsync();
+		if (!isConnected) await ConnectAsync();
 		await hubConnection.InvokeAsync("TestSendToMe");
 	}
 
