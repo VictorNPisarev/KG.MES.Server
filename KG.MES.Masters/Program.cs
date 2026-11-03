@@ -31,8 +31,8 @@ builder.Services.AddHttpClient<AuthService>();
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddSingleton(LoadViewSettings());
 builder.Services.AddSingleton<SupplyService>();
-builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
+builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 builder.Services.AddScoped<UserSessionService>();
 builder.Services.AddScoped<LicenseService>();
 

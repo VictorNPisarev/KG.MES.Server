@@ -40,8 +40,11 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	[Inject] private NavigationManager NavManager { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
+	[Inject] private ISocketService SocketService { get; set; } = null!;
 
 
+	private TListItem? selectedOrder;
+	private bool isModalOpen;
 	private OrderDashboard<TCardItem>? dashboardRef;
 	private string Endpoint => Settings.ListEndpoint;
 	private string CardEndpoint => Settings.CardEndpoint;
@@ -80,11 +83,13 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	private List<ColumnInfo> filterableColumns => columnInfos.Where(c => c.Filterable).ToList();
 	private Dictionary<string, List<FacetValueDto>> facets = [];
 	private ITotalsDto? totals;
-	private string debugMessage = string.Empty;
 	private bool isNewOrdersExpanded = true;
 	private bool showConfirmMarkAllRead;
 	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
 
+	private string debugMessage = string.Empty;
+	private static int _instanceCounter = 0;
+	private int _myInstanceId;
 
 	private IconInfo testIcon = new IconInfo
 	{
@@ -95,6 +100,13 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 	protected override async Task OnInitializedAsync()
 	{
+		_myInstanceId = ++_instanceCounter;
+		debugMessage += $"🟢 Компонент создан. Экземпляр №{_myInstanceId}\n";
+		StateHasChanged();
+
+		debugMessage += "🟢 Начало инициализации\n";
+		StateHasChanged(); // Чтобы сразу отобразить
+
 		columnInfos = ColumnHelper.GetColumns<TListItem>();
 
 		await LoadSettings();
@@ -104,7 +116,53 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		//await LoadNewOrders();
 		await LoadNotifications();
 
+		try
+		{
+			debugMessage += "Подписываемся на SocketService.OnMessage\n";
+			SocketService.OnMessage += OnSocketMessage;
+			StateHasChanged();
+
+			debugMessage += "Вызываем ConnectAsync...\n";
+			StateHasChanged();
+
+			await SocketService.ConnectAsync();
+
+			debugMessage += "ConnectAsync завершен успешно!\n";
+			StateHasChanged();
+
+			await SocketService.SubscribeAsync("notifications");
+
+			debugMessage += "SubscribeAsync to notifications успешно!\n";
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 ОШИБКА ConnectAsync: {ex.Message}\n";
+			StateHasChanged();
+		}
+
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
+
+	}
+
+	public void Dispose()
+	{
+		debugMessage += $"🔴 Компонент уничтожен. Экземпляр №{_myInstanceId}\n";
+		try
+		{
+			if (_panelResizeInitialized)
+			{
+				_ = JSRuntime.InvokeVoidAsync("panelResize.dispose", "split-panel");
+			}
+		}
+		catch { }
+
+		panelResizeRef?.Dispose();
+
+		SocketService.OnMessage -= OnSocketMessage;
+		SocketService.UnsubscribeAsync("notifications");
+		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
+
 	}
 
 	private async void OnOrderUpdated(OrderUpdatedEvent e)
@@ -319,10 +377,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		return pages;
 	}
 
-	private TListItem? selectedOrder;
-
-	private bool isModalOpen;
-
 	private async Task OpenOrder(TListItem order)
 	{
 		selectedOrder = order;
@@ -468,6 +522,16 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		if (useSplitView && !_panelResizeInitialized)
 		{
 			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
+		}
+
+		// Каждый раз, когда компонент рендерится, добавляем глобальный лог
+		if (!string.IsNullOrEmpty(SignalRService.GlobalDebugLog))
+		{
+			if (!debugMessage.Contains(SignalRService.GlobalDebugLog))
+			{
+				debugMessage += SignalRService.GlobalDebugLog;
+				StateHasChanged();
+			}
 		}
 	}
 
@@ -808,22 +872,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		}
 	}
 
-	public void Dispose()
-	{
-		try
-		{
-			if (_panelResizeInitialized)
-			{
-				_ = JSRuntime.InvokeVoidAsync("panelResize.dispose", "split-panel");
-			}
-		}
-		catch { }
-
-		panelResizeRef?.Dispose();
-
-		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
-	}
-
 	// Загрузка фасетов
 	private async Task LoadFacetsAsync()
 	{
@@ -958,5 +1006,40 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		{
 			Console.WriteLine($"Error marking group as read: {ex.Message}");
 		}
+	}
+
+	private async void OnSocketMessage(string channel, object? data)
+	{
+		debugMessage += $"🟢 Вызываем OnSocketMessage с каналом {channel}...\n";
+		if (channel == "orderNotification")
+		{
+			await LoadNotifications();
+		}
+	}
+
+	private async Task TestSignalR()
+	{
+		debugMessage += "🟢 Вызываем TestSendToMe...\n";
+		StateHasChanged();
+
+		try
+		{
+			await SocketService.TestSendToMeAsync();
+			debugMessage += "🟢 Команда отправлена, ждем ответа...\n";
+
+			// Ждем 2 секунды, чтобы сообщение точно пришло
+			await Task.Delay(2000);
+
+			// Читаем лог из сервиса
+			if (SocketService is SignalRService signalR)
+			{
+				debugMessage += $"🟢 Лог сервиса: {signalR.GetType().GetProperty("GlobalDebugLog")?.GetValue(signalR)}\n"; // Или просто используй статическое поле
+			}
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 Ошибка: {ex.Message}\n";
+		}
+		StateHasChanged();
 	}
 }

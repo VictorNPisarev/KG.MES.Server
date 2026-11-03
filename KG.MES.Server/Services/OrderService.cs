@@ -11,6 +11,7 @@ using System.Text.Json;
 using KG.MES.Shared.Common.Extensions;
 using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
+using KG.MES.Server.Hubs;
 
 namespace KG.MES.Shared.Services;
 
@@ -321,6 +322,9 @@ public partial class OrderService : IOrderService
 		if (targetStatusName == Constants.OrderStatus.CommonStatus.Complete)
 		{
 			await notificationService.PublishAsync(NotificationEventType.OrderReady, orderId);
+
+			await SignalRHelper.OrderNotificationAvailable();
+
 		}
 		return new SetOrderStatusResultDto
 		{

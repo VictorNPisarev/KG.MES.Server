@@ -1,6 +1,6 @@
 using KG.MES.Server.Extensions;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -364,10 +364,10 @@ public partial class OrderService
 			if (productionOrderId != Guid.Empty)
 			{
 				// 1. Оповещение для карточки заказа (обновятся открытые карточки)
-				await NotificationHelper.OrderUpdated(productionOrderId, workplaceId, newStatus);
+				await SignalRHelper.OrderUpdated(productionOrderId, workplaceId, newStatus);
 
 				// 2. Оповещение для рабочего места (обновятся списки в приложениях)
-				await NotificationHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, newStatus);
+				await SignalRHelper.WorkplaceOrderUpdated(workplaceId, productionOrderId, newStatus);
 
 				logger.LogInformation(
 					"SignalR: order {OrderId}, workplace {WorkplaceId}, status → {NewStatus}",

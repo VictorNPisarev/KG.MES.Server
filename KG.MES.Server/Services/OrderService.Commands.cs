@@ -2,9 +2,8 @@ using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using KG.MES.Shared.Hubs;
-using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
+using KG.MES.Server.Hubs;
 
 namespace KG.MES.Shared.Services;
 
@@ -123,16 +122,22 @@ public partial class OrderService
 			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
-			// ✅ 6. Уведомляем через SignalR о создании заказа
+			//Добавляю уведомление о новом заказе
+			await notificationService.PublishAsync(NotificationEventType.NewOrder, order.Id);
+
+			// 6. Уведомляем через SignalR о создании заказа
 			try
 			{
 				// Уведомление для списка заказов
 				//await NotificationHelper.OrderCreated(order.Id, order.OrderNumber);
+				Console.WriteLine(":::: OrderService: Дошли до блока SignalR ::::");
+				await SignalRHelper.OrderNotificationAvailable();
+				Console.WriteLine(":::: OrderService: Вызов NewOrdersAvailable завершен ::::");
 
 				// Если есть комментарий, уведомляем о нем
 				if (commentId.HasValue)
 				{
-					await NotificationHelper.OrderCommentAdded(
+					await SignalRHelper.OrderCommentAdded(
 						order.Id,
 						commentId.Value,
 						request.Comment!,
@@ -141,12 +146,10 @@ public partial class OrderService
 			}
 			catch (Exception ex)
 			{
+				Console.WriteLine($"OrderService: Ошибка в блоке SignalR: {ex.Message}");
 				logger.LogWarning(ex, "Failed to send SignalR notification for order creation");
 			}
 
-			//Добавляю уведомление о новом заказе
-			await notificationService.PublishAsync(NotificationEventType.NewOrder, order.Id);
-			
 			return new CreateOrderResultDto
 			{
 				Success = true,

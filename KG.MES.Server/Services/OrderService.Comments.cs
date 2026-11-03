@@ -1,6 +1,6 @@
 // KG.MES.Server/Services/OrderService.Comments.cs
 using KG.MES.Server.Extensions;
-using KG.MES.Shared.Hubs;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
