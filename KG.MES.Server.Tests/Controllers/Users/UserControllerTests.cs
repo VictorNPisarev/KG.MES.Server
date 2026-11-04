@@ -49,7 +49,7 @@ public class UsersControllerTests : TestBase
 		json.RootElement.GetProperty("role_level").GetInt32().Should().Be(10);
 
 		json.RootElement.EnumerateObject().Select(p => p.Name).Should()
-			.BeEquivalentTo(["id", "email", "name", "role_id", "role_name", "role_level"]);
+			.BeEquivalentTo(["id", "email", "name", "role_id", "role_name", "role_level", "is_password_set"]);
 	}
 
 	[Fact]
