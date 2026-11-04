@@ -10,7 +10,7 @@
 	"editSupply": false,
 	"additional": 
 	{
-		"defaultSortBy": "ready_date",
+		"defaultSortBy": "ReadyDate",
 		"defaultSortOrder": "asc"
 	}
 }

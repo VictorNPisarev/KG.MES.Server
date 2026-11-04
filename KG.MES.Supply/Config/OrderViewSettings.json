@@ -7,5 +7,9 @@
 	"showTrace": false,
 	"editTrace": false,
 	"editSupply": true,
-	"showSupply": true
+	"showSupply": true,
+	"additional": {
+		"defaultSortBy": "ReadyDate",
+		"defaultSortOrder": "asc"
+	}
 }

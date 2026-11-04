@@ -9,5 +9,9 @@
 	"showSupply": false,
 	"editSupply": false,
 	"showComment": false,
-	"editComment": false
+	"editComment": false,
+	"additional": {
+		"defaultSortBy": "ReadyDate",
+		"defaultSortOrder": "asc"
+	}
 }
