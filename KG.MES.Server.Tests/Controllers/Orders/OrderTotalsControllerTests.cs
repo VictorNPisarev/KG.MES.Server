@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Tests.Helpers;

@@ -1,7 +1,7 @@
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 public partial class WorkplaceController
 {

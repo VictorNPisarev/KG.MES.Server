@@ -1,18 +1,24 @@
+using System.Text.Json.Serialization;
+
 namespace KG.MES.Shared.Models.Dto;
 
 public class OrderTraceDto
 {
+	[JsonPropertyName("orderId")]
 	public Guid OrderId { get; set; }
-	public Guid? ProductionOrderId { get; set; }
-	public string OrderNumber { get; set; } = string.Empty;
-	public DateTime? ReadyDate { get; set; }
-	public bool? Departed { get; set; }
-	public List<WorkplaceTraceDto> Workplaces { get; set; } = new();
-}
 
-public class WorkplaceTraceDto
-{
-	public Guid WorkplaceId { get; set; }
-	public string WorkplaceName { get; set; } = string.Empty;
-	public string Status { get; set; } = string.Empty;
+	[JsonPropertyName("productionOrderId")]
+	public Guid ProductionOrderId { get; set; }
+
+	[JsonPropertyName("orderNumber")]
+	public string OrderNumber { get; set; } = string.Empty;
+
+	[JsonPropertyName("readyDate")]
+	public DateTime? ReadyDate { get; set; }
+
+	[JsonPropertyName("departed")]
+	public bool? Departed { get; set; }
+
+	[JsonPropertyName("workplaces")]
+	public List<WorkplaceTraceDto> WorkplaceTraces { get; set; } = [];
 }

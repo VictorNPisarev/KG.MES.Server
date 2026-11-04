@@ -19,3 +19,18 @@ public class SupplyTypeDto
 	[JsonPropertyName("is_active")]
 	public bool IsActive { get; set; }
 }
+
+public static class SupplyTypeExtensions
+{
+	public static string DisplayName(this SupplyTypeDto supplyType) => supplyType.Name switch
+	{
+		"lumber" => "Брус",
+		"furniture" => "Фурнитура",
+		"glass" => "Стекло",
+		"paint" => "ЛКМ",
+		"alumWaterShield" => "ППС, В/О",
+		"windowsill" => "Отлив",
+		"woodAlum" => "Д/А",
+		_ => supplyType.Name
+	};
+}

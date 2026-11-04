@@ -1,0 +1,330 @@
+@using System.Drawing
+@using KG.MES.Shared.Common.Extensions
+@using KG.MES.Main.Models
+@using System.Linq
+@using KG.MES.Main.Models.Enums
+@using KG.MES.Main.Services
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Main.Extensions
+@inject HolidayCalendarService HolidayService
+
+<div class="order-details">
+	@if (Order != null)
+	{
+		<!-- Контрагент -->
+		@if (Order.CustomerData != null)
+		{
+			<div class="row mt-2">
+				<div class="col-12">
+					<h5>Контрагент: @Order.CustomerData.CustomerNumber</h5>
+					<p class="small text-muted mb-0">
+						@Order.CustomerData.FirstName @Order.CustomerData.LastName<br>
+						@Order.CustomerData.Postcode @Order.CustomerData.CountryISO, @Order.CustomerData.City, @Order.CustomerData.Street<br>
+						@Order.CustomerData.Phone | @Order.CustomerData.Email
+					</p>
+				</div>
+			</div>
+		}
+
+		<!-- Основная информация -->
+		<div class="row">
+			<div class="col-12">
+				<h5>Информация о заказе</h5>
+				<table class="table table-sm">
+					<tbody>
+						<tr>
+							<td style="width: 16%; background-color: #f8f9fa;"><strong>Номер заказа:</strong></td>
+							<td style="width: 34%;">@Order.DocumentNumber</td>
+							<td style="width: 16%; background-color: #f8f9fa;"><strong>Дата заказа:</strong></td>
+							<td style="width: 34%;">@Order.DocumentDate?.ToString("dd.MM.yyyy")</td>
+						</tr>
+						<tr>
+							<td style="background-color: #f8f9fa;"><strong>Проект:</strong></td>
+							<td>@Order.ProjectNumber - @Order.ProjectDescription</td>
+							<td style="background-color: #f8f9fa;"><strong>Дата запуска:</strong></td>
+							<td>
+								<input type="date" class="form-control form-control-sm" 
+									   value="@Order.InitializeDate.ToString("yyyy-MM-dd")"
+									   @onchange="OnStartDateChanged" />
+							</td>
+						</tr>
+						<tr>
+							<td style="background-color: #f8f9fa;"><strong>Сумма брутто:</strong></td>
+							<td>@Order.DocumentAmountGross.ToString("C")</td>
+							<td style="background-color: #f8f9fa;"><strong>Срок (дней):</strong></td>
+							<td>
+								<input type="number" class="form-control form-control-sm" 
+									   value="@Order.ApprovedLeadTimeDays"
+									   @onchange="OnProductionDaysChanged"
+									   min="1" max="60" style="width: 80px;" />
+							</td>
+						</tr>
+						<tr>
+							<td style="background-color: #f8f9fa;"><strong>Ответственный:</strong></td>
+							<td>@Order.AuthorisedPersonName</td>
+							<td style="background-color: #f8f9fa;"><strong>Плановая готовность:</strong></td>
+							<td class="fw-bold text-success">
+								@Order.CalcReadyDate(HolidayService)?.ToString("dd.MM.yyyy")
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<!-- Комментарий -->
+		<div class="row mt-2">
+			<div class="col-12">
+				<label class="fw-bold small mb-1">Комментарий</label>
+				<div class="input-group">
+					<textarea @ref="textareaElement" class="form-control form-control-sm" @bind="Order.Comment"
+						@onfocus="OnCommentFocus" @onblur="OnCommentBlur" @oninput="OnCommentInput" rows="1"
+						style="resize: none; overflow: hidden; text-overflow: ellipsis; transition: height 0.2s;">
+					</textarea>
+					<!--<textarea 
+						class="form-control form-control-sm comment-textarea @(isCommentExpanded ? "expanded" : "collapsed")"
+						@bind="Order.Comment"
+						@onfocus="OnCommentFocus"
+						@onblur="OnCommentBlur"
+						rows="1">
+					</textarea>-->
+					<button class="btn btn-sm btn-outline-secondary" 
+							@onclick="ToggleCommentExpand" @onblur="OnCommentBlur"
+							type="button">
+						<i class="bi @(isCommentExpanded ? "bi-arrows-collapse" : "bi-arrows-expand")"></i>
+					</button>
+				</div>
+			</div>
+		</div>
+		@if (Order.DocumentItems.Count > 0)
+		{
+			<h5 class="mt-3">Позиции:</h5>
+			<div class="row">
+				<div class="col-md-4">
+					<p>
+						@foreach (var group in Order.GroupByTypes())
+						{
+							<div>
+								@group.Key.GetDescription():
+								@group.Value.Sum(i => i.Piece).ToString() шт.
+								(@group.Value.Sum(i => i.Area * i.Piece).ToString("F2") м²)
+							</div>
+						}
+					</p>
+				</div>
+				<div class="col-md-8">
+							<!-- ✅ Эконом -->
+							<div class="d-flex align-items-center gap-2" 
+								 style="cursor: pointer;" 
+								 @onclick="() => ToggleEconom()"
+								 @onclick:preventDefault="true">
+								<i class="bi @(Order.IsEconom ? "bi-piggy-bank-fill text-primary" : "bi-piggy-bank text-secondary")" 
+									style="font-size: 1.2rem; transition: all 0.2s;"></i>
+								<span>Эконом</span>
+							</div>
+
+							<!-- ✅ Рекламация -->
+							<div class="d-flex align-items-center gap-2" 
+								 style="cursor: pointer;" 
+								 @onclick="() => ToggleClaim()"
+								 @onclick:preventDefault="true">
+								<i class="bi @(Order.IsClaim ? "bi-exclamation-triangle-fill text-danger" : "bi-triangle text-secondary")" 
+									style="font-size: 1.2rem; transition: all 0.2s;"></i>
+								<span>Рекламация</span>
+							</div>
+
+							<!-- ✅ Только оплаченное -->
+							<div class="d-flex align-items-center gap-2" 
+								 style="cursor: pointer;" 
+								 @onclick="() => ToggleOnlyPaid()"
+								 @onclick:preventDefault="true">
+								<i class="bi @(Order.IsOnlyPaid ? "bi-cash-stack text-success" : "bi-cash-coin text-secondary")"
+									style="font-size: 1.2rem; transition: all 0.2s;"></i>
+								<span>Только оплаченное</span>
+							</div>
+
+							<!-- Двухсторонняя покраска (только отображение) -->
+						@if (Order.IsDoubleColor())
+						{
+							<div class="d-flex align-items-center gap-2">
+							<h4><i class="bi @(Order.IsDoubleColor() ? "bi-arrows-collapse-vertical icon-double-paint-classic" : "bi-arrows-collapse-vertical text-secondary opacity-50")"
+									title="@(Order.IsDoubleColor() ? "Двухсторонняя покраска" : "Односторонняя покраска")"
+									style="font-size: 1.2rem;"></i></h4>
+								<span>Двухстор. покраска</span>
+							</div>
+						}
+				</div>
+			</div>
+		}
+
+		<!-- Позиции заказа (аккордеон) -->
+		@if (Order.DocumentItems.Count > 0)
+		{
+			<div class="card mt-3">
+				<div class="card-header p-0">
+					<button class="btn btn-link w-100 text-start text-decoration-none p-3" 
+							data-bs-toggle="collapse" 
+							data-bs-target="#collapseOrderItems"
+							aria-expanded="true">
+						<div class="d-flex justify-content-between align-items-center">
+							<div class="d-flex align-items-center gap-3">
+								<i class="bi bi-cart-fill fs-5"></i>
+								<h5 class="mb-0">Товары в заказе</h5>
+								<span class="badge bg-secondary">@Order.DocumentItems.Sum(i => i.Piece)</span>
+							</div>
+							<div class="text-muted">
+								Общая сумма: @Order.DocumentItems.Sum(i => i.TotalPrice).ToString("C")
+							</div>
+						</div>
+					</button>
+				</div>
+				
+				<div id="collapseOrderItems" class="collapse show">
+					<div class="card-body p-0">
+						<OrderItemsGroupedView GroupedItems="@Order.GroupByTypes()" />
+					</div>
+				</div>
+			</div>
+		}
+	}
+	else
+	{
+		<p class="text-muted">Выберите заказ для просмотра деталей</p>
+	}
+</div>
+
+@code {
+	[Parameter] public DocumentData? Order { get; set; }
+	[Parameter] public EventCallback<DocumentData> OrderChanged { get; set; }
+
+	// ✅ ПРЯМЫЕ МЕТОДЫ ДЛЯ ПЕРЕКЛЮЧЕНИЯ ФЛАГОВ
+	private async Task ToggleEconom()
+	{
+		if (Order == null) return;
+		
+		Order.IsEconom = !Order.IsEconom;
+		Console.WriteLine($"✅ ToggleEconom: {Order.IsEconom}");
+		
+		if (OrderChanged.HasDelegate)
+			await OrderChanged.InvokeAsync(Order);
+		
+		StateHasChanged();
+	}
+
+	private async Task ToggleClaim()
+	{
+		if (Order == null) return;
+		
+		Order.IsClaim = !Order.IsClaim;
+		Console.WriteLine($"✅ ToggleClaim: {Order.IsClaim}");
+		
+		if (OrderChanged.HasDelegate)
+			await OrderChanged.InvokeAsync(Order);
+		
+		StateHasChanged();
+	}
+
+	private async Task ToggleOnlyPaid()
+	{
+		if (Order == null) return;
+		
+		Order.IsOnlyPaid = !Order.IsOnlyPaid;
+		Console.WriteLine($"✅ ToggleOnlyPaid: {Order.IsOnlyPaid}");
+		
+		if (OrderChanged.HasDelegate)
+			await OrderChanged.InvokeAsync(Order);
+		
+		StateHasChanged();
+	}
+
+	// Обработчики для input элементов
+	private async Task OnStartDateChanged(ChangeEventArgs e)
+	{
+		if (Order == null) return;
+		
+		if (DateTime.TryParse(e.Value?.ToString(), out var newDate))
+		{
+			Order.InitializeDate = newDate;
+			Console.WriteLine($"✅ Date changed: {newDate:yyyy-MM-dd}");
+			
+			if (OrderChanged.HasDelegate)
+				await OrderChanged.InvokeAsync(Order);
+		}
+
+		StateHasChanged();
+	}
+
+	private async Task OnProductionDaysChanged(ChangeEventArgs e)
+	{
+		if (Order == null) return;
+		
+		if (int.TryParse(e.Value?.ToString(), out var days))
+		{
+			Order.ApprovedLeadTimeDays = days;
+			Console.WriteLine($"✅ Days changed: {days}");
+			
+			if (OrderChanged.HasDelegate)
+				await OrderChanged.InvokeAsync(Order);
+		}
+
+		StateHasChanged();
+	}
+	private DateTime? CalculateReadyDate()
+	{
+		if (Order == null) return null;
+
+		var startDate = Order.InitializeDate;
+		var days = Order.ApprovedLeadTimeDays;
+
+		// Простой расчет без учета выходных
+		return Order.CalcReadyDate(HolidayService);
+	}
+
+	private bool isCommentExpanded = false;
+
+	private ElementReference textareaElement;
+
+	[Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+
+	private async Task OnCommentFocus()
+	{
+		if (!isCommentExpanded)
+		{
+			isCommentExpanded = true;
+			await JSRuntime.InvokeVoidAsync("autoResizeTextarea", textareaElement);
+		}
+	}
+
+	private async Task OnCommentBlur()
+	{
+		if (isCommentExpanded)
+		{
+			isCommentExpanded = false;
+			await JSRuntime.InvokeVoidAsync("collapseTextarea", textareaElement);
+		}
+	}
+
+	private async Task OnCommentInput(ChangeEventArgs e)
+	{
+		if (isCommentExpanded)
+		{
+			await JSRuntime.InvokeVoidAsync("autoResizeTextarea", textareaElement);
+		}
+	}
+
+	private async Task ToggleCommentExpand()
+	{
+
+		if (!isCommentExpanded)
+		{
+			isCommentExpanded = true;
+			await JSRuntime.InvokeVoidAsync("autoResizeTextarea", textareaElement);
+		}
+		else
+		{
+			isCommentExpanded = false;
+			await JSRuntime.InvokeVoidAsync("collapseTextarea", textareaElement);
+		}
+	}
+
+
+}

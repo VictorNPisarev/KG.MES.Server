@@ -1,0 +1,1059 @@
+using Microsoft.AspNetCore.Components;
+using KG.MES.Shared.Models.Config;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using KG.MES.Shared.Models.Dto;
+using KG.MES.Shared.Services;
+using KG.MES.Shared.Helpers;
+using System.Text.Json;
+using KG.MES.Shared.Models;
+using KG.MES.Shared.Events;
+using KG.MES.Shared.Interfaces;
+using KG.MES.Shared.Constants;
+using System.Reflection;
+using KG.MES.UI.Shared.Interfaces;
+using Mapster;
+using Microsoft.Extensions.Options;
+
+namespace KG.MES.UI.Shared.Components;
+public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto> : ComponentBase
+	where TListItem : class
+	where TCardItem : class
+	where TListItemDto : class
+	where TCardDto : class
+{
+	[Parameter] public OrderViewSettings Settings { get; set; } = new();
+	[Parameter] public EventCallback<TListItem> OnOrderClick { get; set; }
+	[Parameter] public EventCallback<TListItem> OnEditOrder { get; set; }
+	[Parameter] public EventCallback<TListItem> OnDeleteOrder { get; set; }
+	[Parameter] public RenderFragment? HeaderActions { get; set; }
+	[Parameter] public Func<Guid?, Guid[]?, string?, int, int, string?, string?, List<FilterCondition>, Task<PaginatedResponse<TListItem>>>? LoadItems { get; set; }
+	[Parameter] public Func<Task<List<TListItem>>>? LoadNewItems { get; set; }
+
+	[Parameter] public Func<Guid, Task<TCardItem>>? LoadItem { get; set; }
+	[Parameter] public bool ShowOnlyNewFilter { get; set; } = false;
+
+
+	[Inject] private ProductionApiService ApiService { get; set; } = null!;
+	[Inject] private IJSRuntime JSRuntime { get; set; } = null!;
+	[Inject] private IEventAggregator EventAggregator { get; set; } = null!;
+	[Inject] private NavigationManager NavManager { get; set; } = null!;
+	[Inject] private UserSessionService Session { get; set; } = null!;
+	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
+	[Inject] private ISocketService SocketService { get; set; } = null!;
+
+	private TListItem? selectedOrder;
+	private bool isModalOpen;
+	private OrderDashboard<TCardItem>? dashboardRef;
+	private string Endpoint => Settings.ListEndpoint;
+	private string CardEndpoint => Settings.CardEndpoint;
+	private string Title => Settings.Title;
+	private bool ShowActions => Settings.ShowActions;
+	private PaginatedResponse<TListItem> orders = new();
+	private List<TListItem> newOrders = [];
+
+	private List<WorkplaceDto> workplaces = [];
+	private List<ColumnInfo> columnInfos = [];
+	private List<ColumnSetting> columnSettings = [];
+	private bool isLoading = false;
+	private string searchNumber = "";
+	private int currentPage = 1;
+	private int pageSize = 50;
+	private string sortBy = "ReadyDate";
+	private string sortOrder = "asc";
+	private Guid? selectedWorkplaceId;
+	private string tableKey => $"{Endpoint}_{typeof(TListItem).Name}";
+	private bool isColumnsOpen = false;
+	private bool useSplitView;
+	private string savedPanelWidth = "66%";
+	private DotNetObjectReference<OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>>? panelResizeRef;
+	private string? lastReportedWidth;
+	private bool _panelResizeInitialized = false;
+	//private List<Guid> selectedWorkplaceIds = [];
+	private bool dropdownOpen;
+	private Guid[] selectedWorkplaceIds = [];
+	private SavedFilter? savedFilter;
+	private ElementReference pageContainer;
+	private double? scrollYBeforeModal;
+	private bool showAdvancedFilter;
+	private Dictionary<string, HashSet<string>> selectedFilters = [];
+	private HashSet<string> expandedGroups = [];
+	private bool HasActiveFilters => selectedFilters.Values.Any(v => v.Count > 0);
+	private List<ColumnInfo> filterableColumns => columnInfos.Where(c => c.Filterable).ToList();
+	private Dictionary<string, List<FacetValueDto>> facets = [];
+	private ITotalsDto? totals;
+	private bool isNewOrdersExpanded = true;
+	private bool showConfirmMarkAllRead;
+	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
+
+	private string debugMessage = string.Empty;
+	private static int _instanceCounter = 0;
+	private int _myInstanceId;
+
+	private IconInfo testIcon = new IconInfo
+	{
+						Class = "bi bi-piggy-bank-fill",
+						Css = "order-icon-econom",
+						Title = "Эконом"
+	};
+
+	protected override async Task OnInitializedAsync()
+	{
+		_myInstanceId = ++_instanceCounter;
+		debugMessage += $"🟢 Компонент создан. Экземпляр №{_myInstanceId}\n";
+		StateHasChanged();
+
+		debugMessage += "🟢 Начало инициализации\n";
+		StateHasChanged(); // Чтобы сразу отобразить
+
+		columnInfos = ColumnHelper.GetColumns<TListItem>();
+
+		await LoadSettings();
+		workplaces = await ApiService.GetAllWorkplacesAsync();
+		await LoadFacetsAsync();
+		await LoadOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
+
+		try
+		{
+			debugMessage += "Подписываемся на SocketService.OnMessage\n";
+			SocketService.OnMessage += OnSocketMessage;
+			StateHasChanged();
+
+			debugMessage += "Вызываем ConnectAsync...\n";
+			StateHasChanged();
+
+			await SocketService.ConnectAsync();
+
+			debugMessage += "ConnectAsync завершен успешно!\n";
+			StateHasChanged();
+
+			await SocketService.SubscribeAsync("notifications");
+
+			debugMessage += "SubscribeAsync to notifications успешно!\n";
+			StateHasChanged();
+
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 ОШИБКА ConnectAsync: {ex.Message}\n";
+			StateHasChanged();
+		}
+
+		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
+
+	}
+
+	public void Dispose()
+	{
+		debugMessage += $"🔴 Компонент уничтожен. Экземпляр №{_myInstanceId}\n";
+		try
+		{
+			if (_panelResizeInitialized)
+			{
+				_ = JSRuntime.InvokeVoidAsync("panelResize.dispose", "split-panel");
+			}
+		}
+		catch { }
+
+		panelResizeRef?.Dispose();
+
+		SocketService.OnMessage -= OnSocketMessage;
+		SocketService.UnsubscribeAsync("notifications");
+		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (useSplitView && !_panelResizeInitialized)
+		{
+			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
+		}
+	}
+
+	private async void OnOrderUpdated(OrderUpdatedEvent e)
+	{
+		await LoadOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
+		StateHasChanged();
+	}
+
+	private async Task LoadSettings()
+	{
+		try
+		{
+			var splitViewSetting = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "useSplitView");
+			useSplitView = splitViewSetting != null && splitViewSetting.ToLower() == "true";
+
+			var splitPanelWidth = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "splitPanelWidth");
+			//if (!string.IsNullOrEmpty(splitPanelWidth))
+			//	savedPanelWidth = splitPanelWidth;
+
+			var orderFilter = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"orderFilter_{Endpoint}");
+			if (!string.IsNullOrEmpty(orderFilter))
+			{
+				savedFilter = JsonSerializer.Deserialize<SavedFilter>(orderFilter,
+					new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+				if (savedFilter != null)
+				{
+					selectedWorkplaceIds = savedFilter.WorkplaceIds ?? [];
+					searchNumber = savedFilter.OrderNumber ?? "";
+				}
+			}
+
+			var tableSettings = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"table_settings_{tableKey}");
+
+			//TODO временно, чтобы у пользователей не слетели настройки UI. Спустя время надо убрать.
+			if (string.IsNullOrEmpty(tableSettings))
+			{
+				// Пробуем старый ключ с Dto
+				var oldTableKey = tableKey.Replace("ViewModel", "Dto");
+				tableSettings = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"table_settings_{oldTableKey}");
+			}
+
+			columnSettings = TableSettingsManager.GetSettings<TListItem>(tableSettings);
+		}
+		catch
+		{
+			columnSettings = TableSettingsManager.GetDefaultSettings<TListItem>();
+		}
+	}
+
+	private List<(ColumnInfo Info, ColumnSetting Setting)> BuildVisibleColumns()
+	{
+		return columnSettings
+			.Where(s => s.Visible)
+			.Join(columnInfos,
+				s => s.PropertyName,
+				i => i.PropertyName,
+				(s, i) => (Info: i, Setting: s))
+			.OrderBy(x => x.Setting.Order)
+			.ToList();
+	}
+
+	private async Task SaveSettings()
+	{
+		var json = TableSettingsManager.Serialize(columnSettings);
+		await JSRuntime.InvokeVoidAsync("localStorage.setItem", $"table_settings_{tableKey}", json);
+	}
+
+	private async Task ToggleColumn(string propertyName, bool visible)
+	{
+		var setting = columnSettings.FirstOrDefault(s => s.PropertyName == propertyName);
+		if (setting != null)
+		{
+			setting.Visible = visible;
+			await SaveSettings();
+			StateHasChanged();
+		}
+	}
+
+	private async Task MoveColumn(string propertyName, int direction)
+	{
+		var setting = columnSettings.FirstOrDefault(s => s.PropertyName == propertyName);
+		if (setting == null) return;
+
+		var orderedList = columnSettings.OrderBy(s => s.Order).ToList();
+		var currentIndex = orderedList.IndexOf(setting);
+		var newIndex = currentIndex + direction;
+
+		if (newIndex < 0 || newIndex >= orderedList.Count) return;
+
+		// Меняем местами
+		var swap = orderedList[newIndex];
+		var tempOrder = setting.Order;
+		setting.Order = swap.Order;
+		swap.Order = tempOrder;
+
+		// Нормализуем порядок
+		orderedList = columnSettings.OrderBy(s => s.Order).ToList();
+		for (int i = 0; i < orderedList.Count; i++)
+			orderedList[i].Order = i;
+
+		await SaveSettings();
+		StateHasChanged();
+	}
+
+	private async Task ResetColumns()
+	{
+		columnSettings = TableSettingsManager.GetDefaultSettings<TListItem>();
+		await SaveSettings();
+		StateHasChanged();
+	}
+
+	private async Task LoadSortFromStorage()
+	{
+		try
+		{
+			var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"sort_{tableKey}");
+			if (!string.IsNullOrEmpty(json))
+			{
+				var data = JsonSerializer.Deserialize<SortData>(json);
+				sortBy = data?.SortBy ?? "ReadyDate";
+				sortOrder = data?.Ascending == true ? "asc" : "desc";
+			}
+		}
+		catch { }
+	}
+	
+	private async Task LoadOrders()
+	{
+		isLoading = true;
+		StateHasChanged();
+
+		try
+		{
+			var filters = BuildFilterConditionsForIn();
+
+			if (LoadItems != null)
+			{
+				orders = await LoadItems(
+					selectedWorkplaceId,
+					selectedWorkplaceIds,
+					string.IsNullOrEmpty(searchNumber) ? null : searchNumber,
+					currentPage,
+					pageSize,
+					sortBy,
+					sortOrder,
+					filters
+				);
+
+				totals = orders.Totals;
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading orders: {ex.Message}");
+		}
+		finally
+		{
+			isLoading = false;
+			StateHasChanged();
+		}
+	}
+
+	private async Task LoadNewOrders()
+	{
+		if (LoadNewItems == null) return;
+
+		try
+		{
+			newOrders = await LoadNewItems();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading new orders: {ex.Message}");
+		}
+	}
+
+	private async Task ApplyFilters()
+	{
+		currentPage = 1;
+		await LoadOrders();
+	}
+
+	private async Task GoToPage(int page)
+	{
+		currentPage = page;
+		await LoadOrders();
+	}
+
+	private async Task OnPageSizeChanged()
+	{
+		currentPage = 1;
+		await LoadOrders();
+	}
+
+	private async Task OnSearchKeyUp(KeyboardEventArgs e)
+	{
+		if (e.Key == "Enter")
+			await ApplyFilters();
+	}
+
+	private List<int> GetPageNumbers()
+	{
+		var pages = new List<int>();
+		var start = Math.Max(1, orders.Page - 2);
+		var end = Math.Min(orders.TotalPages, orders.Page + 2);
+
+		for (int i = start; i <= end; i++)
+			pages.Add(i);
+
+		return pages;
+	}
+
+	private async Task OpenOrder(TListItem order)
+	{
+		selectedOrder = order;
+
+		// Отмечаю оповещение, как прочитанное
+		var orderId = GetOrderId(order);
+		if (orderId != Guid.Empty)
+		{
+			// Вызов асинхронный, не блокируем UI
+			_ = ApiService.MarkOrderNotificationsAsReadAsync(orderId);
+
+			// Убираем заказ из блока "новых" (или помечаем прочитанным)
+			var newOrder = newOrders.FirstOrDefault(o => GetOrderId(o) == orderId);
+			if (newOrder != null)
+			{
+				newOrders.Remove(newOrder);
+				StateHasChanged();
+			}
+		}
+
+
+		if (useSplitView)
+		{
+			// Просто обновляем панель — Dashboard сам переинициализируется
+			StateHasChanged();
+		}
+		else
+		{
+			// Сохраняем позицию скролла
+			scrollYBeforeModal = await JSRuntime.InvokeAsync<double>("scrollFunctions.getScrollTop", pageContainer);
+
+			isModalOpen = true;
+			StateHasChanged();
+		}
+	}
+
+	private async Task EditOrder(TListItem order)
+	{
+		Guid orderId = GetOrderId(order);
+
+		if (orderId == Guid.Empty)
+			return;
+
+		NavManager.NavigateTo($"create-order?edit={orderId}");
+		await OnEditOrder.InvokeAsync(order);
+	}
+
+	private async Task DeleteOrder(TListItem order)
+	{
+		Guid orderId = GetOrderId(order);
+
+		if (orderId == Guid.Empty)
+			return;
+
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Удалить заказ {GetOrderNumber(order)}?");
+		if (confirmed)
+		{
+
+			var success = await ApiService.DeleteOrderAsync(orderId);
+			if (success) await LoadOrders();
+		}
+	}
+
+	private async Task CloseOrder()
+	{
+		// Сбрасываю фокус с активного элемента ДО закрытия модалки
+		//try
+		//{
+		//	await JSRuntime.InvokeVoidAsync("eval", @"
+		//		document.activeElement?.blur();
+		//		document.body.focus();
+		//	");
+		//	await Task.Delay(30);
+		//}
+		//catch { }
+
+		//if (dashboardRef != null)
+		//{
+		//	var hasChanges = dashboardRef.widgets.Any(w => w?.HasUnsavedChanges() == true);
+
+		//	if (hasChanges)
+		//	{
+		//		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Есть несохранённые изменения. Сохранить?");
+		//		Console.WriteLine($"Confirmed: {confirmed}");
+		//		if (confirmed)
+		//		{
+		//			foreach (var w in dashboardRef.widgets)
+		//				if (w != null)
+		//					await w.SaveAllAsync();
+		//		}
+		//	}
+		//}
+
+		selectedOrder = default;
+		isModalOpen = false;
+		dashboardRef = null;
+
+		if (useSplitView)
+		{
+			// Без перезагрузки списка — просто скрываем панель
+			StateHasChanged();
+		}
+		else
+		{
+			await LoadOrders();
+			//await LoadNewOrders();
+			await LoadNotifications();
+			StateHasChanged();
+
+			// Восстанавливаем позицию скролла
+			if (scrollYBeforeModal.HasValue)
+			{
+				// Восстанавливаем позицию
+				await JSRuntime.InvokeVoidAsync("scrollFunctions.setScrollTop", pageContainer, scrollYBeforeModal.Value);
+				// Сбрасываем переменную, чтобы не скроллить при обычных рендерах
+				scrollYBeforeModal = null;
+			}
+		}
+	}
+
+	private Guid GetOrderId(TListItem order)
+	{
+		var prop = typeof(TListItem).GetProperty("Id");
+		return (Guid)(prop?.GetValue(order) ?? Guid.Empty);
+	}
+
+	private string GetOrderNumber(TListItem order)
+	{
+		var prop = typeof(TListItem).GetProperty("OrderNumber");
+		return prop?.GetValue(order)?.ToString() ?? "—";
+	}
+
+	private async Task ToggleViewMode()
+	{
+		useSplitView = !useSplitView;
+		await JSRuntime.InvokeVoidAsync("localStorage.setItem", "useSplitView", useSplitView.ToString());
+
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public async Task OnPanelResized(double width)
+	{
+		var newWidth = $"{width}px";
+
+		// Защита от спама одинаковых значений (ResizeObserver может вызывать callback очень часто)
+		if (newWidth == lastReportedWidth) return;
+		lastReportedWidth = newWidth;
+
+		await InvokeAsync(async () =>
+		{
+			savedPanelWidth = newWidth;
+			try
+			{
+				await JSRuntime.InvokeVoidAsync("localStorage.setItem", "splitPanelWidth", savedPanelWidth);
+			}
+			catch {}
+
+			StateHasChanged();
+		});
+	}
+
+	private async Task InitializePanelResize()
+	{
+		if (_panelResizeInitialized) return;
+
+		try
+		{
+			panelResizeRef = DotNetObjectReference.Create(this);
+			await JSRuntime.InvokeVoidAsync("panelResize.init", panelResizeRef, "split-panel");
+			_panelResizeInitialized = true;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Failed to initialize panel resize: {ex.Message}");
+			_panelResizeInitialized = false;
+		}
+	}
+
+	private void ToggleDropdown()
+	{
+		dropdownOpen = !dropdownOpen;
+	}
+
+	private void CloseDropdown()
+	{
+		dropdownOpen = false;
+	}
+
+	private async Task ToggleWorkplace(Guid id, bool isChecked)
+	{
+		if (isChecked)
+		{
+			if (!selectedWorkplaceIds.Contains(id))
+				selectedWorkplaceIds = selectedWorkplaceIds.Append(id).ToArray();
+		}
+		else
+		{
+			selectedWorkplaceIds = selectedWorkplaceIds.Where(x => x != id).ToArray();
+		}
+
+		//await ApplyFilters();
+	}
+
+	private async Task SaveFilter()
+	{
+		var filter = new SavedFilter
+		{
+			WorkplaceIds = selectedWorkplaceIds,
+			OrderNumber = searchNumber
+		};
+
+		if (filter == savedFilter) return;
+
+		savedFilter = filter;
+
+		var json = JsonSerializer.Serialize(filter);
+		await JSRuntime.InvokeVoidAsync("localStorage.setItem", $"orderFilter_{Endpoint}", json);
+	}
+
+	private bool IsFilterSaved()
+	{
+		if (savedFilter == null) return false;
+
+		if(selectedWorkplaceIds.Length == 0 && searchNumber == string.Empty)
+			return false;
+
+		return selectedWorkplaceIds.SequenceEqual(savedFilter.WorkplaceIds ?? [])
+			&& searchNumber == (savedFilter.OrderNumber ?? string.Empty);
+	}
+
+	private async Task ClearFilter()
+	{
+		selectedWorkplaceIds = [];
+		searchNumber = "";
+		await ApplyFilters();
+		StateHasChanged();
+	}
+
+	private async Task RestoreFilter()
+	{
+		if (savedFilter != null)
+		{
+			selectedWorkplaceIds = savedFilter.WorkplaceIds ?? [];
+			searchNumber = savedFilter.OrderNumber ?? "";
+			await ApplyFilters();
+			StateHasChanged();
+		}
+	}
+
+	private async Task HandleSortChanged((string SortBy, bool Ascending) sort)
+	{
+		sortBy = sort.SortBy;
+		sortOrder = sort.Ascending ? "asc" : "desc";
+		await LoadOrders();
+	}
+
+	// Фильтруемые поля из ColumnInfo
+	//private Dictionary<string, List<string>> advancedFilterGroups => columnInfos
+	//	.Where(c => c.Filterable)
+	//	.ToDictionary(
+	//		c => c.Title,
+	//		c => orders.Data.Select(item =>
+	//		{
+	//			var prop = typeof(TListItem).GetProperty(c.PropertyName);
+	//			var value = prop?.GetValue(item);
+	//			return value switch
+	//			{
+	//				bool b => b ? "Да" : "Нет",
+	//				null => "—",
+	//				_ => value.ToString() ?? "—"
+	//			};
+	//		}).Distinct().ToList()
+	//	);
+
+	private bool HasAdvancedFilters => selectedFilters.Values.Any(v => v.Count > 0);
+	private void ToggleAdvancedFilter() => showAdvancedFilter = !showAdvancedFilter;
+	private void CloseAdvancedFilter() => showAdvancedFilter = false;
+
+	private void ToggleAdvancedGroup(string group)
+	{
+		if (expandedGroups.Contains(group))
+			expandedGroups.Remove(group);
+		else
+			expandedGroups.Add(group);
+	}
+
+	private void ToggleAdvancedFilterValue(string group, string value, bool selected)
+	{
+		if (!selectedFilters.ContainsKey(group))
+			selectedFilters[group] = new HashSet<string>();
+
+		if (selected)
+			selectedFilters[group].Add(value);
+		else
+			selectedFilters[group].Remove(value);
+
+		//StateHasChanged();
+	}
+
+	private bool IsAdvancedFilterSelected(string group, string value) =>
+		selectedFilters.TryGetValue(group, out var values) && values.Contains(value);
+
+
+	// Уникальные значения для каждой фильтруемой колонки
+	private Dictionary<string, List<string>> GetFilterValues()
+	{
+		var result = new Dictionary<string, List<string>>();
+
+		foreach (var col in filterableColumns)
+		{
+			var values = orders.Data.Select(item =>
+			{
+				var prop = typeof(TListItem).GetProperty(col.PropertyName);
+				var value = prop?.GetValue(item);
+				return value switch
+				{
+					bool b => b ? "Да" : "Нет",
+					null => "—",
+					_ => value.ToString()?.ToLower() ?? "—"
+				};
+			}).Distinct().OrderBy(v => v).ToList();
+
+			result[col.Title] = values;
+		}
+
+		return result;
+	}
+
+	// Отфильтрованные элементы
+	private IEnumerable<TListItem> FilteredItems
+	{
+		get
+		{
+			var filtered = orders.Data;
+			var filters = new List<FilterCondition>();
+
+			foreach (var filter in selectedFilters.Where(f => f.Value.Count > 0))
+			{
+				var col = columnInfos.FirstOrDefault(c => c.Title == filter.Key);
+				if (col == null) continue;
+
+				var prop = typeof(TListItem).GetProperty(col.PropertyName);
+				if (prop == null) continue;
+
+				filtered = filtered.Where(item =>
+				{
+					var value = prop.GetValue(item);
+					var stringValue = value switch
+					{
+						bool b => b ? "Да" : "Нет",
+						null => "—",
+						_ => value.ToString() ?? "—"
+					};
+					return filter.Value.Contains(stringValue);
+				}).ToList();
+			}
+
+			return filtered;
+		}
+	}
+
+	private List<FilterCondition> BuildFilterConditionsForIn()
+	{
+		var filters = new List<FilterCondition>();
+
+		foreach (var filter in selectedFilters.Where(f => f.Value.Count > 0))
+		{
+			var col = columnInfos.FirstOrDefault(c => c.Title == filter.Key);
+			if (col == null) continue;
+
+			var prop = typeof(TListItem).GetProperty(col.PropertyName);
+			if (prop == null) continue;
+
+
+			// Преобразуем значения
+			var convertedValues = filter.Value
+				.Select(v => ConvertFilterValue(v, prop.PropertyType))
+				//.Where(v => !string.IsNullOrEmpty(v))
+				.ToList();
+
+			if (!convertedValues.Any())
+				continue;
+
+			var filterCondition = new FilterCondition ();
+			
+			filterCondition.Field = col.PropertyName;
+			filterCondition.Values = convertedValues!;
+			filterCondition.Operator = FilterOperators.In;
+
+			// Если фильтр по строке с одним значением — используем Contains
+			if (prop.PropertyType == typeof(string) && convertedValues.Count == 1)
+			{
+				filterCondition.Operator = FilterOperators.Contains;
+				filterCondition.Value = convertedValues.First();
+				//filterCondition.Values = null; // для Contains используем Value, не Values
+			}
+
+			filters.Add(filterCondition);
+		}
+
+		return filters;
+	}
+
+	/// <summary>
+	/// Определяет оператор фильтрации по типу свойства
+	/// </summary>
+	private string GetOperatorForProperty(PropertyInfo prop)
+	{
+		var type = prop.PropertyType;
+
+		// Для строк — IN (если несколько значений) или Contains (если одно)
+		if (type == typeof(string))
+			return FilterOperators.In;
+
+		// Для булевых значений — Equal
+		if (type == typeof(bool) || type == typeof(bool?))
+			return FilterOperators.Equal;
+
+		// Для чисел и дат — можно использовать Between, но по умолчанию IN
+		if (type == typeof(int) || type == typeof(int?) ||
+			type == typeof(decimal) || type == typeof(decimal?) ||
+			type == typeof(DateTime) || type == typeof(DateTime?))
+			return FilterOperators.In;
+
+		// Для остальных — IN
+		return FilterOperators.In;
+	}
+
+	private void ClearAdvancedFilters()
+	{
+		selectedFilters.Clear();
+		StateHasChanged();
+	}
+
+	private object? ConvertFilterValue(string value, Type targetType)
+	{
+		if (string.IsNullOrEmpty(value))
+			return null;
+
+		try
+		{
+			// Для булевых значений
+			if (targetType == typeof(bool))
+			{
+				if (value == "Да") return true;
+				if (value == "Нет") return false;
+				return bool.Parse(value);
+			}
+
+			// Для чисел
+			if (targetType == typeof(int) || targetType == typeof(int?))
+				return int.Parse(value);
+
+			if (targetType == typeof(decimal) || targetType == typeof(decimal?))
+				return decimal.Parse(value);
+
+			if (targetType == typeof(double) || targetType == typeof(double?))
+				return double.Parse(value);
+
+			// Для дат
+			if (targetType == typeof(DateTime) || targetType == typeof(DateTime?))
+				return DateTime.Parse(value);
+
+			// Для GUID
+			if (targetType == typeof(Guid) || targetType == typeof(Guid?))
+				return Guid.Parse(value);
+
+			// Для строк — возвращаем как есть
+			return value;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	// Загрузка фасетов
+	private async Task LoadFacetsAsync()
+	{
+		var fields = columnInfos
+			.Where(c => c.Filterable)
+			.Select(c => c.PropertyName)
+			.ToList();
+
+		if (!fields.Any()) return;
+
+		var request = new FilterFacetsRequestDto { Fields = fields };
+		var response = await ApiService.GetFilterFacetsAsync<TListItem>(Endpoint, request);
+
+		facets = response?.Facets ?? [];
+
+		debugMessage += $"\r\n facets: {facets.Count}";
+	}
+
+	// Группы фильтров на основе фасетов
+	private Dictionary<string, List<FacetValueDto>> advancedFilterGroups
+	{
+		get
+		{
+			var result = new Dictionary<string, List<FacetValueDto>>();
+
+			foreach (var col in columnInfos.Where(c => c.Filterable))
+			{
+				if (facets.TryGetValue(col.PropertyName, out var values))
+					result[col.Title] = values;
+			}
+
+			return result;
+		}
+	}
+
+	private async Task MarkAllAsRead()
+	{
+		if (!newOrders.Any()) return;
+
+		try
+		{
+			var success = await ApiService.MarkAllOrdersNotificationsAsReadAsync();
+
+			if (success)
+			{
+				newOrders.Clear();
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking all orders as read: {ex.Message}");
+		}
+	}
+
+	private void ConfirmMarkAllAsRead()
+	{
+		showConfirmMarkAllRead = false;
+		_ = MarkAllAsRead(); // fire-and-forget
+	}
+
+	private async Task LoadNotifications()
+	{
+		var groups = await ApiService.GetOrderNotificationsAsync<TListItemDto>(Endpoint);
+
+		notificationGroups = groups
+			.Select(g => new NotificationGroupDto<TListItem>
+			{
+				EventCode = g.EventCode,
+				EventDescription = g.EventDescription,
+				Severity = g.Severity,
+				Items = g.Items.Select(d => d.Adapt<TListItem>()).ToList()
+			})
+			.Where(g => g.Items.Any())
+			.ToList();
+
+		foreach (var group in notificationGroups)
+		{
+			if (expandedGroups.Contains(group.EventCode))
+				continue;
+
+			var expandByDefault = NotificationSettings.Value
+				.ExpandByDefault
+				.GetValueOrDefault(group.Severity, false);
+
+			if (expandByDefault)
+				expandedGroups.Add(group.EventCode);
+		}
+
+		StateHasChanged();
+	}
+
+	private bool IsGroupExpanded(string eventCode) => expandedGroups.Contains(eventCode);
+	private void ToggleGroup(string eventCode)
+	{
+		if (expandedGroups.Contains(eventCode))
+			expandedGroups.Remove(eventCode);
+		else
+			expandedGroups.Add(eventCode);
+	}
+
+	private string GetSeverityColor(string severity) => severity switch
+	{
+		"Danger" => "danger",
+		"Warning" => "warning",
+		"Success" => "success",
+		_ => "info"
+	};
+
+	private string GetSeverityIcon(string severity) => severity switch
+	{
+		"Danger" => "bi-exclamation-circle-fill",
+		"Warning" => "bi-exclamation-triangle-fill",
+		"Success" => "bi-check-circle-fill",
+		_ => "bi-info-circle-fill"
+	};
+
+	private async Task MarkGroupAsRead(NotificationGroupDto<TListItem> group)
+	{
+		try
+		{
+			var success = await ApiService.MarkNotificationsReadByEventAsync(group.EventCode);
+
+			if (success)
+			{
+				notificationGroups.Remove(group);
+				expandedGroups.Remove(group.EventCode);
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking group as read: {ex.Message}");
+		}
+	}
+
+	private async void OnSocketMessage(string channel, object? data)
+	{
+		// Обязательно выполняем в потоке синхронизации UI Blazor
+		await InvokeAsync(async () =>
+		{
+			try
+			{
+				debugMessage += $"🟢 [SignalR UI] Получен канал: {channel}. Начинаем обновление...\n";
+				StateHasChanged();
+
+				if (channel == "orderNotification")
+				{
+					await LoadNotifications();
+				}
+
+				debugMessage += $"✅ [SignalR UI] Успешно обновлено без падений!\n";
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+				// Ловим ошибку, не давая упасть Blazor-серверу!
+				debugMessage += $"❌ [КРИТИЧЕСКАЯ ОШИБКА В UI]: {ex.Message}\n";
+				debugMessage += $"Стек вызовов: {ex.StackTrace}\n";
+
+				// Если была внутренняя ошибка (например, в Mapster)
+				if (ex.InnerException != null)
+				{
+					debugMessage += $"Внутреннее исключение: {ex.InnerException.Message}\n";
+				}
+				StateHasChanged();
+			}
+		});
+	}
+
+	private async Task TestSignalR()
+	{
+		debugMessage += "🟢 Вызываем TestSendToMe...\n";
+		StateHasChanged();
+
+		try
+		{
+			await SocketService.TestSendToMeAsync();
+			debugMessage += "🟢 Команда отправлена, ждем ответа...\n";
+
+			// Ждем 2 секунды, чтобы сообщение точно пришло
+			await Task.Delay(2000);
+
+			// Читаем лог из сервиса
+			if (SocketService is SignalRService signalR)
+			{
+				debugMessage += $"🟢 Лог сервиса: {signalR.GetType().GetProperty("GlobalDebugLog")?.GetValue(signalR)}\n"; // Или просто используй статическое поле
+			}
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 Ошибка: {ex.Message}\n";
+		}
+		StateHasChanged();
+	}
+}

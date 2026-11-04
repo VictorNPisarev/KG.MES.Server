@@ -1,6 +1,6 @@
 // KG.MES.Server/Services/OrderService.Comments.cs
-using KG.MES.Shared.Extensions;
-using KG.MES.Shared.Hubs;
+using KG.MES.Server.Extensions;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +13,9 @@ public partial class OrderService
 	{
 		// Ищем комментарии напрямую через OrderId (надежнее, чем через массив CommentIds)
 		// Используем LEFT JOIN для Users, чтобы не терять комментарии без UserId
-		var comments = await _context.Comments
+		var comments = await context.Comments
 			.Where(c => c.OrderId == orderId)
-			.GroupJoin(_context.Users,
+			.GroupJoin(context.Users,
 				c => c.UserId,
 				u => u.Id,
 				(c, users) => new { Comment = c, Users = users })
@@ -27,6 +27,7 @@ public partial class OrderService
 					Content = x.Comment.Content,
 					CreatedAt = x.Comment.CreatedAt,
 					UpdatedAt = x.Comment.UpdatedAt,
+					UserId = u != null ? u.Id : null,
 					UserName = u != null ? u.Name : null
 				})
 			.OrderByDescending(c => c.CreatedAt)
@@ -35,16 +36,17 @@ public partial class OrderService
 		return comments.Select(c => new OrderCommentDto
 		{
 			Id = c.Id,
+			UserId = c.UserId,
 			Content = c.Content,
-			CreatedAt = c.CreatedAt.ToProductionTime(),
-			UpdatedAt = c.UpdatedAt.ToProductionTime(),
+			CreatedAt = c.CreatedAt?.ToProductionTime(),
+			UpdatedAt = c.UpdatedAt?.ToProductionTime(),
 			UserName = c.UserName
 		}).ToList();
 	}
 	
 	public async Task<OrderCommentDto> AddOrderCommentAsync(Guid orderId, Guid? userId, string content)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -58,15 +60,15 @@ public partial class OrderService
 				UpdatedAt = DateTime.UtcNow
 			};
 
-			_context.Comments.Add(comment);
-			await _context.SaveChangesAsync();
+			context.Comments.Add(comment);
+			await context.SaveChangesAsync();
 
-			var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+			var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
 			if (order != null)
 			{
 				order.CommentIds = [.. order.CommentIds ?? [], comment.Id];
 				order.UpdatedAt = DateTime.UtcNow;
-				await _context.SaveChangesAsync();
+				await context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
@@ -86,20 +88,21 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
-				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
+				UserId = comment.UserId,
+				UserName = await context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in AddOrderCommentAsync");
+			logger.LogError(ex, "Error in AddOrderCommentAsync");
 			throw;
 		}
 	}
 
 	public async Task<OrderCommentDto> AddProductionOrderCommentAsync(Guid orderId, Guid productionOrderId, Guid? userId, string content)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -113,15 +116,15 @@ public partial class OrderService
 				UpdatedAt = DateTime.UtcNow
 			};
 
-			_context.Comments.Add(comment);
-			await _context.SaveChangesAsync();
+			context.Comments.Add(comment);
+			await context.SaveChangesAsync();
 
-			var productionOrder = await _context.ProductionOrders.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+			var productionOrder = await context.ProductionOrders.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 			if (productionOrder != null)
 			{
 				productionOrder.CommentIds = [.. productionOrder.CommentIds ?? [], comment.Id];
 				productionOrder.UpdatedAt = DateTime.UtcNow;
-				await _context.SaveChangesAsync();
+				await context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
@@ -142,30 +145,31 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
-				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
+				UserId = comment.UserId,
+				UserName = await context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in AddProductionOrderCommentAsync");
+			logger.LogError(ex, "Error in AddProductionOrderCommentAsync");
 			throw;
 		}
 	}
 
 	public async Task<OrderCommentDto> AddSupplyCommentAsync(Guid orderId, Guid supplyTypeId, Guid? userId, string content)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var orderSupply = await _context.OrderSupplies
+			var orderSupply = await context.OrderSupplies
 				.FirstOrDefaultAsync(os => os.OrderId == orderId);
 
 			if (orderSupply == null)
 				throw new Exception("Order supply not found");
 
-			var supplyItem = await _context.SupplyItems
+			var supplyItem = await context.SupplyItems
 				.FirstOrDefaultAsync(si => si.OrderSupplyId == orderSupply.Id && si.SupplyTypeId == supplyTypeId);
 
 			if (supplyItem == null)
@@ -181,12 +185,12 @@ public partial class OrderService
 				UpdatedAt = DateTime.UtcNow
 			};
 
-			_context.Comments.Add(comment);
-			await _context.SaveChangesAsync();
+			context.Comments.Add(comment);
+			await context.SaveChangesAsync();
 
 			supplyItem.CommentId = comment.Id;
 			supplyItem.UpdatedAt = DateTime.UtcNow;
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 
 			await transaction.CommitAsync();
 
@@ -206,20 +210,21 @@ public partial class OrderService
 				Content = comment.Content,
 				CreatedAt = comment.CreatedAt.ToProductionTime(),
 				UpdatedAt = comment.UpdatedAt.ToProductionTime(),
-				UserName = await _context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
+				UserId = comment.UserId,
+				UserName = await context.Users.Where(u => u.Id == userId).Select(u => u.Name).FirstOrDefaultAsync()
 			};
 		}
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in AddSupplyCommentAsync");
+			logger.LogError(ex, "Error in AddSupplyCommentAsync");
 			throw;
 		}
 	}
 
 	public async Task<OrderCommentDto> UpdateOrderCommentAsync(Guid orderId, Guid commentId, string content)
 	{
-		var comment = await _context.Comments
+		var comment = await context.Comments
 			.FirstOrDefaultAsync(c => c.Id == commentId && c.OrderId == orderId);
 
 		if (comment == null)
@@ -227,7 +232,7 @@ public partial class OrderService
 
 		comment.Content = content;
 		comment.UpdatedAt = DateTime.UtcNow;
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 
 		//try
 		//{
@@ -245,7 +250,7 @@ public partial class OrderService
 			Content = comment.Content,
 			CreatedAt = comment.CreatedAt.ToProductionTime(),
 			UpdatedAt = comment.UpdatedAt.ToProductionTime(),
-			UserName = await _context.Users.Where(u => u.Id == comment.UserId).Select(u => u.Name).FirstOrDefaultAsync()
+			UserName = await context.Users.Where(u => u.Id == comment.UserId).Select(u => u.Name).FirstOrDefaultAsync()
 		};
 	}
 }

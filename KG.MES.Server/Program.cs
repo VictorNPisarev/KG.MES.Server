@@ -1,13 +1,21 @@
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using KG.MES.Shared.Data;
-using KG.MES.Shared.Extensions;
-using KG.MES.Shared.Hubs;
+using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Shared.Models.Entities;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using KG.MES.Server.Services;
+using KG.MES.Server.Services.Interfaces;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -19,12 +27,46 @@ ConfigureDatabase(builder.Services, builder.Configuration);
 // Инициализация часового пояса через конфиг
 DateTimeExtensions.Initialize(builder.Configuration);
 
+//Регистрация сервиса автоматической синхронизации enums и соответствующих таблиц в БД. Достаточно добавить новый элемент только в enum.
+//работает для: NotificationEvent, 
+builder.Services.AddHostedService<NotificationEventSeeder>();
+
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ISupplyService, SupplyService>();
+builder.Services.AddScoped<ISupplyService, ServerSupplyService>();
 builder.Services.AddScoped<IWorkplaceService, WorkplaceService>();
 builder.Services.AddScoped<OrderAttributeService>();
+builder.Services.AddScoped<LeadTimeCalculationService>();
+builder.Services.AddScoped<IUserDeviceService, UserDeviceService>();
+builder.Services.AddScoped<ILicenseService, ServerLicenseService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthService, ServerAuthService>();
+builder.Services.AddScoped<NotificationService>();
+
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "KG.MES.Apps";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = true,
+			ValidIssuer = jwtIssuer,
+			ValidateAudience = true,
+			ValidAudience = jwtAudience,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+			ValidateLifetime = true,
+			ClockSkew = TimeSpan.Zero, // ← Важно: не даем запас по времени
+			RoleClaimType = ClaimTypes.Role
+		};
+	});
+
+builder.Services.AddAuthorization();
 
 // Добавляем контроллеры с настройкой JSON (игнорировать циклы)
 builder.Services.AddControllers()
@@ -35,7 +77,6 @@ builder.Services.AddControllers()
 		options.JsonSerializerOptions.Converters.Add(new TotalsDtoConverter());
 	});
 
-builder.Services.AddScoped<LeadTimeCalculationService>(); 
 builder.Services.AddHttpClient();
 
 // Добавляем SignalR
@@ -46,14 +87,28 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Настройка CORS для доступа с любых устройств
+//builder.Services.AddCors(options =>
+//{
+//	options.AddPolicy("AllowAll", policy =>
+//	{
+//		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
+//			  .AllowAnyMethod()
+//			  .AllowAnyHeader();
+//			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
+//	});
+//});
+
 builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAll", policy =>
 	{
-		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
-			  .AllowAnyMethod()
-			  .AllowAnyHeader();
-			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
+		// Читаем массив из конфига. Если его нет, берем пустой массив
+		var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+		policy.WithOrigins(allowedOrigins)
+			.AllowAnyMethod()
+			.AllowAnyHeader()
+			.AllowCredentials();
 	});
 });
 
@@ -67,9 +122,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-
-app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("AllowAll");
 
 if (app.Environment.IsDevelopment())
 {
@@ -77,13 +132,13 @@ if (app.Environment.IsDevelopment())
 }
 
 // Инициализация NotificationHelper (после app.Build())
-var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
-NotificationHelper.Initialize(hubContext);
+var hubContext = app.Services.GetRequiredService<IHubContext<SignalRHub>>();
+SignalRHelper.Initialize(hubContext);
 
 
 app.MapControllers();
 
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<SignalRHub>("/signalRHub");
 
 app.Run();
 

@@ -45,5 +45,4 @@ public class WorkplaceHistoryDto
 
 	[JsonPropertyName("is_two_side_paint")]
 	public bool IsTwoSidePaint { get; set; }
-
 }

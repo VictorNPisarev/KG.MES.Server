@@ -63,4 +63,7 @@ public class SalesOrderDto
 
 	[JsonPropertyName("currency")]
 	public string? Currency { get; set; }
+
+	[JsonPropertyName("is_new")]
+	public bool IsNew { get; set; }
 }

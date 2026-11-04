@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -64,7 +64,7 @@ public class SupplyControllerTests : IClassFixture<WebApplicationFactory<Program
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 		var content = await response.Content.ReadAsStringAsync();
-		var result = JsonSerializer.Deserialize<List<SupplyOrderDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+		var result = JsonSerializer.Deserialize<List<OrderSupplyDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
 		result.Should().NotBeNull();
 		result!.Should().HaveCount(2);

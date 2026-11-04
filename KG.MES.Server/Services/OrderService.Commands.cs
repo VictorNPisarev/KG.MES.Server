@@ -2,7 +2,8 @@ using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using KG.MES.Shared.Hubs;
+using KG.MES.Shared.Model.Enums;
+using KG.MES.Server.Hubs;
 
 namespace KG.MES.Shared.Services;
 
@@ -10,7 +11,7 @@ public partial class OrderService
 {
 	public async Task<CreateOrderResultDto> CreateOrderAsync(OrderRequestDto request)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -36,8 +37,8 @@ public partial class OrderService
 				CommentIds = []
 			};
 
-			_context.Orders.Add(order);
-			await _context.SaveChangesAsync(); // Сохраняем, чтобы получить order.Id
+			context.Orders.Add(order);
+			await context.SaveChangesAsync(); // Сохраняем, чтобы получить order.Id
 
 			// 2. Создаем комментарий (если есть)
 			Guid? commentId = null;
@@ -53,8 +54,8 @@ public partial class OrderService
 					UpdatedAt = DateTime.UtcNow
 				};
 
-				_context.Comments.Add(comment);
-				await _context.SaveChangesAsync(); // Сохраняем комментарий
+				context.Comments.Add(comment);
+				await context.SaveChangesAsync(); // Сохраняем комментарий
 
 				// Добавляем ID комментария в заказ
 				order.CommentIds.Add(comment.Id);
@@ -62,7 +63,7 @@ public partial class OrderService
 			}
 
 			// 3. Создаем производственный заказ
-			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(_context);
+			var noneId = await OrderServiceHelper.GetNoneWorkplaceIdAsync(context);
 
 			var productionOrder = new ProductionOrder
 			{
@@ -79,8 +80,8 @@ public partial class OrderService
 				CommentIds = []
 			};
 
-			_context.ProductionOrders.Add(productionOrder);
-			await _context.SaveChangesAsync();
+			context.ProductionOrders.Add(productionOrder);
+			await context.SaveChangesAsync();
 
 			// 4. Создаем снабжение
 			var orderSupply = new OrderSupply
@@ -92,11 +93,11 @@ public partial class OrderService
 				CommentIds = []
 			};
 
-			_context.OrderSupplies.Add(orderSupply);
-			await _context.SaveChangesAsync();
+			context.OrderSupplies.Add(orderSupply);
+			await context.SaveChangesAsync();
 
 			// 5. Создаем позиции снабжения
-			var supplyTypes = await _context.SupplyTypes
+			var supplyTypes = await context.SupplyTypes
 				.Where(st => st.IsActive)
 				.ToListAsync();
 
@@ -114,23 +115,29 @@ public partial class OrderService
 					UpdatedAt = DateTime.UtcNow
 				};
 
-				_context.SupplyItems.Add(supplyItem);
+				context.SupplyItems.Add(supplyItem);
 				supplyItemIds.Add(supplyItem.Id);
 			}
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
-			// ✅ 6. Уведомляем через SignalR о создании заказа
+			//Добавляю уведомление о новом заказе
+			await notificationService.PublishAsync(NotificationEventType.NewOrder, order.Id);
+
+			// 6. Уведомляем через SignalR о создании заказа
 			try
 			{
 				// Уведомление для списка заказов
 				//await NotificationHelper.OrderCreated(order.Id, order.OrderNumber);
+				Console.WriteLine(":::: OrderService: Дошли до блока SignalR ::::");
+				await SignalRHelper.OrderNotificationAvailable();
+				Console.WriteLine(":::: OrderService: Вызов NewOrdersAvailable завершен ::::");
 
 				// Если есть комментарий, уведомляем о нем
 				if (commentId.HasValue)
 				{
-					await NotificationHelper.OrderCommentAdded(
+					await SignalRHelper.OrderCommentAdded(
 						order.Id,
 						commentId.Value,
 						request.Comment!,
@@ -139,7 +146,8 @@ public partial class OrderService
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "Failed to send SignalR notification for order creation");
+				Console.WriteLine($"OrderService: Ошибка в блоке SignalR: {ex.Message}");
+				logger.LogWarning(ex, "Failed to send SignalR notification for order creation");
 			}
 
 			return new CreateOrderResultDto
@@ -154,7 +162,7 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in CreateOrderAsync");
+			logger.LogError(ex, "Error in CreateOrderAsync");
 			throw;
 		}
 	}
@@ -162,11 +170,11 @@ public partial class OrderService
 	public async Task<OperationResultDto> BeginOrderWorkplaceAsync(
 		Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var hasExisting = await _context.OrderFootprints
+			var hasExisting = await context.OrderFootprints
 				.AnyAsync(fp => fp.ProductionOrderId == productionOrderId);
 
 			if (!hasExisting)
@@ -191,7 +199,7 @@ public partial class OrderService
 				CreatedAt = DateTime.UtcNow
 			};
 
-			_context.OperationLogs.Add(operationLog);
+			context.OperationLogs.Add(operationLog);
 
 			await SetProductionOrderCurrentWorkplaceAsync(productionOrderId, workplaceId);
 
@@ -204,7 +212,7 @@ public partial class OrderService
 			//	productionOrder.UpdatedAt = DateTime.UtcNow;
 			//}
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 
 			await ActivateNextWorkplacesAsync(productionOrderId, workplaceId);
 			await ActivateParallelWorkplacesAsync(productionOrderId, workplaceId);
@@ -223,7 +231,7 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in BeginOrderWorkplaceAsync");
+			logger.LogError(ex, "Error in BeginOrderWorkplaceAsync");
 			throw;
 		}
 	}
@@ -231,15 +239,15 @@ public partial class OrderService
 	public async Task<OperationResultDto> CompleteOrderWorkplaceAsync(
 		Guid productionOrderId, Guid workplaceId, Guid? userId, string notes, string source)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.Include(po => po.CurrentWorkplace)
 				.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 
-			var workplace = await _context.Workplaces
+			var workplace = await context.Workplaces
 				.FirstOrDefaultAsync(w => w.Id == workplaceId);
 
 			if (productionOrder == null)
@@ -252,12 +260,15 @@ public partial class OrderService
 			}
 
 			// Завершаю текущий участок
+			Console.WriteLine($"Завершаю текущий участок");
 			await UpdateStatusAsync(productionOrder.Id, workplaceId, OrderStatus.WorkplaceStatus.Completed);
 
 			// Автоматически завершаю все предыдущие
+			Console.WriteLine($"Автоматически завершаю все предыдущиеок");
 			await AutoCompletePreviousWorkplacesAsync( productionOrderId, workplaceId, userId, source);
 
 			// Логирую текущее завершения
+			Console.WriteLine($"Логирую текущее завершения");
 			var operationLog = new OperationLog
 			{
 				Id = Guid.NewGuid(),
@@ -271,13 +282,14 @@ public partial class OrderService
 				CreatedAt = DateTime.UtcNow
 			};
 
-			_context.OperationLogs.Add(operationLog);
-			await _context.SaveChangesAsync();
+			context.OperationLogs.Add(operationLog);
+			await context.SaveChangesAsync();
 
 			// Если завершил участок упаковки — перевожу в "ГОТОВО"
+			Console.WriteLine($"Если завершил участок упаковки — перевожу в \"ГОТОВО\"");
 			if (workplace?.Code == WorkplaceCodes.Packing)
 			{
-				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
+				await SetOrderCompleteInternalAsync(productionOrder.OrderId, null, null);
 			}
 
 			await transaction.CommitAsync();
@@ -294,7 +306,7 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in CompleteOrderWorkplaceAsync");
+			logger.LogError(ex, "Error in CompleteOrderWorkplaceAsync");
 			throw;
 		}
 	}
@@ -302,21 +314,21 @@ public partial class OrderService
 	public async Task<BatchUpdateResultDto> UpdateOrderFootprintBatchAsync(
 		Guid productionOrderId, List<FootprintItemDto> footprints, Guid? userId, string notes)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 		var details = new List<BatchUpdateDetail>();
 
 		try
 		{
 			foreach (var footprint in footprints)
 			{
-				var existing = await _context.OrderFootprints
+				var existing = await context.OrderFootprints
 					.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId && fp.WorkplaceId == footprint.WorkplaceId);
 
 				string? oldStatus = null;
 
 				if (existing == null)
 				{
-					_context.OrderFootprints.Add(new OrderFootprint
+					context.OrderFootprints.Add(new OrderFootprint
 					{
 						Id = Guid.NewGuid(),
 						ProductionOrderId = productionOrderId,
@@ -363,7 +375,7 @@ public partial class OrderService
 				}
 			}
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
 			return new BatchUpdateResultDto
@@ -376,7 +388,7 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in UpdateOrderFootprintBatchAsync");
+			logger.LogError(ex, "Error in UpdateOrderFootprintBatchAsync");
 			throw;
 		}
 	}
@@ -386,13 +398,13 @@ public partial class OrderService
 	/// </summary>
 	public async Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId)
 	{
-		var order = await _context.Orders
+		var order = await context.Orders
 			.FirstOrDefaultAsync(o => o.Id == orderId);
 
 		if (order == null)
 			return null;
 
-		var productionOrder = await _context.ProductionOrders
+		var productionOrder = await context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
 		if (productionOrder == null)
@@ -427,17 +439,17 @@ public partial class OrderService
 	/// </summary>
 	public async Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var order = await _context.Orders
+			var order = await context.Orders
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
 			if (order == null)
 				return false;
 
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
 			if (productionOrder == null)
@@ -467,7 +479,7 @@ public partial class OrderService
 			productionOrder.Machine = dto.Machine;
 			productionOrder.UpdatedAt = DateTime.UtcNow;
 
-			await _context.SaveChangesAsync();
+			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
 			return true;
@@ -475,7 +487,7 @@ public partial class OrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error updating order {OrderId}", orderId);
+			logger.LogError(ex, "Error updating order {OrderId}", orderId);
 			return false;
 		}
 	}
@@ -485,32 +497,20 @@ public partial class OrderService
 	/// </summary>
 	public async Task<bool> DeleteOrderAsync(Guid orderId)
 	{
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
-			var order = await _context.Orders
+			var order = await context.Orders
 				.Include(o => o.ProductionOrder)
 				.Include(o => o.OrderSupply)
 					.ThenInclude(os => os!.SupplyItems)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-
 			if (order == null)
 			{
-				Console.WriteLine("if (order == null)");
 				return false;
 			}
-
-			Console.WriteLine("Order not null");
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
-			Console.WriteLine();
 
 			// Удаляем связанные данные (каскадно, но явно для контроля)
 			if (order.OrderSupply != null)
@@ -518,43 +518,43 @@ public partial class OrderService
 				// Удаляем supply_items (если есть)
 				if (order.OrderSupply.SupplyItems != null)
 				{
-					_context.SupplyItems.RemoveRange(order.OrderSupply.SupplyItems);
+					context.SupplyItems.RemoveRange(order.OrderSupply.SupplyItems);
 				}
-				_context.OrderSupplies.Remove(order.OrderSupply);
+				context.OrderSupplies.Remove(order.OrderSupply);
 			}
 
 			if (order.ProductionOrder != null)
 			{
 				// Удаляем footprints
-				var footprints = await _context.OrderFootprints
+				var footprints = await context.OrderFootprints
 					.Where(fp => fp.ProductionOrderId == order.ProductionOrder.Id)
 					.ToListAsync();
 				if (footprints.Any())
 				{
-					_context.OrderFootprints.RemoveRange(footprints);
+					context.OrderFootprints.RemoveRange(footprints);
 				}
 
-				_context.ProductionOrders.Remove(order.ProductionOrder);
+				context.ProductionOrders.Remove(order.ProductionOrder);
 			}
 
-			_context.Orders.Remove(order);
-			await _context.SaveChangesAsync();
+			context.Orders.Remove(order);
+			await context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
-			_logger.LogInformation("Order {OrderId} deleted", orderId);
+			logger.LogInformation("Order {OrderId} deleted", orderId);
 			return true;
 		}
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error deleting order {OrderId}", orderId);
+			logger.LogError(ex, "Error deleting order {OrderId}", orderId);
 			return false;
 		}
 	}
 
 	private async Task<bool> IsWorkplaceCompletedAsync(Guid productionOrderId, Guid workplaceId)
 	{
-		return await _context.OperationLogs
+		return await context.OperationLogs
 			.AnyAsync(ol => ol.ProductionOrderId == productionOrderId
 							&& ol.WorkplaceId == workplaceId
 							&& ol.OperationType == "COMPLETE");
@@ -572,7 +572,7 @@ public partial class OrderService
 			var current = queue.Dequeue();
 			if (!visited.Add(current)) continue;
 
-			var previous = await _context.WorkplaceTransitions
+			var previous = await context.WorkplaceTransitions
 				.Where(wt => wt.ToWorkplaceId == current)
 				.Select(wt => wt.FromWorkplaceId)
 				.ToListAsync();
@@ -607,7 +607,7 @@ public partial class OrderService
 				continue;
 
 			// 1. Лог автозавершения
-			_context.OperationLogs.Add(new OperationLog
+			context.OperationLogs.Add(new OperationLog
 			{
 				Id = Guid.NewGuid(),
 				ProductionOrderId = productionOrderId,
@@ -621,7 +621,7 @@ public partial class OrderService
 			});
 
 			// 2. Обновляем след
-			var footprint = await _context.OrderFootprints
+			var footprint = await context.OrderFootprints
 				.FirstOrDefaultAsync(fp => fp.ProductionOrderId == productionOrderId
 										   && fp.WorkplaceId == prevWorkplaceId);
 
@@ -632,6 +632,6 @@ public partial class OrderService
 			}
 		}
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 	}
 }

@@ -1,0 +1,33 @@
+<div class="login-container">
+	<div class="login-card">
+		<h2>Регистрация</h2>
+
+		@if (!string.IsNullOrEmpty(error))
+		{
+			<div class="alert alert-danger">@error</div>
+		}
+
+		<div class="mb-3">
+			<label class="form-label">Email</label>
+			<input type="email" class="form-control" @bind="email" readonly />
+		</div>
+
+		<div class="mb-3">
+			<label class="form-label">Имя</label>
+			<input type="text" class="form-control @(firstNameError ? "field-invalid" : "")" @bind="firstName" />
+		</div>
+
+		<div class="mb-3">
+			<label class="form-label">Фамилия</label>
+			<input type="text" class="form-control @(lastNameError ? "field-invalid" : "")" @bind="lastName" />
+		</div>
+
+		<button class="btn btn-primary w-100" @onclick="Register" disabled="@isLoading">
+			@if (isLoading)
+			{
+				<span class="spinner-border spinner-border-sm me-2"></span>
+			}
+			Зарегистрироваться
+		</button>
+	</div>
+</div>

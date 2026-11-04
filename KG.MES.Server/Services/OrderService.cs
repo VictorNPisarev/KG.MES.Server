@@ -1,9 +1,6 @@
-using System.Globalization;
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Data;
-using KG.MES.Shared.Extensions;
-
-//using KG.MES.Server.Extensions;
+using KG.MES.Server.Data;
+using KG.MES.Server.Extensions;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
@@ -11,28 +8,34 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
-using System.Collections;
+using KG.MES.Shared.Common.Extensions;
+using KG.MES.Server.Services;
+using KG.MES.Shared.Model.Enums;
+using KG.MES.Server.Hubs;
 
 namespace KG.MES.Shared.Services;
 
 public partial class OrderService : IOrderService
 {
-	private readonly AppDbContext _context;
-	private readonly ILogger<OrderService> _logger;
-	private readonly OrderAttributeService _orderAttributeService;
+	private readonly AppDbContext context;
+	private readonly ILogger<OrderService> logger;
+	private readonly OrderAttributeService orderAttributeService;
+	private readonly NotificationService notificationService;
 
-	public OrderService(AppDbContext context, ILogger<OrderService> logger, OrderAttributeService orderAttributeService)
+
+	public OrderService(AppDbContext context, ILogger<OrderService> logger, OrderAttributeService orderAttributeService, NotificationService notificationService)
 	{
-		_context = context;
-		_logger = logger;
-		_orderAttributeService = orderAttributeService;
+		this.context = context;
+		this.logger = logger;
+		this.orderAttributeService = orderAttributeService;
+		this.notificationService = notificationService;
 	}
 
 	private IQueryable<OrderDetailDto> GetOrderByIdentifierQuery()
 	{
-		return _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
+		return context.Orders
+			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDetailDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -57,18 +60,125 @@ public partial class OrderService : IOrderService
 	}
 
 	// Основной метод GetOrdersAsync
+	//public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
+	//	int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, 
+	//	Guid? currentUserId, Guid? currentRoleId, List<FilterCondition>? filters = null)
+	//{
+	//	var query = BuildBaseQuery();
+
+	//	if (!string.IsNullOrEmpty(orderNumber))
+	//	{
+	//		//query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+	//		var lowerFilter = orderNumber.ToLower();
+	//		query = query.Where(o => o.OrderNumber != null && o.OrderNumber.ToLower().Contains(lowerFilter));
+	//	}
+
+	//	if (
+	//		//string.IsNullOrEmpty(orderNumber) &&
+	//		workplaceIds != null && workplaceIds.Any())
+	//	{
+	//		query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
+	//	}
+
+	//	if (filters != null && filters.Any())
+	//	{
+	//		query = ApplyFilters(query, filters);
+	//	}
+
+
+
+	//	var total = await query.CountAsync();
+
+	//	// Сортировка
+	//	IOrderedQueryable<OrderDto> orderedQuery;
+
+	//	orderedQuery = query.OrderByProperty(sortBy, sortOrder);
+
+	//	//Пагинация
+	//	var items = await orderedQuery
+	//		.Skip((page - 1) * limit)
+	//		.Take(limit)
+	//		.ToListAsync();
+
+	//	foreach (var item in items)
+	//	{
+	//		item.CreatedAt = item.CreatedAt.ToProductionTime();
+	//	}
+
+	//	var totals = await query
+	//		.GroupBy(x => 1)
+	//		.Select(g => new OrderTotalsDto
+	//		{
+	//			WindowCountTotal = g.Sum(x => x.WindowCount),
+	//			WindowAreaTotal = g.Sum(x => x.WindowArea),
+	//			PlateCountTotal = g.Sum(x => x.PlateCount),
+	//			PlateAreaTotal = g.Sum(x => x.PlateArea)
+	//		})
+	//		.FirstOrDefaultAsync();
+
+	//	// ✅ Помечаем новые заказы
+	//	if (currentUserId.HasValue && currentRoleId.HasValue)
+	//	{
+	//		var orderIds = items.Select(i => i.Id).ToList();
+
+	//		// Заказы, по которым есть непрочитанные уведомления
+	//		var newOrderIds = await context.OrderNotifications
+	//			.Where(n => orderIds.Contains(n.OrderId))
+	//			.Where(n =>
+	//			(n.RoleId == null && n.UserId == null) ||
+	//			(n.RoleId != null && n.RoleId == currentRoleId) ||
+	//			(n.RoleId == null && n.UserId != null && n.UserId == currentUserId))
+	//			.Where(n => !context.OrderNotificationReads
+	//				.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
+	//			.Select(n => n.OrderId)
+	//			.Distinct()
+	//			.ToListAsync();
+
+	//		var newOrderSet = newOrderIds.ToHashSet();
+
+	//		foreach (var item in items)
+	//		{
+	//			item.IsNew = newOrderSet.Contains(item.Id);
+	//		}
+	//	}
+
+
+	//	return new PaginatedResponse<OrderDto>
+	//	{
+	//		Data = items,
+	//		Pagination = new PaginationInfo
+	//		{
+	//			Page = page,
+	//			Limit = limit,
+	//			Total = total,
+	//			Pages = (int)Math.Ceiling(total / (double)limit)
+	//		},
+	//		Sort = new SortInfo
+	//		{
+	//			By = sortBy ?? "ready_date",
+	//			Order = sortOrder ?? "asc"
+	//		},
+	//		Totals = totals
+	//	};
+	//}
+
 	public async Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber,
-		List<FilterCondition>? filters = null)
+	int page, int limit, string? sortBy, string? sortOrder,
+	List<Guid>? workplaceIds, string? orderNumber,
+	Guid? currentUserId, Guid? currentRoleId,
+	List<FilterCondition>? filters = null)
 	{
+		// Базовый запрос
 		var query = BuildBaseQuery();
 
+		// Фильтры
 		if (!string.IsNullOrEmpty(orderNumber))
-			query = query.Where(o => EF.Functions.ILike(o.OrderNumber, $"%{orderNumber}%"));
+		{
+			var lowerFilter = orderNumber.ToLower();
+			query = query.Where(o => o.OrderNumber != null && o.OrderNumber.ToLower().Contains(lowerFilter));
+		}
 
-		if (
-			//string.IsNullOrEmpty(orderNumber) &&
-			workplaceIds != null && workplaceIds.Any())
+		if (workplaceIds != null && workplaceIds.Any())
 		{
 			query = query.Where(o => workplaceIds.Contains(o.CurrentWorkplaceId ?? Guid.Empty));
 		}
@@ -78,26 +188,60 @@ public partial class OrderService : IOrderService
 			query = ApplyFilters(query, filters);
 		}
 
-
-
+		// Общее количество (для пагинации)
 		var total = await query.CountAsync();
 
-		// Применяем сортировку
-		IOrderedQueryable<OrderDto> orderedQuery;
+		// Сортировка
+		var orderedQuery = query.OrderByProperty(sortBy, sortOrder);
 
-		orderedQuery = query.OrderByProperty(sortBy, sortOrder);
-
-
-		var items = await orderedQuery
+		// Пагинация
+		var pagedQuery = orderedQuery
 			.Skip((page - 1) * limit)
-			.Take(limit)
+			.Take(limit);
+
+		// Проекция с вычислением IsNew прямо в SQL
+		var items = await pagedQuery
+			.Select(o => new OrderDto
+			{
+				// --- Копируем все поля из OrderDto ---
+				Id = o.Id,
+				OrderNumber = o.OrderNumber,
+				ReadyDate = o.ReadyDate,
+				WindowCount = o.WindowCount,
+				WindowArea = o.WindowArea,
+				PlateCount = o.PlateCount,
+				PlateArea = o.PlateArea,
+				IsEconom = o.IsEconom,
+				IsClaim = o.IsClaim,
+				IsOnlyPaid = o.IsOnlyPaid,
+				IsTwoSidePaint = o.IsTwoSidePaint,
+				CreatedAt = o.CreatedAt,
+				ProductionOrderId = o.ProductionOrderId,
+				CurrentWorkplaceId = o.CurrentWorkplaceId,
+				CurrentStatus = o.CurrentStatus,
+				Machine = o.Machine,
+				RtmDate = o.RtmDate,
+				IsNew = currentUserId.HasValue && currentRoleId.HasValue
+							? context.OrderNotifications
+								.Where(n => n.OrderId == o.Id)
+								.Where(n =>
+									(n.RoleId == null && n.UserId == null) ||
+									(n.RoleId != null && n.RoleId == currentRoleId) ||
+									(n.RoleId == null && n.UserId != null && n.UserId == currentUserId))
+								.Where(n => !context.OrderNotificationReads
+												.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
+								.Any()
+							: false
+			})
 			.ToListAsync();
 
+		// Конвертация времени
 		foreach (var item in items)
 		{
 			item.CreatedAt = item.CreatedAt.ToProductionTime();
 		}
 
+		// Подсчет итогов (Totals)
 		var totals = await query
 			.GroupBy(x => 1)
 			.Select(g => new OrderTotalsDto
@@ -131,7 +275,7 @@ public partial class OrderService : IOrderService
 	public async Task<SetOrderStatusResultDto> SetOrderStatusAsync(
 		Guid orderId, string targetStatusName, Guid? userId, string? notes)
 	{
-		var status = await _context.Workplaces
+		var status = await context.Workplaces
 			.FirstOrDefaultAsync(w => w.Name == targetStatusName);
 
 		if (status == null)
@@ -143,7 +287,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		var productionOrder = await _context.ProductionOrders
+		var productionOrder = await context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
 		if (productionOrder == null)
@@ -172,9 +316,16 @@ public partial class OrderService : IOrderService
 			CreatedAt = DateTime.UtcNow
 		};
 
-		_context.OperationLogs.Add(operationLog);
-		await _context.SaveChangesAsync();
+		context.OperationLogs.Add(operationLog);
+		await context.SaveChangesAsync();
 
+		if (targetStatusName == Constants.OrderStatus.CommonStatus.Complete)
+		{
+			await notificationService.PublishAsync(NotificationEventType.OrderReady, orderId);
+
+			await SignalRHelper.OrderNotificationAvailable();
+
+		}
 		return new SetOrderStatusResultDto
 		{
 			Success = true,
@@ -182,94 +333,101 @@ public partial class OrderService : IOrderService
 		};
 	}
 
-	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
-		Guid orderId, Guid? userId, string? notes)
+	// Публичный метод (для прямого вызова из контроллера)
+	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(Guid orderId, Guid? userId, string? notes)
 	{
-		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
-		if (!orderExists)
-		{
-			_logger.LogWarning($"Order {orderId} not found");
-			return new SetOrderStatusResultDto
-			{
-				Success = false,
-				Message = $"Заказ {orderId} не найден"
-			};
-		}
-
-		//using var transaction = await _context.Database.BeginTransactionAsync();
-
+		using var transaction = await context.Database.BeginTransactionAsync();
 		try
 		{
-			var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
-			
+			// Вызываем внутренний метод, где вся логика
+			var result = await SetOrderCompleteInternalAsync(orderId, userId, notes);
+
+			// Если бизнес-логика вернула ошибку — откатываем
 			if (!result.Success)
 			{
-				//await transaction.RollbackAsync();
+				await transaction.RollbackAsync();
 				return result;
 			}
-			// Меняю все следы заказа (footprint) на completed
 
-			var Order = await _context.Orders
-				.Include(o => o.ProductionOrder)
-				.FirstOrDefaultAsync(o => o.Id == orderId);
+			// Сохраняем всё, что накопилось в ChangeTracker
+			await context.SaveChangesAsync();
+			await transaction.CommitAsync();
 
-
-			var footprints = await _context.OrderFootprints
-				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
-				.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
-				.ToListAsync();
-
-			if (footprints.Any())
-			{
-				foreach (var footprint in footprints)
-				{
-					footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
-
-					_context.OperationLogs.Add(
-						new OperationLog
-						{
-							Id = Guid.NewGuid(),
-							ProductionOrderId = footprint.ProductionOrderId,
-							WorkplaceId = footprint.WorkplaceId,
-							UserId = userId, //TODO
-							OperationType = "COMPLETE", //TODO
-							OperationTime = DateTime.UtcNow,
-							CreatedAt = DateTime.UtcNow,
-							Notes = "Цикл производства завершен",
-							Source = "Handle change by Order COMPLETE"
-						}
-					);
-					await _context.SaveChangesAsync();
-				}
-			}
-
-			//await transaction.CommitAsync();
-
-			return new SetOrderStatusResultDto
-			{
-				Success = true,
-				Message = "Заказ отгружен, следы завершены"
-			};
+			return result;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Error in SetOrderCompleteAsync");
-			return new SetOrderStatusResultDto
-			{
-				Success = false,
-				Message = ex.Message
-			};
+			await transaction.RollbackAsync();
+			logger.LogError(ex, "Error in SetOrderCompleteAsync");
+			return new SetOrderStatusResultDto { Success = false, Message = ex.Message };
 		}
 	}
 
+	internal async Task<SetOrderStatusResultDto> SetOrderCompleteInternalAsync(Guid orderId, Guid? userId, string? notes)
+	{
+		// 1. Меняем статус на "ГОТОВО" (через SetOrderStatusAsync, который тоже БЕЗ транзакции)
+		var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
+
+		if (!result.Success)
+			return result; // Возвращаем ошибку, публичный метод сделает Rollback
+
+		// 2. Ищем заказ для обновления футпринтов
+		var order = await context.Orders
+			.Include(o => o.ProductionOrder)
+			.FirstOrDefaultAsync(o => o.Id == orderId);
+
+		if (order?.ProductionOrder == null)
+		{
+			return new SetOrderStatusResultDto
+			{
+				Success = false,
+				Message = "Производственный заказ не найден"
+			};
+		}
+
+		// 3. Меняем все следы на completed
+		var footprints = await context.OrderFootprints
+			.Where(fp => fp.ProductionOrderId == order.ProductionOrder.Id)
+			.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
+			.ToListAsync();
+
+		if (footprints.Any())
+		{
+			foreach (var footprint in footprints)
+			{
+				footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
+
+				// Логируем операцию
+				context.OperationLogs.Add(new OperationLog
+				{
+					Id = Guid.NewGuid(),
+					ProductionOrderId = footprint.ProductionOrderId,
+					WorkplaceId = footprint.WorkplaceId,
+					UserId = userId,
+					OperationType = "COMPLETE",
+					OperationTime = DateTime.UtcNow,
+					CreatedAt = DateTime.UtcNow,
+					Notes = "Цикл производства завершен",
+					Source = "Handle change by Order COMPLETE"
+				});
+			}
+		}
+
+		return new SetOrderStatusResultDto
+		{
+			Success = true,
+			Message = "Заказ готов, следы завершены"
+		};
+	}
+	
 	public async Task<SetOrderStatusResultDto> SetOrderDepartureAsync(
 		Guid orderId, Guid? userId, string? notes)
 	{
 
-		var orderExists = await _context.Orders.AnyAsync(o => o.Id == orderId);
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
 		if (!orderExists)
 		{
-			_logger.LogWarning($"Order {orderId} not found");
+			logger.LogWarning($"Order {orderId} not found");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -277,7 +435,7 @@ public partial class OrderService : IOrderService
 			};
 		}
 
-		using var transaction = await _context.Database.BeginTransactionAsync();
+		using var transaction = await context.Database.BeginTransactionAsync();
 
 		try
 		{
@@ -290,22 +448,22 @@ public partial class OrderService : IOrderService
 			}
 			// Удаляю следы заказа (footprint)
 
-			var productionOrder = await _context.ProductionOrders
+			var productionOrder = await context.ProductionOrders
 				.FirstOrDefaultAsync(po => po.OrderId == orderId);
 
-			var Order = await _context.Orders
+			var Order = await context.Orders
 				.Include(o => o.ProductionOrder)
 				.FirstOrDefaultAsync(o => o.Id == orderId);
 
 
-			var footprints = await _context.OrderFootprints
+			var footprints = await context.OrderFootprints
 				.Where(fp => fp.ProductionOrderId == Order!.ProductionOrder!.Id)
 				.ToListAsync();
 
 			if (footprints.Any())
 			{
-				_context.OrderFootprints.RemoveRange(footprints);
-				await _context.SaveChangesAsync();
+				context.OrderFootprints.RemoveRange(footprints);
+				await context.SaveChangesAsync();
 			}
 
 			await transaction.CommitAsync();
@@ -319,7 +477,7 @@ public partial class OrderService : IOrderService
 		catch (Exception ex)
 		{
 			await transaction.RollbackAsync();
-			_logger.LogError(ex, "Error in SetOrderDepartureAsync");
+			logger.LogError(ex, "Error in SetOrderDepartureAsync");
 			return new SetOrderStatusResultDto
 			{
 				Success = false,
@@ -335,16 +493,16 @@ public partial class OrderService : IOrderService
 	{
 		// Находим наиболее поздний участок со статусом active или completed
 		// Берём последний по дате обновления или по уровню (если уровень есть)
-		var latestFootprint = await _context.OrderFootprints
+		var latestFootprint = await context.OrderFootprints
 			.Where(fp => fp.ProductionOrderId == productionOrderId)
 			.Where(fp => fp.Status == OrderStatus.WorkplaceStatus.Active ||
 						 fp.Status == OrderStatus.WorkplaceStatus.Completed)
-			.Join(_context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new { fp, w })
+			.Join(context.Workplaces, fp => fp.WorkplaceId, w => w.Id, (fp, w) => new { fp, w })
 			.OrderByDescending(x => x.w.Level)  // ← по уровню
 			.Select(x => x.fp)
 			.FirstOrDefaultAsync();
 
-		var productionOrder = await _context.ProductionOrders
+		var productionOrder = await context.ProductionOrders
 			.FirstOrDefaultAsync(po => po.Id == productionOrderId);
 
 		if (productionOrder == null)
@@ -362,7 +520,7 @@ public partial class OrderService : IOrderService
 			productionOrder.UpdatedAt = DateTime.UtcNow;
 		}
 
-		await _context.SaveChangesAsync();
+		await context.SaveChangesAsync();
 	}
 
 	public async Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(
@@ -402,9 +560,9 @@ public partial class OrderService : IOrderService
 
 	private IQueryable<OrderDto> BuildBaseQuery()
 	{
-		return _context.Orders
-			.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+		return context.Orders
+			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 			{
 				Id = x.o.Id,
 				OrderNumber = x.o.OrderNumber,
@@ -432,9 +590,9 @@ public partial class OrderService : IOrderService
 		// В зависимости от типа — свой базовый query
 		if (typeof(TDto) == typeof(OrderDto))
 		{
-			return (IQueryable<TDto>)_context.Orders
-				.Join(_context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-				.Join(_context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+			return (IQueryable<TDto>)context.Orders
+				.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+				.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
 				{
 					Id = x.o.Id,
 					OrderNumber = x.o.OrderNumber,
@@ -459,7 +617,7 @@ public partial class OrderService : IOrderService
 		{
 			// ... другой query для Sales
 		}
-		else if (typeof(TDto) == typeof(SupplyOrderDto))
+		else if (typeof(TDto) == typeof(OrderSupplyDto))
 		{
 			// ... другой query для Supply
 		}
@@ -726,5 +884,36 @@ public partial class OrderService : IOrderService
 			.OrderBy(v => v)
 			.Select(v => new FacetValueDto { Value = v })
 			.ToList();
+	}
+
+	public async Task<List<NotificationGroupDto<OrderDto>>> GetNewOrdersAsync(
+		Guid userId, Guid? roleId)
+	{
+		// 1. Получаем плоский список уведомлений
+		var notifications = await notificationService.GetUnreadOrderNotificationsAsync(userId, roleId);
+
+		if (!notifications.Any())
+			return new List<NotificationGroupDto<OrderDto>>();
+
+		// 2. Получаем заказы
+		var orderIds = notifications.Select(n => n.OrderId).Distinct().ToList();
+		var orders = await BuildBaseQuery().Where(o => orderIds.Contains(o.Id)).ToListAsync();
+		var orderDict = orders.ToDictionary(o => o.Id);
+
+		// 3. Группируем по (EventCode, Severity)
+		var result = notifications
+			.Where(n => orderDict.ContainsKey(n.OrderId))
+			.GroupBy(n => new { n.EventCode, n.EventDescription, n.Severity, SeverityOrder = n.GetSeverityOrder() })
+			.OrderBy(g => g.Key.SeverityOrder)
+			.Select(g => new NotificationGroupDto<OrderDto>
+			{
+				EventCode = g.Key.EventCode,
+				EventDescription = g.Key.EventDescription,
+				Severity = g.Key.Severity,
+				Items = g.Select(n => orderDict[n.OrderId]).ToList()
+			})
+			.ToList();
+
+		return result;
 	}
 }

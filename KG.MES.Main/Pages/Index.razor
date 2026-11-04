@@ -1,0 +1,15 @@
+@page "/"
+@using KG.MES.Shared.Models.Config
+@using KG.MES.Shared.Models.Dto
+@using KG.MES.Shared.Models.ViewModels
+
+<AuthorizedPage>
+	<OrderListView TListItem="OrderViewModel" TCardItem="OrderViewModel" TListItemDto="OrderDto" TCardDto="OrderDto"
+			LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList" LoadItem="LoadOrderDetails" Settings="@AppSettings">
+		<HeaderActions>
+			<NavLink href="/upload" class="btn btn-primary">
+				<i class="bi bi-upload"></i> Загрузить XML
+			</NavLink>
+		</HeaderActions>
+	</OrderListView>
+</AuthorizedPage>
