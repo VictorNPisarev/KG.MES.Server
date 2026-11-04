@@ -10,6 +10,4 @@ public interface ISocketService
 	Task DisconnectAsync();
 	Task JoinOrderAsync(string productionOrderId);
 	Task TestSendToMeAsync();
-
-
 }

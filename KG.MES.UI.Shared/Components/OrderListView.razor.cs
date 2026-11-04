@@ -41,8 +41,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	[Inject] private UserSessionService Session { get; set; } = null!;
 	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
 	[Inject] private ISocketService SocketService { get; set; } = null!;
-	[Inject] private NotificationStateService NotificationState { get; set; } = null!;
-
 
 	private TListItem? selectedOrder;
 	private bool isModalOpen;
@@ -119,28 +117,23 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 		try
 		{
-			//debugMessage += "Подписываемся на SocketService.OnMessage\n";
-			//SocketService.OnMessage += OnSocketMessage;
-			//StateHasChanged();
+			debugMessage += "Подписываемся на SocketService.OnMessage\n";
+			SocketService.OnMessage += OnSocketMessage;
+			StateHasChanged();
 
-			//debugMessage += "Вызываем ConnectAsync...\n";
-			//StateHasChanged();
+			debugMessage += "Вызываем ConnectAsync...\n";
+			StateHasChanged();
 
-			//await SocketService.ConnectAsync();
+			await SocketService.ConnectAsync();
 
-			//debugMessage += "ConnectAsync завершен успешно!\n";
-			//StateHasChanged();
+			debugMessage += "ConnectAsync завершен успешно!\n";
+			StateHasChanged();
 
-			//await SocketService.SubscribeAsync("notifications");
-
-			//debugMessage += "SubscribeAsync to notifications успешно!\n";
-			//StateHasChanged();
-
-			// ✅ 1. Подписываемся на событие
-			NotificationState.OnNewOrders += HandleNewOrders;
-
-			// ✅ 2. Подключаемся и подписываемся только на нужный канал
 			await SocketService.SubscribeAsync("notifications");
+
+			debugMessage += "SubscribeAsync to notifications успешно!\n";
+			StateHasChanged();
+
 		}
 		catch (Exception ex)
 		{
@@ -166,13 +159,17 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 		panelResizeRef?.Dispose();
 
-		//SocketService.OnMessage -= OnSocketMessage;
-		//SocketService.UnsubscribeAsync("notifications");
-
-		NotificationState.OnNewOrders -= HandleNewOrders;
-		// Опционально: отписаться от канала, если компонент уничтожен
+		SocketService.OnMessage -= OnSocketMessage;
 		SocketService.UnsubscribeAsync("notifications");
+		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
+	}
 
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (useSplitView && !_panelResizeInitialized)
+		{
+			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
+		}
 	}
 
 	private async void OnOrderUpdated(OrderUpdatedEvent e)
@@ -525,24 +522,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		await JSRuntime.InvokeVoidAsync("localStorage.setItem", "useSplitView", useSplitView.ToString());
 
 		StateHasChanged();
-	}
-
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (useSplitView && !_panelResizeInitialized)
-		{
-			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
-		}
-
-		// Каждый раз, когда компонент рендерится, добавляем глобальный лог
-		if (!string.IsNullOrEmpty(SignalRService.GlobalDebugLog))
-		{
-			if (!debugMessage.Contains(SignalRService.GlobalDebugLog))
-			{
-				debugMessage += SignalRService.GlobalDebugLog;
-				StateHasChanged();
-			}
-		}
 	}
 
 	[JSInvokable]
@@ -1020,23 +999,37 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 
 	private async void OnSocketMessage(string channel, object? data)
 	{
-		debugMessage += $"🟢 Вызываем OnSocketMessage с каналом {channel}...\n";
-		if (channel == "orderNotification")
-		{
-			await LoadNotifications();
-		}
-	}
-
-	private async void HandleNewOrders()
-	{
-		debugMessage += $"🟢 Вызываем HandleNewOrders...\n";
+		// Обязательно выполняем в потоке синхронизации UI Blazor
 		await InvokeAsync(async () =>
 		{
-			await LoadNotifications();
-			StateHasChanged();
+			try
+			{
+				debugMessage += $"🟢 [SignalR UI] Получен канал: {channel}. Начинаем обновление...\n";
+				StateHasChanged();
+
+				if (channel == "orderNotification")
+				{
+					await LoadNotifications();
+				}
+
+				debugMessage += $"✅ [SignalR UI] Успешно обновлено без падений!\n";
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+				// Ловим ошибку, не давая упасть Blazor-серверу!
+				debugMessage += $"❌ [КРИТИЧЕСКАЯ ОШИБКА В UI]: {ex.Message}\n";
+				debugMessage += $"Стек вызовов: {ex.StackTrace}\n";
+
+				// Если была внутренняя ошибка (например, в Mapster)
+				if (ex.InnerException != null)
+				{
+					debugMessage += $"Внутреннее исключение: {ex.InnerException.Message}\n";
+				}
+				StateHasChanged();
+			}
 		});
 	}
-
 
 	private async Task TestSignalR()
 	{

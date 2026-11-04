@@ -9,7 +9,6 @@ namespace KG.MES.Shared.Services; // Или KG.MES.Shared.Services, где у т
 public class SignalRService : ISocketService, IAsyncDisposable
 {
 	private readonly HubConnection hubConnection;
-	private readonly NotificationStateService state;
 	private readonly ILogger<SignalRService> logger;
 	private bool isConnected;
 
@@ -18,9 +17,8 @@ public class SignalRService : ISocketService, IAsyncDisposable
 	public static string GlobalDebugLog { get; set; } = "";
 	public static string GlobalLog { get; private set; } = "";
 
-	public SignalRService(NotificationStateService state, IConfiguration configuration, ILogger<SignalRService> logger)
+	public SignalRService(IConfiguration configuration, ILogger<SignalRService> logger)
 	{
-		this.state = state;
 		this.logger = logger;
 
 		var serverUrl = configuration["SignalR:Url"] ?? "http://192.168.0.179:3031/notificationHub";
@@ -73,13 +71,11 @@ public class SignalRService : ISocketService, IAsyncDisposable
 		//	_logger.LogInformation("Received new-orders-available");
 		//	OnMessage?.Invoke("new-orders", data);
 		//});
-		hubConnection.On<object>("new-orders-available", async (data) =>
+		hubConnection.On("new-orders-available", () =>
 		{
-			// Пишем НАПРЯМУЮ в консоль браузера
-
 			GlobalDebugLog += $":::: [SignalRService] Получено new-orders-available в {DateTime.Now:HH:mm:ss}\n ::::";
 			Log("📡 Получено new-orders-available");
-			OnMessage?.Invoke("orderNotification", data);
+			OnMessage?.Invoke("orderNotification", null);
 		});
 	}
 
