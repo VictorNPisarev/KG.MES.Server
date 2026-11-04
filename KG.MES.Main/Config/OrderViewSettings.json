@@ -10,8 +10,8 @@
 	"editTrace": false,
 	"showSupply": true,
 	"editSupply": false,
-<<<<<<< Updated upstream
-	"additional": {
+	"additional":
+  {
 		"defaultSortBy": "ReadyDate",
 		"defaultSortOrder": "asc"
 	}
