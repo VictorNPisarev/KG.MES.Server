@@ -3,7 +3,7 @@ using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 public partial class SupplyController
 {
@@ -86,5 +86,19 @@ public partial class SupplyController
 	{
 		var history = await supplyService.GetSupplyHistoryAsync(supplyItemId);
 		return Ok(history);
+	}
+
+	public async Task<IActionResult> GetNewSupplyOrdersHandler()
+	{
+		Console.WriteLine("ENDPOINT :: [HttpGet(\"supplies / new\")]");
+
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
+			return Ok(new List<SupplyDto>());
+
+		var result = await supplyService.GetNewSupplyOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
+
+		Console.WriteLine($"ENDPOINT :: [HttpGet(\"supplies / new\")] :: CurrentUserId - {CurrentUserId} :: CurrentRoleId - {CurrentRoleId} :: result count {result.Count}");
+
+		return Ok(result);
 	}
 }

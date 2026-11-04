@@ -10,7 +10,7 @@ namespace KG.MES.Server.Controllers;
 [Route("api/admin")]
 [Authorize(Roles = "Admin,Advanced,Middle")]
 //[Authorize(Roles = "Admin,User")]
-public partial class AdminController : ControllerBase
+public partial class AdminController : BaseController
 {
 	//-------------------------
 	//POST

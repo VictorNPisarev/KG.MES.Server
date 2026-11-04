@@ -3,12 +3,12 @@ using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
 [Authorize]
-public partial class OrderController : ControllerBase
+public partial class OrderController : BaseController
 {
 	#region POST
 	
@@ -49,7 +49,13 @@ public partial class OrderController : ControllerBase
 	// POST: api/orders/{orderId}/OrderSupplyComments
 	[HttpPost("orders/{orderId}/OrderSupplyComments")]
 	public Task<IActionResult> AddSupplyComment(Guid orderId, [FromBody] AddSupplyCommentRequestDto request) => AddSupplyCommentHandler(orderId, request);
-	
+
+	// POST: api/orders/fasets
+	[HttpPost("orders/facets")]
+	[AllowAnonymous]
+	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
+		=> GetFilterFacetsHandler(request);
+
 	#endregion POST
 
 
@@ -109,15 +115,12 @@ public partial class OrderController : ControllerBase
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 
-	// GET: api/orders/fasets
-	[HttpPost("orders/facets")]
-	[AllowAnonymous]
-	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
-		=> GetFilterFacetsHandler(request);
-
+	[HttpGet("orders/new")]
+	public Task<IActionResult> GetNewOrders() => GetNewOrdersHandler();
+	
 	#endregion GET
 
-	
+
 	#region PUT
 
 	// PUT: api/orders/footprint/{productionOrderId}/workplace/{workplaceId}

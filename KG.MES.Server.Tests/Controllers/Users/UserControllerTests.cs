@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Identity;

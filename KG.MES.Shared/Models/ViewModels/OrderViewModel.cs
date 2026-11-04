@@ -8,7 +8,7 @@ public class OrderViewModel
 {
 	public Guid Id { get; set; }
 
-	[Column("№ заказа", Order = 1, IconConditions = new[] { "IsClaim:Claim", "IsEconom:Econom" }, Sortable = true)]
+	[Column("№ заказа", Order = 1, IconConditions = new[] { "IsClaim:Claim", "IsEconom:Econom", "IsNew:New" }, Sortable = true)]
 	public string OrderNumber { get; set; } = string.Empty;
 
 	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", Sortable = true)]
@@ -43,7 +43,6 @@ public class OrderViewModel
 
 	[Column("2-стор. покраска", Order = 13, IsBadge = true, Filterable = true)]
 	public bool IsTwoSidePaint { get; set; }
-
 	public string? ProductionOrderId { get; set; }
 
 	public string? CurrentWorkplaceId { get; set; }
@@ -55,6 +54,9 @@ public class OrderViewModel
 
 	[Column("Станок", Order = 12, Visible = true, IsBadge = true, Filterable = true)]
 	public string? Machine { get; set; }
+
+	public bool IsNew { get; set; }
+
 
 	[Column("***", Order = 2, Visible = false, IconConditions = new[] { "IsClaim:Claim",
 																		"IsEconom:Econom",

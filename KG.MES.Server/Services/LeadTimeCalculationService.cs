@@ -1,4 +1,4 @@
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace KG.MES.Shared.Services;

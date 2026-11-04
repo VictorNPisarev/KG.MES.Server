@@ -2,9 +2,9 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Server.Extensions;
-using KG.MES.Shared.Hubs;
+using KG.MES.Server.Hubs;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
@@ -27,6 +27,10 @@ ConfigureDatabase(builder.Services, builder.Configuration);
 // Инициализация часового пояса через конфиг
 DateTimeExtensions.Initialize(builder.Configuration);
 
+//Регистрация сервиса автоматической синхронизации enums и соответствующих таблиц в БД. Достаточно добавить новый элемент только в enum.
+//работает для: NotificationEvent, 
+builder.Services.AddHostedService<NotificationEventSeeder>();
+
 // Регистрация API сервисов
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -39,6 +43,7 @@ builder.Services.AddScoped<ILicenseService, ServerLicenseService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, ServerAuthService>();
+builder.Services.AddScoped<NotificationService>();
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";
@@ -82,14 +87,28 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Настройка CORS для доступа с любых устройств
+//builder.Services.AddCors(options =>
+//{
+//	options.AddPolicy("AllowAll", policy =>
+//	{
+//		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
+//			  .AllowAnyMethod()
+//			  .AllowAnyHeader();
+//			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
+//	});
+//});
+
 builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAll", policy =>
 	{
-		policy.AllowAnyOrigin()   //Оставляю пока не реализована авторизация. Для SignalR с авторизацией нужно будет WithOrigins(...)
-			  .AllowAnyMethod()
-			  .AllowAnyHeader();
-			//  .AllowCredentials(); // ← ВАЖНО для SignalR! (но когда будет авторизация)
+		// Читаем массив из конфига. Если его нет, берем пустой массив
+		var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+		policy.WithOrigins(allowedOrigins)
+			.AllowAnyMethod()
+			.AllowAnyHeader()
+			.AllowCredentials();
 	});
 });
 
@@ -113,13 +132,13 @@ if (app.Environment.IsDevelopment())
 }
 
 // Инициализация NotificationHelper (после app.Build())
-var hubContext = app.Services.GetRequiredService<IHubContext<NotificationHub>>();
-NotificationHelper.Initialize(hubContext);
+var hubContext = app.Services.GetRequiredService<IHubContext<SignalRHub>>();
+SignalRHelper.Initialize(hubContext);
 
 
 app.MapControllers();
 
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<SignalRHub>("/signalRHub");
 
 app.Run();
 

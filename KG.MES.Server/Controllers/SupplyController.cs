@@ -3,11 +3,11 @@ using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public partial class SupplyController : ControllerBase
+public partial class SupplyController : BaseController
 {
 	#region GET
 
@@ -33,6 +33,9 @@ public partial class SupplyController : ControllerBase
 	[HttpGet("supply-items/{supplyItemId}/history")]
 	public Task<IActionResult> GetSupplyHistory(Guid supplyItemId)
 		=> GetSupplyHistoryHandler(supplyItemId);
+
+	[HttpGet("supplies/new")]
+	public Task<IActionResult> GetNewSupplyOrders() => GetNewSupplyOrdersHandler();
 
 	#endregion GET
 

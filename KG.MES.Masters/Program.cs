@@ -15,6 +15,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddDistributedMemoryCache();
 
+builder.Services.Configure<NotificationSettings>(
+	builder.Configuration.GetSection("Notifications"));
+
 builder.Services.AddSession(options =>
 {
 	options.Cookie.Name = ".Session.Masters";
@@ -30,7 +33,6 @@ builder.Services.AddSingleton(LoadViewSettings());
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
-builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<UserSessionService>();
 builder.Services.AddScoped<LicenseService>();
 

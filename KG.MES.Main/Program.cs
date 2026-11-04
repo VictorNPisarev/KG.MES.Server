@@ -19,6 +19,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 	options.Cookie.Path = "/main";
 });
 
+builder.Services.Configure<NotificationSettings>(
+	builder.Configuration.GetSection("Notifications"));
+
 builder.Services.AddSession(options =>
 {
 	options.Cookie.Name = ".Session.Main";
@@ -41,11 +44,11 @@ builder.Services.AddSingleton<MaterialTypeConfigService>();
 builder.Services.AddSingleton<HolidayCalendarService>();
 builder.Services.AddSingleton<IMaterialFactory, MaterialFactory>();
 builder.Services.AddSingleton(LoadViewSettings(builder.Environment));
+builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 //builder.Services.AddScoped<ISocketService, SocketService>();
-builder.Services.AddScoped<ISocketService, SignalRService>();
 
 var app = builder.Build();
 

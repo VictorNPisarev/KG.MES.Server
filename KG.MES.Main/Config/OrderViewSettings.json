@@ -12,12 +12,7 @@
 	"editSupply": false,
 <<<<<<< Updated upstream
 	"additional": {
-		"defaultSortBy": "ready_date",
-=======
-	"additional":
-  {
 		"defaultSortBy": "ReadyDate",
->>>>>>> Stashed changes
 		"defaultSortOrder": "asc"
 	}
 }

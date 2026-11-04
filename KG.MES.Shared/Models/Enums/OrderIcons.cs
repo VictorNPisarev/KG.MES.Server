@@ -21,5 +21,8 @@ public enum OrderIcon
 	StartOperationTransfer,
 
 	[IconClass("bi bi-box-arrow-right", "icon-transfer-complete", "Переходящий заказ. Завершен позже выбранного периода")]
-	CompleteOperationTransfer
+	CompleteOperationTransfer,
+
+	[IconClass("bi bi-star-fill", "text-danger me-1", "Новый заказ")]
+	New
 }

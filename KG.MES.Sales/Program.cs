@@ -15,6 +15,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddDistributedMemoryCache();
 
+builder.Services.Configure<NotificationSettings>(
+	builder.Configuration.GetSection("Notifications"));
+
 builder.Services.AddSession(options =>
 {
 	options.Cookie.Name = ".Session.Sales";
@@ -25,7 +28,6 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddHttpClient<ProductionApiService>();
 builder.Services.AddSingleton(LoadViewSettings());
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
-//builder.Services.AddScoped<ISocketService, SocketService>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddHttpClient<AuthService>();
 builder.Services.AddScoped<UserSessionService>();

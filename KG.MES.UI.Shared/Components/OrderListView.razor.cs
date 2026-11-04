@@ -12,12 +12,15 @@ using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Constants;
 using System.Reflection;
 using KG.MES.UI.Shared.Interfaces;
+using Mapster;
+using Microsoft.Extensions.Options;
 
 namespace KG.MES.UI.Shared.Components;
-public partial class OrderListView<TListItem, TCardItem> : ComponentBase
+public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto> : ComponentBase
 	where TListItem : class
 	where TCardItem : class
-
+	where TListItemDto : class
+	where TCardDto : class
 {
 	[Parameter] public OrderViewSettings Settings { get; set; } = new();
 	[Parameter] public EventCallback<TListItem> OnOrderClick { get; set; }
@@ -25,7 +28,10 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	[Parameter] public EventCallback<TListItem> OnDeleteOrder { get; set; }
 	[Parameter] public RenderFragment? HeaderActions { get; set; }
 	[Parameter] public Func<Guid?, Guid[]?, string?, int, int, string?, string?, List<FilterCondition>, Task<PaginatedResponse<TListItem>>>? LoadItems { get; set; }
+	[Parameter] public Func<Task<List<TListItem>>>? LoadNewItems { get; set; }
+
 	[Parameter] public Func<Guid, Task<TCardItem>>? LoadItem { get; set; }
+	[Parameter] public bool ShowOnlyNewFilter { get; set; } = false;
 
 
 	[Inject] private ProductionApiService ApiService { get; set; } = null!;
@@ -33,14 +39,19 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	[Inject] private IEventAggregator EventAggregator { get; set; } = null!;
 	[Inject] private NavigationManager NavManager { get; set; } = null!;
 	[Inject] private UserSessionService Session { get; set; } = null!;
+	[Inject] private IOptions<NotificationSettings> NotificationSettings { get; set; } = null!;
+	[Inject] private ISocketService SocketService { get; set; } = null!;
 
-
+	private TListItem? selectedOrder;
+	private bool isModalOpen;
 	private OrderDashboard<TCardItem>? dashboardRef;
 	private string Endpoint => Settings.ListEndpoint;
 	private string CardEndpoint => Settings.CardEndpoint;
 	private string Title => Settings.Title;
 	private bool ShowActions => Settings.ShowActions;
 	private PaginatedResponse<TListItem> orders = new();
+	private List<TListItem> newOrders = [];
+
 	private List<WorkplaceDto> workplaces = [];
 	private List<ColumnInfo> columnInfos = [];
 	private List<ColumnSetting> columnSettings = [];
@@ -48,14 +59,14 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private string searchNumber = "";
 	private int currentPage = 1;
 	private int pageSize = 50;
-	private string sortBy = "ready_date";
+	private string sortBy = "ReadyDate";
 	private string sortOrder = "asc";
 	private Guid? selectedWorkplaceId;
 	private string tableKey => $"{Endpoint}_{typeof(TListItem).Name}";
 	private bool isColumnsOpen = false;
 	private bool useSplitView;
 	private string savedPanelWidth = "66%";
-	private DotNetObjectReference<OrderListView<TListItem, TCardItem>>? panelResizeRef;
+	private DotNetObjectReference<OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>>? panelResizeRef;
 	private string? lastReportedWidth;
 	private bool _panelResizeInitialized = false;
 	//private List<Guid> selectedWorkplaceIds = [];
@@ -71,8 +82,13 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	private List<ColumnInfo> filterableColumns => columnInfos.Where(c => c.Filterable).ToList();
 	private Dictionary<string, List<FacetValueDto>> facets = [];
 	private ITotalsDto? totals;
+	private bool isNewOrdersExpanded = true;
+	private bool showConfirmMarkAllRead;
+	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
 
 	private string debugMessage = string.Empty;
+	private static int _instanceCounter = 0;
+	private int _myInstanceId;
 
 	private IconInfo testIcon = new IconInfo
 	{
@@ -83,19 +99,84 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 	protected override async Task OnInitializedAsync()
 	{
+		_myInstanceId = ++_instanceCounter;
+		debugMessage += $"🟢 Компонент создан. Экземпляр №{_myInstanceId}\n";
+		StateHasChanged();
+
+		debugMessage += "🟢 Начало инициализации\n";
+		StateHasChanged(); // Чтобы сразу отобразить
+
 		columnInfos = ColumnHelper.GetColumns<TListItem>();
 
 		await LoadSettings();
 		workplaces = await ApiService.GetAllWorkplacesAsync();
 		await LoadFacetsAsync();
 		await LoadOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
+
+		try
+		{
+			debugMessage += "Подписываемся на SocketService.OnMessage\n";
+			SocketService.OnMessage += OnSocketMessage;
+			StateHasChanged();
+
+			debugMessage += "Вызываем ConnectAsync...\n";
+			StateHasChanged();
+
+			await SocketService.ConnectAsync();
+
+			debugMessage += "ConnectAsync завершен успешно!\n";
+			StateHasChanged();
+
+			await SocketService.SubscribeAsync("notifications");
+
+			debugMessage += "SubscribeAsync to notifications успешно!\n";
+			StateHasChanged();
+
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 ОШИБКА ConnectAsync: {ex.Message}\n";
+			StateHasChanged();
+		}
 
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
+
+	}
+
+	public void Dispose()
+	{
+		debugMessage += $"🔴 Компонент уничтожен. Экземпляр №{_myInstanceId}\n";
+		try
+		{
+			if (_panelResizeInitialized)
+			{
+				_ = JSRuntime.InvokeVoidAsync("panelResize.dispose", "split-panel");
+			}
+		}
+		catch { }
+
+		panelResizeRef?.Dispose();
+
+		SocketService.OnMessage -= OnSocketMessage;
+		SocketService.UnsubscribeAsync("notifications");
+		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (useSplitView && !_panelResizeInitialized)
+		{
+			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
+		}
 	}
 
 	private async void OnOrderUpdated(OrderUpdatedEvent e)
 	{
 		await LoadOrders();
+		//await LoadNewOrders();
+		await LoadNotifications();
 		StateHasChanged();
 	}
 
@@ -210,7 +291,7 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 			if (!string.IsNullOrEmpty(json))
 			{
 				var data = JsonSerializer.Deserialize<SortData>(json);
-				sortBy = data?.SortBy ?? "ready_date";
+				sortBy = data?.SortBy ?? "ReadyDate";
 				sortOrder = data?.Ascending == true ? "asc" : "desc";
 			}
 		}
@@ -219,18 +300,12 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 	
 	private async Task LoadOrders()
 	{
-		debugMessage += "\r\nLoadOrders() in";
 		isLoading = true;
 		StateHasChanged();
 
 		try
 		{
-			debugMessage += "\r\nLoadOrders() try in";
-			//ApiService.Session = Session;
-
-			debugMessage += "\r\nLoadOrders() before filters";
 			var filters = BuildFilterConditionsForIn();
-			debugMessage += "\r\nLoadOrders() after filters";
 
 			if (LoadItems != null)
 			{
@@ -255,8 +330,21 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		finally
 		{
 			isLoading = false;
-			debugMessage += "\r\nLoadOrders() finally";
 			StateHasChanged();
+		}
+	}
+
+	private async Task LoadNewOrders()
+	{
+		if (LoadNewItems == null) return;
+
+		try
+		{
+			newOrders = await LoadNewItems();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading new orders: {ex.Message}");
 		}
 	}
 
@@ -296,15 +384,26 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		return pages;
 	}
 
-	private TListItem? selectedOrder;
-
-	private bool isModalOpen;
-
 	private async Task OpenOrder(TListItem order)
 	{
 		selectedOrder = order;
 
-		debugMessage = $"order: {GetOrderId(selectedOrder)}";
+		// Отмечаю оповещение, как прочитанное
+		var orderId = GetOrderId(order);
+		if (orderId != Guid.Empty)
+		{
+			// Вызов асинхронный, не блокируем UI
+			_ = ApiService.MarkOrderNotificationsAsReadAsync(orderId);
+
+			// Убираем заказ из блока "новых" (или помечаем прочитанным)
+			var newOrder = newOrders.FirstOrDefault(o => GetOrderId(o) == orderId);
+			if (newOrder != null)
+			{
+				newOrders.Remove(newOrder);
+				StateHasChanged();
+			}
+		}
+
 
 		if (useSplitView)
 		{
@@ -390,6 +489,8 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		else
 		{
 			await LoadOrders();
+			//await LoadNewOrders();
+			await LoadNotifications();
 			StateHasChanged();
 
 			// Восстанавливаем позицию скролла
@@ -421,14 +522,6 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		await JSRuntime.InvokeVoidAsync("localStorage.setItem", "useSplitView", useSplitView.ToString());
 
 		StateHasChanged();
-	}
-
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (useSplitView && !_panelResizeInitialized)
-		{
-			//await InitializePanelResize(); //TODO доработать сохранение измененной ширины таблицы (панель в этом месте еще не существует)
-		}
 	}
 
 	[JSInvokable]
@@ -768,22 +861,6 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 		}
 	}
 
-	public void Dispose()
-	{
-		try
-		{
-			if (_panelResizeInitialized)
-			{
-				_ = JSRuntime.InvokeVoidAsync("panelResize.dispose", "split-panel");
-			}
-		}
-		catch { }
-
-		panelResizeRef?.Dispose();
-
-		EventAggregator.Unsubscribe<OrderUpdatedEvent>(OnOrderUpdated);
-	}
-
 	// Загрузка фасетов
 	private async Task LoadFacetsAsync()
 	{
@@ -817,5 +894,166 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 			return result;
 		}
+	}
+
+	private async Task MarkAllAsRead()
+	{
+		if (!newOrders.Any()) return;
+
+		try
+		{
+			var success = await ApiService.MarkAllOrdersNotificationsAsReadAsync();
+
+			if (success)
+			{
+				newOrders.Clear();
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking all orders as read: {ex.Message}");
+		}
+	}
+
+	private void ConfirmMarkAllAsRead()
+	{
+		showConfirmMarkAllRead = false;
+		_ = MarkAllAsRead(); // fire-and-forget
+	}
+
+	private async Task LoadNotifications()
+	{
+		var groups = await ApiService.GetOrderNotificationsAsync<TListItemDto>(Endpoint);
+
+		notificationGroups = groups
+			.Select(g => new NotificationGroupDto<TListItem>
+			{
+				EventCode = g.EventCode,
+				EventDescription = g.EventDescription,
+				Severity = g.Severity,
+				Items = g.Items.Select(d => d.Adapt<TListItem>()).ToList()
+			})
+			.Where(g => g.Items.Any())
+			.ToList();
+
+		foreach (var group in notificationGroups)
+		{
+			if (expandedGroups.Contains(group.EventCode))
+				continue;
+
+			var expandByDefault = NotificationSettings.Value
+				.ExpandByDefault
+				.GetValueOrDefault(group.Severity, false);
+
+			if (expandByDefault)
+				expandedGroups.Add(group.EventCode);
+		}
+
+		StateHasChanged();
+	}
+
+	private bool IsGroupExpanded(string eventCode) => expandedGroups.Contains(eventCode);
+	private void ToggleGroup(string eventCode)
+	{
+		if (expandedGroups.Contains(eventCode))
+			expandedGroups.Remove(eventCode);
+		else
+			expandedGroups.Add(eventCode);
+	}
+
+	private string GetSeverityColor(string severity) => severity switch
+	{
+		"Danger" => "danger",
+		"Warning" => "warning",
+		"Success" => "success",
+		_ => "info"
+	};
+
+	private string GetSeverityIcon(string severity) => severity switch
+	{
+		"Danger" => "bi-exclamation-circle-fill",
+		"Warning" => "bi-exclamation-triangle-fill",
+		"Success" => "bi-check-circle-fill",
+		_ => "bi-info-circle-fill"
+	};
+
+	private async Task MarkGroupAsRead(NotificationGroupDto<TListItem> group)
+	{
+		try
+		{
+			var success = await ApiService.MarkNotificationsReadByEventAsync(group.EventCode);
+
+			if (success)
+			{
+				notificationGroups.Remove(group);
+				expandedGroups.Remove(group.EventCode);
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error marking group as read: {ex.Message}");
+		}
+	}
+
+	private async void OnSocketMessage(string channel, object? data)
+	{
+		// Обязательно выполняем в потоке синхронизации UI Blazor
+		await InvokeAsync(async () =>
+		{
+			try
+			{
+				debugMessage += $"🟢 [SignalR UI] Получен канал: {channel}. Начинаем обновление...\n";
+				StateHasChanged();
+
+				if (channel == "orderNotification")
+				{
+					await LoadNotifications();
+				}
+
+				debugMessage += $"✅ [SignalR UI] Успешно обновлено без падений!\n";
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+				// Ловим ошибку, не давая упасть Blazor-серверу!
+				debugMessage += $"❌ [КРИТИЧЕСКАЯ ОШИБКА В UI]: {ex.Message}\n";
+				debugMessage += $"Стек вызовов: {ex.StackTrace}\n";
+
+				// Если была внутренняя ошибка (например, в Mapster)
+				if (ex.InnerException != null)
+				{
+					debugMessage += $"Внутреннее исключение: {ex.InnerException.Message}\n";
+				}
+				StateHasChanged();
+			}
+		});
+	}
+
+	private async Task TestSignalR()
+	{
+		debugMessage += "🟢 Вызываем TestSendToMe...\n";
+		StateHasChanged();
+
+		try
+		{
+			await SocketService.TestSendToMeAsync();
+			debugMessage += "🟢 Команда отправлена, ждем ответа...\n";
+
+			// Ждем 2 секунды, чтобы сообщение точно пришло
+			await Task.Delay(2000);
+
+			// Читаем лог из сервиса
+			if (SocketService is SignalRService signalR)
+			{
+				debugMessage += $"🟢 Лог сервиса: {signalR.GetType().GetProperty("GlobalDebugLog")?.GetValue(signalR)}\n"; // Или просто используй статическое поле
+			}
+		}
+		catch (Exception ex)
+		{
+			debugMessage += $"🔴 Ошибка: {ex.Message}\n";
+		}
+		StateHasChanged();
 	}
 }

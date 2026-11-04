@@ -15,6 +15,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddDistributedMemoryCache();
 
+builder.Services.Configure<NotificationSettings>(
+	builder.Configuration.GetSection("Notifications"));
+
 builder.Services.AddSession(options =>
 {
 	options.Cookie.Name = ".Session.Supply";

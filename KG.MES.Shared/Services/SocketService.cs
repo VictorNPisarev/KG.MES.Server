@@ -61,5 +61,8 @@ namespace KG.MES.Shared.Services
 		{
 			await _jsRuntime.InvokeVoidAsync("socketService.subscribe", channel, id);
 		}
+		public async Task TestSendToMeAsync()
+		{
+		}
 	}
 }

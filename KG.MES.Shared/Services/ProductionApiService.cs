@@ -972,4 +972,89 @@ public class ProductionApiService : AuthorizedApiService
 			return [];
 		}
 	}
+
+	public async Task<List<T>> GetNewOrdersAsync<T>(string endpoint)
+	{
+		try
+		{
+			EnsureAuthorization();
+			// endpoint для новых заказов
+			var url = $"{BaseUrl}/{endpoint}/new";
+			return await httpClient.GetFromJsonAsync<List<T>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching new orders");
+			return [];
+		}
+	}
+
+	public async Task<List<NotificationGroupDto<T>>> GetOrderNotificationsAsync<T>(string endpoint)
+	{
+		try
+		{
+			EnsureAuthorization();
+			//var url = $"{BaseUrl}/notifications/orders"; // или ваш endpoint
+			var url = $"{BaseUrl}/{endpoint}/new";
+			return await httpClient.GetFromJsonAsync<List<NotificationGroupDto<T>>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching notifications");
+			return [];
+		}
+	}
+
+	public async Task<bool> MarkOrderNotificationsAsReadAsync(Guid orderId)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var url = $"{BaseUrl}/notifications/orders/{orderId}/read";
+			var response = await httpClient.PostAsync(url, null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error marking order {Id} as read", orderId);
+			return false;
+		}
+	}
+
+	public async Task<bool> MarkAllOrdersNotificationsAsReadAsync()
+	{
+		try
+		{
+			EnsureAuthorization();
+			// Предполагаем, что на сервере есть такой endpoint. 
+			// Если нет — нужно создать, либо дергать в цикле для каждого заказа.
+			var url = $"{BaseUrl}/notifications/orders/read-all";
+			var response = await httpClient.PostAsync(url, null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error marking all orders as read");
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Пометить группу уведомлений (по коду события) как прочитанную
+	/// </summary>
+	public async Task<bool> MarkNotificationsReadByEventAsync(string eventCode)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var url = $"{BaseUrl}/notifications/orders/read-by-event/{Uri.EscapeDataString(eventCode)}";
+			var response = await httpClient.PostAsync(url, null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error marking notifications as read for event {EventCode}", eventCode);
+			return false;
+		}
+	}
 }

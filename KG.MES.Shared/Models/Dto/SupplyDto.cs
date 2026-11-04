@@ -81,4 +81,7 @@ public class SupplyDto
 
 	[JsonPropertyName("woodAlum_comment")]
 	public string? WoodAlumComment { get; set; }
+
+	[JsonPropertyName("is_new")]
+	public bool IsNew { get; set; }
 }

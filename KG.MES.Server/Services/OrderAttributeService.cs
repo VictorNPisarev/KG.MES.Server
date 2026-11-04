@@ -1,4 +1,4 @@
-using KG.MES.Shared.Data;
+using KG.MES.Server.Data;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 

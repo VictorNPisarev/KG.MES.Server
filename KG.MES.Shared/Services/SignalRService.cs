@@ -1,27 +1,36 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using KG.MES.Shared.Interfaces; // Убедись, что namespace совпадает с твоим ISocketService
+using KG.MES.Shared.Interfaces;
+using Microsoft.JSInterop; // Убедись, что namespace совпадает с твоим ISocketService
 
 namespace KG.MES.Shared.Services; // Или KG.MES.Shared.Services, где у тебя лежат сервисы
 
 public class SignalRService : ISocketService, IAsyncDisposable
 {
-	private readonly HubConnection _hubConnection;
-	private readonly ILogger<SignalRService> _logger;
-	private bool _isInitialized;
+	private readonly HubConnection hubConnection;
+	private readonly ILogger<SignalRService> logger;
+	private bool isConnected;
 
-	public event Action<string, object>? OnMessage;
+	public event Action<string, object?>? OnMessage;
+
+	public static string GlobalDebugLog { get; set; } = "";
+	public static string GlobalLog { get; private set; } = "";
 
 	public SignalRService(IConfiguration configuration, ILogger<SignalRService> logger)
 	{
-		_logger = logger;
+		this.logger = logger;
 
 		var serverUrl = configuration["SignalR:Url"] ?? "http://192.168.0.179:3031/notificationHub";
 
-		_hubConnection = new HubConnectionBuilder()
+		hubConnection = new HubConnectionBuilder()
 			.WithUrl(serverUrl)
 			.WithAutomaticReconnect()
+			.ConfigureLogging(logging =>
+			{
+				logging.SetMinimumLevel(LogLevel.Trace); // ← Включаем ВСЁ
+				logging.AddConsole(); // ← Выводим в консоль браузера
+			})
 			.Build();
 
 		RegisterHandlers();
@@ -29,28 +38,44 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	private void RegisterHandlers()
 	{
-		_hubConnection.On<object>("order:updated", (data) =>
+		hubConnection.On<object>("order:updated", (data) =>
 		{
-			_logger.LogInformation("Received order:updated");
+			logger.LogInformation("Received order:updated");
+			Log("📡 Получено order:updated");
 			OnMessage?.Invoke("order", data);
 		});
 
-		_hubConnection.On<object>("workplace:order:updated", (data) =>
+		hubConnection.On<object>("workplace:order:updated", (data) =>
 		{
-			_logger.LogInformation("Received workplace:order:updated");
+			logger.LogInformation("Received workplace:order:updated");
+			Log("📡 Получено workplace:order:updated");
 			OnMessage?.Invoke("workplace", data);
 		});
 
-		_hubConnection.On<object>("supply:updated", (data) =>
+		hubConnection.On<object>("supply:updated", (data) =>
 		{
-			_logger.LogInformation("Received supply:updated");
+			logger.LogInformation("Received supply:updated");
+			Log("📡 Получено supply:updated");
 			OnMessage?.Invoke("supply", data);
 		});
 
-		_hubConnection.On<object>("order:comment:added", (data) =>
+		hubConnection.On<object>("order:comment:added", (data) =>
 		{
-			_logger.LogInformation("Received order:comment:added");
+			logger.LogInformation("Received order:comment:added");
+			Log("📡 Получено order:comment:added");
 			OnMessage?.Invoke("comment", data);
+		});
+
+		//_hubConnection.On<object>("new-orders-available", (data) =>
+		//{
+		//	_logger.LogInformation("Received new-orders-available");
+		//	OnMessage?.Invoke("new-orders", data);
+		//});
+		hubConnection.On("new-orders-available", () =>
+		{
+			GlobalDebugLog += $":::: [SignalRService] Получено new-orders-available в {DateTime.Now:HH:mm:ss}\n ::::";
+			Log("📡 Получено new-orders-available");
+			OnMessage?.Invoke("orderNotification", null);
 		});
 	}
 
@@ -58,11 +83,11 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task ConnectAsync()
 	{
-		if (_hubConnection.State == HubConnectionState.Disconnected)
+		if (!isConnected)
 		{
-			await _hubConnection.StartAsync();
-			_isInitialized = true;
-			_logger.LogInformation("SignalR connected");
+			await hubConnection.StartAsync();
+			isConnected = true;
+			logger.LogInformation("SignalR connected");
 		}
 	}
 
@@ -73,44 +98,54 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task SubscribeAsync(string channel, string? id = null)
 	{
-		if (!_isInitialized) await ConnectAsync();
+		if (!isConnected) await ConnectAsync();
 
 		switch (channel.ToLower())
 		{
 			case "order":
 				if (!string.IsNullOrEmpty(id))
 				{
-					await _hubConnection.InvokeAsync("SubscribeToOrder", id);
-					_logger.LogInformation("Subscribed to order {OrderId}", id);
+					await hubConnection.InvokeAsync("SubscribeToOrder", id);
+					logger.LogInformation("Subscribed to order {OrderId}", id);
 				}
 				break;
 			case "workplace":
 				if (!string.IsNullOrEmpty(id))
 				{
-					await _hubConnection.InvokeAsync("SubscribeToWorkplace", id);
-					_logger.LogInformation("Subscribed to workplace {WorkplaceId}", id);
+					await hubConnection.InvokeAsync("SubscribeToWorkplace", id);
+					logger.LogInformation("Subscribed to workplace {WorkplaceId}", id);
 				}
 				break;
 			case "supply":
-				await _hubConnection.InvokeAsync("SubscribeToSupply");
-				_logger.LogInformation("Subscribed to supply");
+				await hubConnection.InvokeAsync("SubscribeToSupply");
+				logger.LogInformation("Subscribed to supply");
+				break;
+			case "notifications":
+				await hubConnection.InvokeAsync("SubscribeToNotifications");
+				logger.LogInformation("Subscribed to notifications");
 				break;
 		}
 	}
 
 	public async Task UnsubscribeAsync(string channel)
 	{
-		if (!_isInitialized) return;
+		if (!isConnected) return;
 
 		switch (channel.ToLower())
 		{
 			case "order":
 				// Для простоты можно не передавать id, если хаб умеет отписывать по всем, 
 				// но лучше передать, если он есть в контексте. Пока оставим базовый вызов.
-				await _hubConnection.InvokeAsync("UnsubscribeFromOrder"); // Заглушка, адаптируй под свой хаб при необходимости
+				await hubConnection.InvokeAsync("UnsubscribeFromOrder"); // Заглушка, адаптируй под свой хаб при необходимости
+				break;
+			case "workplace":
+				await hubConnection.InvokeAsync("UnsubscribeFromWorkplace");
 				break;
 			case "supply":
-				await _hubConnection.InvokeAsync("UnsubscribeFromSupply");
+				await hubConnection.InvokeAsync("UnsubscribeFromSupply");
+				break;
+			case "notifications":
+				await hubConnection.InvokeAsync("UnsubscribeFromNotifications");
 				break;
 		}
 	}
@@ -123,17 +158,28 @@ public class SignalRService : ISocketService, IAsyncDisposable
 
 	public async Task DisconnectAsync()
 	{
-		if (_hubConnection.State == HubConnectionState.Connected)
+		if (hubConnection.State == HubConnectionState.Connected)
 		{
-			await _hubConnection.StopAsync();
-			_isInitialized = false;
-			_logger.LogInformation("SignalR disconnected");
+			await hubConnection.StopAsync();
+			isConnected = false;
+			logger.LogInformation("SignalR disconnected");
 		}
 	}
 
 	public async ValueTask DisposeAsync()
 	{
 		await DisconnectAsync();
-		await _hubConnection.DisposeAsync();
+		await hubConnection.DisposeAsync();
+	}
+
+	public async Task TestSendToMeAsync()
+	{
+		if (!isConnected) await ConnectAsync();
+		await hubConnection.InvokeAsync("TestSendToMe");
+	}
+
+	private void Log(string message)
+	{
+		GlobalLog += $"[{DateTime.Now:HH:mm:ss}] {message}\n";
 	}
 }

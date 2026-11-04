@@ -52,4 +52,10 @@ public partial class Index
 
 		return null;
 	}
+
+	private async Task<List<OrderViewModel>> LoadNewOrdersList()
+	{
+		var dtos = await ApiService.GetNewOrdersAsync<OrderDto>(Endpoint);
+		return dtos.Select(d => d.Adapt<OrderViewModel>()).ToList();
+	}
 }

@@ -8,7 +8,7 @@ public class SupplyViewModel
 {
 	public Guid Id { get; set; }
 
-	[Column("№ заказа", Order = 0, IconConditions = new[] { "IsClaim:Claim", "IsEconom:Econom" }, Sortable = true)]
+	[Column("№ заказа", Order = 0, IconConditions = new[] { "IsClaim:Claim", "IsEconom:Econom", "IsNew:New" }, Sortable = true)]
 	public string OrderNumber { get; set; } = string.Empty;
 
 	[Column("Дата запуска", Visible = false, DisplayFormat = "dd.MM.yyyy", Sortable = true)]
@@ -77,6 +77,7 @@ public class SupplyViewModel
 	[Column("Д/А прим.", Order = 17, Visible = false, DisplayGroup = "supply_status")]
 	public string? WoodAlumComment { get; set; }
 
+	public bool IsNew { get; set; }
 
 	[Column("***", Order = 2, Visible = false, IconConditions = new[] { "IsClaim:Claim",
 																		"IsEconom:Econom",

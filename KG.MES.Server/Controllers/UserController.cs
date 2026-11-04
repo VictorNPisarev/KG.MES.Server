@@ -7,7 +7,7 @@ namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public partial class UsersController : ControllerBase
+public partial class UsersController : BaseController
 {
 	#region POST
 

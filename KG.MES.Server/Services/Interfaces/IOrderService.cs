@@ -5,7 +5,8 @@ namespace KG.MES.Shared.Services.Interfaces;
 public interface IOrderService
 {
 	Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, List<FilterCondition>? filters = null);
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, Guid? currentUserId, 
+		Guid? currentRoleId, List<FilterCondition>? filters = null);
 
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
@@ -29,11 +30,14 @@ public interface IOrderService
 	Task<OrderCommercialDto> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto);
 	Task<List<CustomerDto>> GetCustomersAsync(string? search = null);
 	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
-	Task<PaginatedResponse<SalesOrderDto>> GetSalesOrdersAsync(
-		int page, int limit, string? sortBy, string? sortOrder, string? orderNumber, string? customerName, Guid? managerId);
+		int page, int limit, string? sortBy, string? sortOrder,
+		List<Guid>? workplaceIds, string? orderNumber,
+		string? customerName, Guid? managerId,
+		Guid? currentUserId, Guid? currentRoleId);
+	Task<List<NotificationGroupDto<SalesOrderDto>>> GetNewSalesOrdersAsync(Guid userId, Guid? roleId);
 	Task<OrderRequestDto?> GetOrderForEditAsync(Guid orderId);
 	Task<bool> UpdateOrderAsync(Guid orderId, OrderRequestDto dto);
 	Task<bool> DeleteOrderAsync(Guid orderId);
 	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
+	Task<List<NotificationGroupDto<OrderDto>>> GetNewOrdersAsync(Guid userId, Guid? roleId);
 }
