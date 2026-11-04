@@ -83,16 +83,6 @@ public partial class OrderListView<TListItem, TCardItem> : ComponentBase
 
 	protected override async Task OnInitializedAsync()
 	{
-<<<<<<< Updated upstream
-=======
-		_myInstanceId = ++_instanceCounter;
-		debugMessage += $"Компонент создан. Экземпляр №{_myInstanceId}\n";
-		StateHasChanged();
-
-		debugMessage += "Начало инициализации\n";
-		StateHasChanged(); // Чтобы сразу отобразить
-
->>>>>>> Stashed changes
 		columnInfos = ColumnHelper.GetColumns<TListItem>();
 
 		await LoadSettings();

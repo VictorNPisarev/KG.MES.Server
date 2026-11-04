@@ -27,12 +27,8 @@ builder.Services.AddHttpClient<ProductionApiService>();
 builder.Services.AddHttpClient<AuthService>();
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddSingleton(LoadViewSettings());
-<<<<<<< Updated upstream
-builder.Services.AddSingleton<SupplyService>();
-=======
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
->>>>>>> Stashed changes
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
 builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<UserSessionService>();
