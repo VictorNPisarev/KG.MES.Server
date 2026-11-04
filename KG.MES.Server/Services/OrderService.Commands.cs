@@ -260,12 +260,15 @@ public partial class OrderService
 			}
 
 			// Завершаю текущий участок
+			Console.WriteLine($"Завершаю текущий участок");
 			await UpdateStatusAsync(productionOrder.Id, workplaceId, OrderStatus.WorkplaceStatus.Completed);
 
 			// Автоматически завершаю все предыдущие
+			Console.WriteLine($"Автоматически завершаю все предыдущиеок");
 			await AutoCompletePreviousWorkplacesAsync( productionOrderId, workplaceId, userId, source);
 
 			// Логирую текущее завершения
+			Console.WriteLine($"Логирую текущее завершения");
 			var operationLog = new OperationLog
 			{
 				Id = Guid.NewGuid(),
@@ -283,9 +286,10 @@ public partial class OrderService
 			await context.SaveChangesAsync();
 
 			// Если завершил участок упаковки — перевожу в "ГОТОВО"
+			Console.WriteLine($"Если завершил участок упаковки — перевожу в \"ГОТОВО\"");
 			if (workplace?.Code == WorkplaceCodes.Packing)
 			{
-				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
+				await SetOrderCompleteInternalAsync(productionOrder.OrderId, null, null);
 			}
 
 			await transaction.CommitAsync();

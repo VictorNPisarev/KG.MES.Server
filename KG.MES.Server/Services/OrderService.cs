@@ -333,94 +333,93 @@ public partial class OrderService : IOrderService
 		};
 	}
 
-	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(
-		Guid orderId, Guid? userId, string? notes)
+	// Публичный метод (для прямого вызова из контроллера)
+	public async Task<SetOrderStatusResultDto> SetOrderCompleteAsync(Guid orderId, Guid? userId, string? notes)
 	{
-		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
-		if (!orderExists)
-		{
-			logger.LogWarning($"Order {orderId} not found");
-			return new SetOrderStatusResultDto
-			{
-				Success = false,
-				Message = $"Заказ {orderId} не найден"
-			};
-		}
-
 		using var transaction = await context.Database.BeginTransactionAsync();
-
 		try
 		{
-			var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
-			
+			// Вызываем внутренний метод, где вся логика
+			var result = await SetOrderCompleteInternalAsync(orderId, userId, notes);
+
+			// Если бизнес-логика вернула ошибку — откатываем
 			if (!result.Success)
 			{
 				await transaction.RollbackAsync();
 				return result;
 			}
-			// Меняю все следы заказа (footprint) на completed
 
-			var order = await context.Orders
-				.Include(o => o.ProductionOrder)
-				.FirstOrDefaultAsync(o => o.Id == orderId);
+			// Сохраняем всё, что накопилось в ChangeTracker
+			await context.SaveChangesAsync();
+			await transaction.CommitAsync();
 
-			if (order?.ProductionOrder == null)
+			return result;
+		}
+		catch (Exception ex)
+		{
+			await transaction.RollbackAsync();
+			logger.LogError(ex, "Error in SetOrderCompleteAsync");
+			return new SetOrderStatusResultDto { Success = false, Message = ex.Message };
+		}
+	}
+
+	internal async Task<SetOrderStatusResultDto> SetOrderCompleteInternalAsync(Guid orderId, Guid? userId, string? notes)
+	{
+		// 1. Меняем статус на "ГОТОВО" (через SetOrderStatusAsync, который тоже БЕЗ транзакции)
+		var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
+
+		if (!result.Success)
+			return result; // Возвращаем ошибку, публичный метод сделает Rollback
+
+		// 2. Ищем заказ для обновления футпринтов
+		var order = await context.Orders
+			.Include(o => o.ProductionOrder)
+			.FirstOrDefaultAsync(o => o.Id == orderId);
+
+		if (order?.ProductionOrder == null)
+		{
+			return new SetOrderStatusResultDto
 			{
-				await transaction.RollbackAsync();
-				return new SetOrderStatusResultDto
-				{
-					Success = false,
-					Message = "Производственный заказ не найден"
-				};
-			}
+				Success = false,
+				Message = "Производственный заказ не найден"
+			};
+		}
 
+		// 3. Меняем все следы на completed
+		var footprints = await context.OrderFootprints
+			.Where(fp => fp.ProductionOrderId == order.ProductionOrder.Id)
+			.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
+			.ToListAsync();
 
-
-			var footprints = await context.OrderFootprints
-				.Where(fp => fp.ProductionOrderId == order!.ProductionOrder!.Id)
-				.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
-				.ToListAsync();
-
+		if (footprints.Any())
+		{
 			foreach (var footprint in footprints)
 			{
 				footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
 
-				context.OperationLogs.Add(
-					new OperationLog
-					{
-						Id = Guid.NewGuid(),
-						ProductionOrderId = footprint.ProductionOrderId,
-						WorkplaceId = footprint.WorkplaceId,
-						UserId = userId, //TODO
-						OperationType = "COMPLETE", //TODO
-						OperationTime = DateTime.UtcNow,
-						CreatedAt = DateTime.UtcNow,
-						Notes = "Цикл производства завершен",
-						Source = "Handle change by Order COMPLETE"
-					}
-				);
+				// Логируем операцию
+				context.OperationLogs.Add(new OperationLog
+				{
+					Id = Guid.NewGuid(),
+					ProductionOrderId = footprint.ProductionOrderId,
+					WorkplaceId = footprint.WorkplaceId,
+					UserId = userId,
+					OperationType = "COMPLETE",
+					OperationTime = DateTime.UtcNow,
+					CreatedAt = DateTime.UtcNow,
+					Notes = "Цикл производства завершен",
+					Source = "Handle change by Order COMPLETE"
+				});
 			}
-
-			await context.SaveChangesAsync();
-			await transaction.CommitAsync();
-
-			return new SetOrderStatusResultDto
-			{
-				Success = true,
-				Message = "Заказ отгружен, следы завершены"
-			};
 		}
-		catch (Exception ex)
+
+		return new SetOrderStatusResultDto
 		{
-			logger.LogError(ex, "Error in SetOrderCompleteAsync");
-			return new SetOrderStatusResultDto
-			{
-				Success = false,
-				Message = ex.Message
-			};
-		}
+			Success = true,
+			Message = "Заказ готов, следы завершены"
+		};
 	}
-
+	
 	public async Task<SetOrderStatusResultDto> SetOrderDepartureAsync(
 		Guid orderId, Guid? userId, string? notes)
 	{
