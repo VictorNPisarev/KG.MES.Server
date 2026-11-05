@@ -8,7 +8,7 @@ namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin,Advanced,Middle")]
+[Authorize(Roles = "Admin,Advanced")]
 //[Authorize(Roles = "Admin,User")]
 public partial class AdminController : BaseController
 {
@@ -89,4 +89,20 @@ public partial class AdminController : BaseController
 	[HttpGet("roles")]
 	public Task<IActionResult> GetRoles()
 		=> GetRolesHandler();
+
+	//---- Notifications ----
+	[HttpGet("notifications/subscriptions")]
+	public Task<IActionResult> GetSubscriptions() => GetSubscriptionsHandler();
+
+	[HttpPost("notifications/subscriptions")]
+	public Task<IActionResult> CreateSubscription([FromBody] NotificationSubscribeRequestDto dto) => CreateSubscriptionHandler(dto);
+
+	[HttpPost("notifications/subscriptions/{id}/toggle")]
+	public Task<IActionResult> ToggleSubscription(Guid id) => ToggleSubscriptionHandler(id);
+
+	[HttpDelete("notifications/subscriptions/{id}")]
+	public Task<IActionResult> DeleteSubscription(Guid id) => DeleteSubscriptionHandler(id);
+
+	[HttpGet("notifications/events")]
+	public Task<IActionResult> GetEvents() => GetEventsHandler();
 }

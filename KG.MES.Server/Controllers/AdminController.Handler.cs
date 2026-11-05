@@ -12,11 +12,14 @@ public partial class AdminController
 {
 	private readonly ILicenseService licenseService;
 	private readonly IUserService userService;
+	private readonly INotificationAdminService notificationAdminService;
 
-	public AdminController(ILicenseService licenseService, IUserService userService)
+
+	public AdminController(ILicenseService licenseService, IUserService userService, INotificationAdminService notificationAdminService)
 	{
 		this.licenseService = licenseService;
 		this.userService = userService;
+		this.notificationAdminService = notificationAdminService;
 	}
 
 	public Task<IActionResult> GetLicensesHandler(int page, int limit, string? search, LicenseType? type, bool? isActive)
@@ -210,5 +213,38 @@ public partial class AdminController
 		if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
 			throw new UnauthorizedAccessException("User ID not found in token");
 		return userId;
+	}
+
+	//--------------
+	public async Task<IActionResult> GetSubscriptionsHandler()
+	{
+		var result = await notificationAdminService.GetSubscriptionsAsync();
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> CreateSubscriptionHandler(NotificationSubscribeRequestDto dto)
+	{
+		var id = await notificationAdminService.CreateSubscriptionAsync(dto);
+		return Ok(new { Id = id });
+	}
+
+	public async Task<IActionResult> ToggleSubscriptionHandler(Guid id)
+	{
+		var success = await notificationAdminService.ToggleSubscriptionAsync(id);
+		if (!success) return NotFound();
+		return Ok();
+	}
+
+	public async Task<IActionResult> DeleteSubscriptionHandler(Guid id)
+	{
+		var success = await notificationAdminService.DeleteSubscriptionAsync(id);
+		if (!success) return NotFound();
+		return Ok();
+	}
+
+	public async Task<IActionResult> GetEventsHandler()
+	{
+		var result = await notificationAdminService.GetEventsAsync();
+		return Ok(result);
 	}
 }
