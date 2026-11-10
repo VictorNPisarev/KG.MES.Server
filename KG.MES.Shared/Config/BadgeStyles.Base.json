@@ -1,0 +1,87 @@
+{
+	"groups":
+	{
+		"workplaces":
+		{
+			"none": "badge-workplace-none",
+			"не определен": "badge-workplace-undefined",
+			"торцовка": "badge-workplace-торцовка",
+			"столярка": "badge-workplace-столярка",
+			"профилирование": "badge-workplace-профилирование",
+			"сборка": "badge-workplace-сборка",
+			"шлифовка": "badge-workplace-шлифовка",
+			"покраска": "badge-workplace-покраска",
+			"фурнитура": "badge-workplace-фурнитура",
+			"остекление": "badge-workplace-остекление",
+			"упаковка": "badge-workplace-упаковка",
+			"готово": "badge-workplace-готово",
+			"отгружен": "badge-workplace-отгружен"
+		},
+		"features":
+		{
+			"рекламация": "badge-рекламация",
+			"эконом": "badge-эконом",
+			"оплачен, не запущен": "badge-оплачен-не-запущен"
+		},
+		"workplace_statuses":
+		{
+			"planned": "badge-ghost-dark",
+			"pending": "bg-warning bg-opacity-25 text-warning",
+			"active": "bg-primary bg-opacity-25 text-primary",
+			"completed": "bg-success bg-opacity-25 text-success",
+			"joinery": "bg-warning bg-opacity-25 text-warning"
+		},
+		"workplace_logs":
+		{
+			"COMPLETE": "bg-success bg-opacity-25 text-success",
+			"START": "bg-primary bg-opacity-25 text-primary"
+		},
+		"supply_statuses":
+		{
+			"not_available": "bg-danger bg-opacity-25 text-danger",
+			"delayed": "bg-warning bg-opacity-25 text-warning",
+			"ordered": "bg-primary bg-opacity-25 text-primary",
+			"in_stock": "bg-success bg-opacity-25 text-success"
+		},
+		"booleans":
+		{
+			"True": "bg-success",
+			"False": "bg-light text-dark"
+		},
+		"machines":
+		{
+			"Conturex": "bg-primary",
+			"Угловой центр": "bg-success"
+		}
+	},
+	"defaults":
+	{
+		"defaultStatus": "bg-light text-dark",
+		"defaultBoolean": "bg-light text-dark"
+	},
+	"displays":
+	{
+		"workplace_name":
+		{
+			"none": "Ожидает",
+			"торцовка": "Торцовка",
+			"столярка": "Столярка",
+			"профилирование": "Профилирование",
+			"сборка": "Сборка",
+			"шлифовка": "Шлифовка",
+			"покраска": "Покраска",
+			"фурнитура": "Фурнитура",
+			"остекление": "Остекление",
+			"упаковка": "Упаковка",
+			"готово": "Готово",
+			"отгружен": "Отгружен"
+		},
+		"supply_status":
+		{
+			"not_available": "Нет в наличии",
+			"delayed": "Задерживается",
+			"ordered": "Заказан",
+			"in_stock": "На складе"
+		}
+	}
+}

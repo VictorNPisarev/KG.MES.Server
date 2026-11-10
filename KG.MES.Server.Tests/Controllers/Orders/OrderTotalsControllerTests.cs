@@ -1,28 +1,19 @@
 using System.Net;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Shared.Data;
+using KG.MES.Server.Tests.Helpers;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Serialization;
-using KG.MES.Shared.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit;
 
-namespace KG.MES.Shared.Tests.Controllers.Orders;
+namespace KG.MES.Server.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderTotalsControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
 
-	public OrderTotalsControllerTests(WebApplicationFactory<Program> factory)
+	public OrderTotalsControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	protected static readonly JsonSerializerOptions jsonOptions = new()
@@ -36,14 +27,13 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 	public async Task GetOrders_ShouldReturnTotalsForAllRecords()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Totals");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var order1Id = Guid.NewGuid();
 		var order2Id = Guid.NewGuid();
 		var workplaceId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
 			.WithOrder(o =>
 			{
@@ -64,8 +54,7 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 				o.PlateCount = 1;
 				o.PlateArea = 1.5m;
 			})
-			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplaceId; })
-			.Build(customFactory.Services);
+			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplaceId; }));
 
 		// Act
 		var response = await client.GetAsync("/api/orders?page=1&limit=50");
@@ -95,14 +84,13 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 	public async Task GetOrders_WithFilter_ShouldReturnTotalsOnlyForFilteredData()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Totals_Filtered");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var order1Id = Guid.NewGuid();
 		var order2Id = Guid.NewGuid();
 		var workplaceId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
 			.WithOrder(o => 
 			{
@@ -125,8 +113,7 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 				o.PlateArea = 1.5m;
 				o.IsEconom = true;
 			})
-			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplaceId; })
-			.Build(customFactory.Services);
+			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplaceId; }));
 
 		// Act — фильтруем только IsEconom = true
 		var filters = Uri.EscapeDataString(
@@ -159,8 +146,7 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 	public async Task GetOrders_WithNoData_ShouldReturnZeroTotals()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Totals_Empty");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		// Нет данных в БД
 
@@ -179,29 +165,5 @@ public class OrderTotalsControllerTests : IClassFixture<WebApplicationFactory<Pr
 		});
 
 		result?.Totals.Should().BeNull();
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName)
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning));
-				});
-
-				services.ConfigureHttpJsonOptions(options =>
-				{
-					options.SerializerOptions.Converters.Add(new TotalsDtoConverter());
-				});
-
-			});
-		});
 	}
 }

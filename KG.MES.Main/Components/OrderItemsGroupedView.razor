@@ -1,0 +1,193 @@
+@using KG.MES.Main.Models
+@using KG.MES.Shared.Common.Extensions
+@using KG.MES.Main.Models.Enums
+
+@if (GroupedItems?.Any() == true)
+{
+	<div class="groups-container">
+		<div class="accordion" id="groupsAccordion">
+			@{
+				var groupIndex = 0;
+				foreach (var group in GroupedItems)
+				{
+					var groupId = $"group-{groupIndex}";
+					var collapseId = $"collapse-{groupId}";
+					
+					<div class="accordion-item mb-3 border rounded">
+						<h2 class="accordion-header">
+							<button class="accordion-button @(groupIndex == 0 ? "" : "collapsed")" 
+									type="button" 
+									data-bs-toggle="collapse" 
+									data-bs-target="#@collapseId"
+									aria-expanded="@(groupIndex == 0 ? "true" : "false")">
+								<div class="d-flex justify-content-between align-items-center w-100 me-3">
+									<div class="d-flex align-items-center gap-3">
+										<i class="bi @group.Key.GetIcon()"></i>
+										<h6 class="mb-0">
+											@group.Key.GetDescription()
+											<span class="badge bg-secondary ms-2">@group.Value.Sum(i => i.Piece)</span>
+										</h6>
+									</div>
+									<div class="text-muted">
+										Сумма: @group.Value.Sum(i => i.TotalPrice).ToString("C")
+									</div>
+								</div>
+							</button>
+						</h2>
+						<div id="@collapseId" 
+							 class="accordion-collapse collapse @(groupIndex == 0 ? "show" : "")" 
+							 data-bs-parent="#groupsAccordion">
+							<div class="accordion-body p-0">
+								<div class="table-responsive">
+									<table class="table table-active mb-0 w-100">
+										<!--<thead class="table-dark">
+											<tr>
+												<th style="min-width: 40px">#</th>
+												<th>Тип</th>
+												<th>Артикул</th>
+												<th>Описание</th>
+												<th>Количество</th>
+												<th style="min-width: 120px; text-align: center">Цена за ед.</th>
+												<th style="min-width: 120px; text-align: center">Сумма</th>
+											</tr>
+										</thead>-->
+											<tbody>
+												@foreach (var item in group.Value)
+												{
+													<tr class="bg-warning bg-opacity-10 product-row">
+														<td style="text-align: center; vertical-align: top; white-space: nowrap;">
+															Поз. @item.ItemNumber
+														</td>
+														<td colspan="2" style="white-space: nowrap; padding-left: 1rem; vertical-align: top;">
+															<div style="display: flex; flex-direction: column;">
+																<div>Тип: <strong>@item.ItemType.GetDescription()</strong></div>
+																<div>Артикул: <strong>@item.ArticleNumber</strong></div>
+																@if (item.ItemType == DocumentItemType.Konstruktion)
+																{
+																	<div>Вид дерева: <strong>@item.WoodType</strong></div>
+																	<div>Цвет: <strong>@item.Color</strong></div>
+																	<div>Двухстор. покраска: 
+																		@if (item.DoubleColor())
+																		{
+																			<i class="bi bi-check-circle-fill text-success"></i>
+																		}
+																		else
+																		{
+																			<i class="bi bi-x-circle-fill text-danger"></i>
+																		}
+																	</div>
+																	<div>Форма: <strong>@item.FormType.GetDescription()</strong></div>
+																}
+															</div>
+														</td>
+														<td style="padding-left: 1rem; vertical-align: top;">
+															<div style="display: flex; flex-direction: column;">
+																<div><strong>@item.ShortDescription</strong></div>
+																@if (!string.IsNullOrEmpty(item.Description))
+																{
+																	<div><small class="text-muted">@item.Description</small></div>
+																}
+															</div>
+														</td>
+														<td style="white-space: nowrap; padding-left: 1rem; vertical-align: top;">
+															@if(item.ItemType != DocumentItemType.Konstruktion 
+																&& item.ItemType != DocumentItemType.MosquitoNet
+																&& item.ItemType != DocumentItemType.GlassProduct
+																&& item.ItemType != DocumentItemType.Casing)
+															{
+																<div>
+																	@item.Quantity.ToString("F2") @item.Unit
+																</div>
+															}
+															<div>@item.Piece.ToString() шт.</div>
+														</td>
+														<td style="text-align: center; padding-left: 1rem; vertical-align: top;" class="text-currency">
+															@item.UnitPrice.ToString("C")
+														</td>
+														<td style="text-align: center; padding-left: 1rem; vertical-align: top;" class="text-currency">
+															<strong>@item.TotalPrice.ToString("C")</strong>
+														</td>
+													</tr>
+
+													@if (item.HasMaterials)
+													{
+														<tr class="bg-warning bg-opacity-10">
+															<td colspan="7" class="p-0 border-0">
+																<div class="p-3">
+																	<div class="accordion" id="materials-accordion-@item.ItemNumber">
+																		<div class="accordion-item">
+																			<h2 class="accordion-header">
+																				<button class="accordion-button collapsed" type="button" 
+																						data-bs-toggle="collapse" 
+																						data-bs-target="#materials-collapse-@item.ItemNumber">
+																					<i class="bi bi-tools me-2"></i> 
+																					Технические данные и материалы
+																				</button>
+																			</h2>
+																			<div id="materials-collapse-@item.ItemNumber" class="accordion-collapse collapse">
+																				<div class="accordion-body">
+																					<TechnicalDataView Item="@item" />
+																				</div>
+																			</div>
+																		</div>
+																	</div>
+																</div>
+															</td>
+														</tr>
+													}
+
+													@* Материалы позиции (аккордеон) *@
+													@if (item.Materials != null && item.Materials.Any())
+													{
+														<tr class="bg-warning bg-opacity-10">
+															<td colspan="7" class="p-0 border-0">
+																<div class="p-3">
+																	<MaterialsGroupedView MaterialItems="@item.GroupByTypes()" />
+																</div>
+															</td>
+														</tr>
+													}
+
+													
+													<!-- Разделитель между позициями -->
+													<tr class="separator-row">
+														<td colspan="7" style="height: 0.5rem; padding: 0; border: none;"></td>
+													</tr>
+												}
+											</tbody>
+											<tfoot>
+												<tr class="table-info">
+													<td colspan="5" class="text-end"><strong>Итого по группе:</strong></td>
+													<td colspan="2"><strong>@group.Value.Sum(i => i.TotalPrice).ToString("C")</strong></td>
+												</tr>
+											</tfoot>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					
+					groupIndex++;
+				}
+			}
+		</div>
+		
+		<!-- Общий итог -->
+		<div class="card mt-3 bg-light">
+			<div class="card-body text-end">
+				<h5>Общая сумма заказа: @GroupedItems.Sum(item => item.Value.Sum(i => i.TotalPrice)).ToString("C")</h5>
+			</div>
+		</div>
+	</div>
+}
+else
+{
+	<div class="alert alert-info">
+		<i class="bi bi-info-circle"></i> Нет товаров в заказе
+	</div>
+}
+
+@code {
+	[Parameter]
+	public Dictionary<DocumentItemType, List<DocumentItem>>? GroupedItems { get; set; }
+}

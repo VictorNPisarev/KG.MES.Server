@@ -1,27 +1,21 @@
 // KG.MES.Server/Controllers/SupplyController.cs
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
-public partial class SupplyController : ControllerBase
+[Authorize]
+public partial class SupplyController : BaseController
 {
+	#region GET
+
 	// GET: api/orders/{orderId}/supplies
 	[HttpGet("orders/{orderId}/supplies")]
 	public Task<IActionResult> GetOrderSupplyStatuses(Guid orderId) => GetOrderSupplyStatusesHandler(orderId);
-
-	// PUT: api/orders/{orderId}/supply/{supplyTypeId}
-	[HttpPut("orders/{orderId}/supply/{supplyTypeId}")]
-	public Task<IActionResult> UpdateSupplyStatus(Guid orderId, Guid supplyTypeId, [FromBody] UpdateSupplyItemRequest request)
-		=> UpdateSupplyStatusHandler(orderId, supplyTypeId, request);
-
-	// PUT: api/orders/{orderId}/supplies
-	[HttpPut("orders/{orderId}/supplies")]
-	public Task<IActionResult> UpdateAllSupplyStatuses(Guid orderId, [FromBody] UpdateOrderSupplyItemsRequestDto request)
-		=> UpdateAllSupplyStatusesHandler(orderId, request);
 	
 	// GET: api/supplies/conditions
 	[HttpGet("supplies/conditions")]
@@ -38,8 +32,35 @@ public partial class SupplyController : ControllerBase
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null)
 		=> GetAllSupplyStatusesHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds);
 
+	[HttpGet("supply-items/{supplyItemId}/history")]
+	public Task<IActionResult> GetSupplyHistory(Guid supplyItemId)
+		=> GetSupplyHistoryHandler(supplyItemId);
+
+	[HttpGet("supplies/new")]
+	public Task<IActionResult> GetNewSupplyOrders() => GetNewSupplyOrdersHandler();
+
+	#endregion GET
+
+	#region POST
+
 	// GET: api/supply/orders/fasets
 	[HttpPost("supply/orders/facets")]
 	public Task<IActionResult> GetSupplyOrderFacets([FromBody] FilterFacetsRequestDto request)
 		=> GetFilterFacetsHandler(request);
+
+	#endregion POST
+
+	#region PUT
+
+	// PUT: api/orders/{orderId}/supply/{supplyTypeId}
+	[HttpPut("orders/{orderId}/supply/{supplyTypeId}")]
+	public Task<IActionResult> UpdateSupplyStatus(Guid orderId, Guid supplyTypeId, [FromBody] UpdateSupplyItemRequest request)
+		=> UpdateSupplyStatusHandler(orderId, supplyTypeId, request);
+
+	// PUT: api/orders/{orderId}/supplies
+	[HttpPut("orders/{orderId}/supplies")]
+	public Task<IActionResult> UpdateAllSupplyStatuses(Guid orderId, [FromBody] UpdateOrderSupplyItemsRequestDto request)
+		=> UpdateAllSupplyStatusesHandler(orderId, request);
+
+	#endregion PUT
 }

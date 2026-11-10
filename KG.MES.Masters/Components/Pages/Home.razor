@@ -1,0 +1,9 @@
+﻿@page "/"
+@using KG.MES.Shared.Config
+@using KG.MES.Shared.Models.ViewModels
+@using KG.MES.UI.Shared.Components
+
+<AuthorizedPage>
+	<OrderListView TListItem="MastersOrderViewModel" TCardItem="OrderViewModel" TListItemDto="MastersOrderDto" TCardDto="OrderDto" LoadItems="LoadOrdersList" LoadNewItems="LoadNewOrdersList"
+		LoadItem="LoadOrderDetails" Settings="@AppSettings" />
+</AuthorizedPage>

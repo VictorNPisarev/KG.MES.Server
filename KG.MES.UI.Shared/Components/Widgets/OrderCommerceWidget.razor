@@ -1,0 +1,33 @@
+@if (isLoading)
+{
+	<div class="text-center py-3">
+		<div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+	</div>
+}
+else if (commerceOrder != null)
+{
+	<div class="commerce-panel">
+		<h6 class="trace-title"><i class="bi bi-briefcase"></i> Коммерческая информация</h6>
+		<table class="commerce-table">
+			<tbody>
+				<tr>
+					<td class="commerce-label">Менеджер</td>
+					<td><strong>@(commerceOrder.Manager ?? "—")</strong></td>
+				</tr>
+				<tr>
+					<td class="commerce-label">Контрагент</td>
+					<td><strong>@(commerceOrder.CustomerName ?? "—")</strong></td>
+				</tr>
+				<tr>
+					<td class="commerce-label">Цена</td>
+					<td><strong>@commerceOrder.Price.ToString("C")</strong></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+}
+else
+{
+	<p class="text-muted small mb-0">Нет коммерческих данных</p>
+}
+

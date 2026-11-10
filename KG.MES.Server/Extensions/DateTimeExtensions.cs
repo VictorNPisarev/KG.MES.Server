@@ -1,11 +1,11 @@
 using System.Runtime.CompilerServices;
 
-namespace KG.MES.Shared.Extensions;
+namespace KG.MES.Server.Extensions;
 
 public static class DateTimeExtensions
 {
 	private static TimeZoneInfo? productionTimeZone;
-	private static readonly ILogger? logger;
+	//private static readonly ILogger? logger;
 
 	public static void Initialize(IConfiguration configuration)
 	{

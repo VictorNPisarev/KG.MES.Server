@@ -19,6 +19,14 @@ public class PaginatedResponse<T>
 	[JsonPropertyName("totals")]
 	public ITotalsDto? Totals { get; set; }
 
+	// Удобные свойства для UI
+	public int Page => Pagination.Page;
+	public int Limit => Pagination.Limit;
+	public int Total => Pagination.Total;
+	public int TotalPages => Pagination.Pages;
+	public bool HasNextPage => Page < TotalPages;
+	public bool HasPreviousPage => Page > 1;
+
 }
 
 public class PaginationInfo

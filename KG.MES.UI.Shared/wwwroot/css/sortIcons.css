@@ -1,0 +1,17 @@
+/* Неактивная сортировка — bi-arrow-down-up (уменьшенная) */
+.sort-icon-default {
+	font-size: 0.7rem !important;
+	color: #000000 !important;
+}
+
+/* Сортировка по возрастанию — bi-sort-down-alt (жёлтая) */
+.sort-icon-asc {
+	font-size: 1.2rem !important;
+	color: #335fd8 !important;
+}
+
+/* Сортировка по убыванию — bi-sort-down (зелёная) */
+.sort-icon-desc {
+	font-size: 1.2rem !important;
+	color: #d63062 !important;
+}

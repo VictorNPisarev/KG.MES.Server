@@ -3,9 +3,9 @@ using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 
-namespace KG.MES.Shared.Controllers;
+namespace KG.MES.Server.Controllers;
 
-public partial class SalesController : ControllerBase
+public partial class SalesController : BaseController
 {
 	private readonly IOrderService _orderService;
 	private readonly ILogger<SalesController> _logger;
@@ -28,7 +28,7 @@ public partial class SalesController : ControllerBase
 		}
 
 		var result = await _orderService.GetSalesOrdersAsync(
-			page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+			page, limit, sortBy, sortOrder, workplaceIds, orderNumber, customerName, managerId, CurrentUserId, CurrentRoleId);
 
 		return Ok(result);
 	}
@@ -108,6 +108,22 @@ public partial class SalesController : ControllerBase
 			return BadRequest(new { error = "Fields are required" });
 
 		var result = await _orderService.GetFilterFacetsAsync<SalesOrderDto>(request);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> GetNewSalesOrdersHandler()
+	{
+		Console.WriteLine(":::: GetNewSalesOrdersHandler ::::");
+
+		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
+			return Ok(new List<SalesOrderDto>());
+
+		Console.WriteLine($":::: GetNewSalesOrdersHandler :: CurrentUserId - {CurrentUserId} :: CurrentRoleId - {CurrentRoleId} ::::");
+
+		var result = await _orderService.GetNewSalesOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
+
+		Console.WriteLine($":::: GetNewSalesOrdersHandler :: result.Count - {result.Count} ::::");
+
 		return Ok(result);
 	}
 }
