@@ -4,18 +4,16 @@ using FluentAssertions;
 using KG.MES.Server.Data;
 using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using KG.MES.Server.Tests.Helpers;
 
-namespace KG.MES.Shared.Tests.Controllers.Orders;
+namespace KG.MES.Server.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
 public class OrdersWorkplaceControllerTests : TestBase
@@ -266,10 +264,9 @@ public class OrdersWorkplaceControllerTests : TestBase
 		var packingWorkplaceId = Guid.NewGuid();
 		var completeWorkplaceId = Guid.NewGuid();
 
-		var customFactory = SetupTestFactory("TestDb_PackingComplete");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w =>
 			{
 				w.Id = packingWorkplaceId;
@@ -308,7 +305,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 				t.FromWorkplaceId = packingWorkplaceId;
 				t.ToWorkplaceId = completeWorkplaceId;
 			})
-			.Build(customFactory.Services);
+		);
 
 		// Act
 		var request = new CompleteWorkplaceRequestDto
@@ -334,7 +331,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// Проверяем логи
@@ -382,10 +379,9 @@ public class OrdersWorkplaceControllerTests : TestBase
 		var workplace3Id = Guid.NewGuid();
 		var completeWorkplaceId = Guid.NewGuid();
 
-		var customFactory = SetupTestFactory("TestDb_MasterComplete");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Сборка"; w.IsWorkplace = true; w.Level = 30; })
 			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Покраска"; w.IsWorkplace = true; w.Level = 35; })
 			.WithWorkplace(w => { w.Id = workplace3Id; w.Name = "Шлифовка"; w.IsWorkplace = true; w.Level = 25; })
@@ -410,9 +406,9 @@ public class OrdersWorkplaceControllerTests : TestBase
 				ol.Notes = "Начало работы на Сборке";
 				ol.Source = "Test";
 			})
-			.Build(customFactory.Services);
+		);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// Проверяем начальное состояние
@@ -484,10 +480,9 @@ public class OrdersWorkplaceControllerTests : TestBase
 		var completeWorkplaceId = Guid.NewGuid();
 		var departedWorkplaceId = Guid.NewGuid();
 
-		var customFactory = SetupTestFactory("TestDb_Departure");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w =>
 			{
 				w.Id = completeWorkplaceId;
@@ -515,7 +510,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 				po.OrderId = orderId;
 				po.CurrentWorkplaceId = completeWorkplaceId;
 			})
-			.Build(customFactory.Services);
+		);
 
 		// Act — вызываем API отгрузки
 		var request = new { userId, notes = "Заказ отгружен клиенту" };
@@ -524,7 +519,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// Проверяем лог отгрузки
@@ -550,8 +545,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 	public async Task CompleteOrderWorkplace_ShouldAutoCompletePreviousWorkplaces()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_AutoComplete");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var userId = Guid.NewGuid();
 
@@ -564,7 +558,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			// Участки
 			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Торцовка"; w.IsWorkplace = true; w.Level = 10; })
 			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Профилирование"; w.IsWorkplace = true; w.Level = 20; })
@@ -603,7 +597,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 				ol.Source = "Test";
 			})
 
-			.Build(customFactory.Services);
+		);
 
 		// Act — завершаем Упаковку (workplace4)
 		var request = new CompleteWorkplaceRequestDto
@@ -620,7 +614,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// 1. Проверяем логи
@@ -668,8 +662,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 	public async Task CompleteOrderWorkplace_WhenAllPreviousAlreadyCompleted_ShouldNotCreateDuplicates()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_AutoComplete_NoDuplicates");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var userId = Guid.NewGuid();
 
@@ -679,7 +672,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplace1Id; w.Name = "Торцовка"; w.IsWorkplace = true; w.Level = 10; })
 			.WithWorkplace(w => { w.Id = workplace2Id; w.Name = "Упаковка"; w.Code = "PACKING"; w.IsWorkplace = true; w.Level = 20; })
 			.WithWorkplaceTransition(t => { t.FromWorkplaceId = workplace1Id; t.ToWorkplaceId = workplace2Id; })
@@ -705,7 +698,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 				ol.Source = "Test";
 			})
 
-			.Build(customFactory.Services);
+		);
 
 		// Act — завершаем Упаковку
 		var request = new CompleteWorkplaceRequestDto
@@ -722,7 +715,7 @@ public class OrdersWorkplaceControllerTests : TestBase
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = customFactory.Services.CreateScope();
+		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// Проверяем, что для Торцовки только ОДИН лог COMPLETE

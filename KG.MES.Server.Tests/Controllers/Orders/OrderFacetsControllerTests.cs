@@ -2,42 +2,32 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
-using KG.MES.Server.Data;
+using KG.MES.Server.Tests.Helpers;
 using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Xunit;
 
 namespace KG.MES.Shared.Tests.Controllers.Orders;
 
 [Trait("Category", "Orders")]
-public class OrderFacetsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class OrderFacetsControllerTests : TestBase
 {
-	private readonly WebApplicationFactory<Program> _factory;
 
-	public OrderFacetsControllerTests(WebApplicationFactory<Program> factory)
+	public OrderFacetsControllerTests(WebApplicationFactory<Program> factory) : base(factory)
 	{
-		_factory = factory;
 	}
 
 	[Fact]
 	public async Task GetFacets_ShouldReturnDistinctValuesWithCounts()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Facets");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var order1Id = Guid.NewGuid();
 		var order2Id = Guid.NewGuid();
 		var order3Id = Guid.NewGuid();
 		var workplaceId = Guid.NewGuid();
 
-		new TestDataBuilder()
+		BuildTestData(builder => builder
 			.WithWorkplace(w => { w.Id = workplaceId; w.Name = "Сборка"; w.IsWorkplace = true; })
 			.WithOrder(o =>
 			{
@@ -71,8 +61,7 @@ public class OrderFacetsControllerTests : IClassFixture<WebApplicationFactory<Pr
 				o.PlateArea = 0m;
 				o.IsEconom = true;
 			})
-			.WithProductionOrder(po => { po.OrderId = order3Id; po.CurrentWorkplaceId = workplaceId; po.Machine = "Угловой центр"; })
-			.Build(customFactory.Services);
+			.WithProductionOrder(po => { po.OrderId = order3Id; po.CurrentWorkplaceId = workplaceId; po.Machine = "Угловой центр"; }));
 
 		var request = new FilterFacetsRequestDto
 		{
@@ -106,8 +95,7 @@ public class OrderFacetsControllerTests : IClassFixture<WebApplicationFactory<Pr
 	public async Task GetFacets_WithUnknownField_ShouldReturnEmptyList()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Facets_Unknown");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var request = new FilterFacetsRequestDto
 		{
@@ -132,8 +120,7 @@ public class OrderFacetsControllerTests : IClassFixture<WebApplicationFactory<Pr
 	public async Task GetFacets_WithEmptyFields_ShouldReturnBadRequest()
 	{
 		// Arrange
-		var customFactory = SetupTestFactory("TestDb_Facets_Empty");
-		var client = customFactory.CreateClient();
+		var client = CreateClient();
 
 		var request = new FilterFacetsRequestDto { Fields = new List<string>() };
 
@@ -142,23 +129,5 @@ public class OrderFacetsControllerTests : IClassFixture<WebApplicationFactory<Pr
 
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName)
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning));
-				});
-			});
-		});
 	}
 }

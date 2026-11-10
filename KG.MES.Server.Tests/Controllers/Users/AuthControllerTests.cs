@@ -184,7 +184,7 @@ public class AuthControllerTests : TestBase
 		response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
 
 		var json = await ParseJsonResponse(response);
-		json.GetProperty("error").GetString().Should().Be("License has expired");
+		json.GetProperty("error").GetString().Should().Be("Лицензия истекла");
 	}
 
 	[Fact]

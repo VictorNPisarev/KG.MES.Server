@@ -216,8 +216,8 @@ public class LicenseServiceTests : IDisposable
 		updatedLicense.Devices.First().Should().NotBeNull();
 		updatedLicense.Devices.First().DeviceName.Should().Be("Test PC Updated");
 		updatedLicense.Devices.Last().DeviceName.Should().Be("Test PC Updated");
-		updatedLicense.Devices.First().LastIp.Should().Be("192.168.1.1");
-		//updatedLicense.Devices.Last().LastIp.Should().Be("192.168.1.2");
+		updatedLicense.Devices.First().LastIp.Should().Be("192.168.1.2");
+		updatedLicense.Devices.Last().LastIp.Should().Be("192.168.1.2");
 		updatedLicense.Devices.Last().LastUsedAt.Should().NotBeNull();
 		updatedLicense.Devices.Last().LastUsedAt!.Value.Should().BeAfter(firstUsedAt!.Value);
 	}
@@ -258,7 +258,7 @@ public class LicenseServiceTests : IDisposable
 
 		// Assert
 		result.IsValid.Should().BeFalse();
-		result.Reason.Should().Be("Неверный ключ лиценз…");
+		result.Reason.Should().Be("Неверный ключ лицензии");
 	}
 
 	[Fact]

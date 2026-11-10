@@ -41,7 +41,11 @@ public class TestDataBuilder
 			Id = Guid.NewGuid(),
 			Email = "test@example.com",
 			Name = "TestUser",
-			RoleId = _roles.FirstOrDefault()?.Id ?? Guid.NewGuid()
+			RoleId = _roles.FirstOrDefault()?.Id ?? Guid.NewGuid(),
+			IsActive = true,
+			IsApproved = true,
+			IsPasswordSet = false
+
 		};
 		configure(user);
 		_users.Add(user);
