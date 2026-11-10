@@ -25,7 +25,6 @@ public partial class RegistrationPage
 	private bool isLoading;
 	private bool firstNameError;
 	private bool lastNameError;
-	private bool passUnknown = false;
 
 	protected override void OnInitialized()
 	{

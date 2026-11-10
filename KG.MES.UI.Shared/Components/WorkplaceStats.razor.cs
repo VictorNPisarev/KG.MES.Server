@@ -1,5 +1,5 @@
 using KG.MES.Shared.Constants;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services;
 using Microsoft.AspNetCore.Components;
@@ -29,7 +29,6 @@ public partial class WorkplaceStats
 
 	private DateTime orderDateFrom = DateTime.Now.AddDays(-7);
 	private DateTime orderDateTo = DateTime.Now;
-	private bool showOrderDateFilter;
 
 	protected override async Task OnInitializedAsync()
 	{

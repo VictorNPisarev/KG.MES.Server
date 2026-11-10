@@ -24,5 +24,8 @@ public enum OrderIcon
 	CompleteOperationTransfer,
 
 	[IconClass("bi bi-star-fill", "text-danger me-1", "Новый заказ")]
-	New
+	New,
+
+	[IconClass("bi bi-check-all", "text-success me-1", "Участок завершил работы", forvard:false)]
+	WorkplaceComplete
 }

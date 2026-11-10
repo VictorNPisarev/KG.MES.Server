@@ -8,6 +8,7 @@ public interface INotificationAdminService
 	Task<Guid> CreateSubscriptionAsync(NotificationSubscribeRequestDto dto);
 	Task<bool> ToggleSubscriptionAsync(Guid id);
 	Task<bool> DeleteSubscriptionAsync(Guid id);
+	Task<bool> UpdateSubscriptionSeverityAsync(Guid id, string severity);
 	Task<List<NotificationEventDto>> GetEventsAsync();
 	Task<List<RoleDto>> GetRolesAsync();
 }

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Components;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using KG.MES.Shared.Models.Dto;
@@ -63,7 +63,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	private string sortOrder = "asc";
 	private Guid? selectedWorkplaceId;
 	private string tableKey => $"{Endpoint}_{typeof(TListItem).Name}";
-	private bool isColumnsOpen = false;
 	private bool useSplitView;
 	private string savedPanelWidth = "66%";
 	private DotNetObjectReference<OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>>? panelResizeRef;
@@ -82,7 +81,6 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	private List<ColumnInfo> filterableColumns => columnInfos.Where(c => c.Filterable).ToList();
 	private Dictionary<string, List<FacetValueDto>> facets = [];
 	private ITotalsDto? totals;
-	private bool isNewOrdersExpanded = true;
 	private bool showConfirmMarkAllRead;
 	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
 

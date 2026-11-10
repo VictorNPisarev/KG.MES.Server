@@ -1,3 +1,4 @@
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Enums;
 using KG.MES.Shared.Services;
@@ -60,15 +61,45 @@ public partial class AdminPage
 	private string resetPasswordError = "";
 	private bool resetPasswordFieldError;
 	private bool selectedUserIsApproved;
-
-
 	private List<RoleDto> roles = [];
+	private List<NotificationSubscriptionDto> subscriptions = [];
+	private List<NotificationEventDto> notificationEvents = [];
+	private List<UserAdminListItemDto> activeUsers = [];
+
+	private bool showCreateSubscription;
+	private bool showDeleteSubscriptionModal;
+
+	private Guid? newSubscriptionEventId;
+	private string newSubscriptionTargetType = "role"; // "role" | "user"
+	private Guid? newSubscriptionRoleId;
+	private Guid? newSubscriptionUserId;
+	private string newSubscriptionSeverity = "Info";
+
+	private Guid? subscriptionToDelete;
+	private string subscriptionToDeleteLabel = "";
+
+	private static readonly string[] severities = ["Info", "Warning", "Danger", "Success"];
+
+	private bool CanViewNotifications => Config.AllowViewNotifications;
+	private bool CanCreateNotification => Config.AllowCreateNotification;
+	private bool CanToggleNotification => Config.AllowToggleNotification;
+	private bool CanDeleteNotification => Config.AllowDeleteNotification;
+	private bool CanEditNotificationSeverity => Config.AllowEditNotificationSeverity;
 
 	protected override async Task OnInitializedAsync()
 	{
 		roles = await AdminService.GetRolesAsync();
 		await LoadLicenses();
 		await LoadUsers();
+
+		if (Config.AllowViewNotifications)
+		{
+			await LoadNotificationEvents();
+			await LoadSubscriptions();
+
+			var allUsers = await AdminService.GetUsersAsync(page: 1, limit: 500);
+			activeUsers = allUsers.Where(u => u.IsActive).ToList();
+		}
 	}
 
 	private async Task LoadLicenses()
@@ -116,10 +147,13 @@ public partial class AdminPage
 		showViewLicenseModal = false;
 		showExtendModal = false;
 		showResetPasswordModal = false;
+		showCreateSubscription = false;
+		showDeleteSubscriptionModal = false;
+		subscriptionToDelete = null;
+		subscriptionToDeleteLabel = "";
 		resetPasswordError = "";
 		resetPasswordFieldError = false;
 		selectedUser = null;
-
 	}
 
 	private async Task CreateLicense()
@@ -244,6 +278,8 @@ public partial class AdminPage
 		if (except != nameof(showExtendModal)) showExtendModal = false;
 		if (except != nameof(showViewLicenseModal)) showViewLicenseModal = false;
 		if (except != nameof(showResetPasswordModal)) showResetPasswordModal = false;
+		if (except != nameof(showCreateSubscription)) showCreateSubscription = false;
+		if (except != nameof(showDeleteSubscriptionModal)) showDeleteSubscriptionModal = false;
 	}
 
 	private async Task ToggleUserBlock(UserAdminListItemDto user)
@@ -331,5 +367,97 @@ public partial class AdminPage
 		}
 
 		StateHasChanged();
+	}
+
+	private async Task LoadNotificationEvents() => notificationEvents = await AdminService.GetNotificationEventsAsync();
+	private async Task LoadSubscriptions() => subscriptions = await AdminService.GetSubscriptionsAsync();
+
+	private void OpenCreateSubscriptionModal()
+	{
+		showCreateSubscription = true;
+		CloseOtherModalsExcept(nameof(showCreateSubscription));
+
+		newSubscriptionEventId = notificationEvents.FirstOrDefault()?.Id;
+		newSubscriptionTargetType = "role";
+		newSubscriptionRoleId = roles.FirstOrDefault()?.Id;
+		newSubscriptionUserId = null;
+		newSubscriptionSeverity = "Info";
+	}
+
+	private void OnTargetTypeChanged(string type)
+	{
+		newSubscriptionTargetType = type;
+		if (type == "role")
+		{
+			newSubscriptionUserId = null;
+			newSubscriptionRoleId ??= roles.FirstOrDefault()?.Id;
+		}
+		else
+		{
+			newSubscriptionRoleId = null;
+			newSubscriptionUserId ??= activeUsers.FirstOrDefault()?.Id;
+		}
+	}
+
+	private async Task CreateSubscription()
+	{
+		if (newSubscriptionEventId == null) return;
+		if (newSubscriptionTargetType == "role" && newSubscriptionRoleId == null) return;
+		if (newSubscriptionTargetType == "user" && newSubscriptionUserId == null) return;
+
+		isCreating = true;
+		try
+		{
+			var dto = new NotificationSubscribeRequestDto
+			{
+				EventId = newSubscriptionEventId.Value,
+				RoleId = newSubscriptionTargetType == "role" ? newSubscriptionRoleId : null,
+				UserId = newSubscriptionTargetType == "user" ? newSubscriptionUserId : null,
+				Severity = newSubscriptionSeverity
+			};
+
+			var id = await AdminService.CreateSubscriptionAsync(dto);
+			if (id != null)
+			{
+				await LoadSubscriptions();
+				CloseModals();
+			}
+		}
+		finally
+		{
+			isCreating = false;
+		}
+	}
+
+	private async Task ToggleSubscription(Guid id)
+	{
+		await AdminService.ToggleSubscriptionAsync(id);
+		await LoadSubscriptions();
+	}
+
+	private async Task ChangeSeverity(Guid id, string severity)
+	{
+		var ok = await AdminService.UpdateSubscriptionSeverityAsync(id, severity);
+		if (ok) await LoadSubscriptions();
+	}
+
+	private void ConfirmDeleteSubscription(NotificationSubscriptionDto sub)
+	{
+		subscriptionToDelete = sub.Id;
+		subscriptionToDeleteLabel = sub.UserId != null
+			? $"пользователя «{sub.UserName}»"
+			: $"роли «{sub.RoleName}»";
+		showDeleteSubscriptionModal = true;
+		CloseOtherModalsExcept(nameof(showDeleteSubscriptionModal));
+	}
+
+	private async Task DeleteSubscription()
+	{
+		if (subscriptionToDelete == null) return;
+		var ok = await AdminService.DeleteSubscriptionAsync(subscriptionToDelete.Value);
+		if (ok) await LoadSubscriptions();
+		showDeleteSubscriptionModal = false;
+		subscriptionToDelete = null;
+		subscriptionToDeleteLabel = "";
 	}
 }

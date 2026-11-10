@@ -11,7 +11,8 @@ public class MastersOrderViewModel
 	[Column("№ заказа", Order = 1, IconConditions = new[] { "IsClaim:Claim", "IsOnlyPlate:Plate", "IsEconom:Econom", "IsTwoSidePaint:TwoSidePaint", "IsNew:New" }, Sortable = true)]
 	public string OrderNumber { get; set; } = string.Empty;
 
-	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", Sortable = true)]
+	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", Sortable = true, ShowCompletionCheck = true,
+		IconConditions = new[] { "IsCompletedOnCurrentWorkplace:WorkplaceComplete" })]
 	public string? CurrentStatus { get; set; }
 
 	[Column("Дата запуска", Order = 4, DisplayFormat = "dd.MM.yyyy", Sortable = true)]
@@ -73,6 +74,8 @@ public class MastersOrderViewModel
 			return WindowCount == 0 && PlateCount > 0;
 		}
 	}
+
+	public bool IsCompletedOnCurrentWorkplace { get; set; }
 
 	public MastersOrderViewModel () {}
 

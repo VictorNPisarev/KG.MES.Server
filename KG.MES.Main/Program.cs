@@ -3,7 +3,7 @@ using KG.MES.Main.Interfaces;
 using KG.MES.Main.Services;
 using KG.MES.Shared.Helpers;
 using KG.MES.Shared.Interfaces;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
 
@@ -48,7 +48,6 @@ builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
-//builder.Services.AddScoped<ISocketService, SocketService>();
 
 var app = builder.Build();
 

@@ -1,4 +1,4 @@
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.ViewModels;
 using KG.MES.Shared.Services;

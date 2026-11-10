@@ -44,7 +44,8 @@ public class SalesOrderViewModel
 
 	public Guid? CurrentWorkplaceId { get; set; }
 
-	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name")]
+	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", ShowCompletionCheck = true,
+		IconConditions = new[] { "IsCompletedOnCurrentWorkplace:WorkplaceComplete" })]
 	public string? CurrentStatus { get; set; }
 
 	public Guid? ManagerId { get; set; }
@@ -78,6 +79,9 @@ public class SalesOrderViewModel
 			return WindowCount == 0 && PlateCount > 0;
 		}
 	}
+
+	public bool IsCompletedOnCurrentWorkplace { get; set; }
+
 
 	public SalesOrderViewModel () {}
 

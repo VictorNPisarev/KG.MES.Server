@@ -19,7 +19,6 @@ public partial class UserLogin : ComponentBase
 	private string licenseKey = "";
 	private string licenseKeyHandle = "";
 	private bool isLoading;
-	private bool isAuthorized;
 	private bool registrationRequired;
 	private string? registrationToken;
 

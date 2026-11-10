@@ -24,7 +24,8 @@ public class SupplyViewModel
 
 	public Guid? CurrentWorkplaceId { get; set; }
 
-	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name")]
+	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", ShowCompletionCheck = true,
+		IconConditions = new[] { "IsCompletedOnCurrentWorkplace:WorkplaceComplete" })]
 	public string? Status { get; set; }
 
 	public bool IsEconom { get; set; }
@@ -85,6 +86,8 @@ public class SupplyViewModel
 																		"IsTwoSidePaint:TwoSidePaint",
 																		"IsOnlyPlate:Plate" })]
 	public string OrderFlags { get; } = string.Empty;
+
+	public bool IsCompletedOnCurrentWorkplace { get; set; }
 
 	public SupplyViewModel () {}
 

@@ -11,7 +11,8 @@ public class OrderViewModel
 	[Column("№ заказа", Order = 1, IconConditions = new[] { "IsClaim:Claim", "IsEconom:Econom", "IsNew:New" }, Sortable = true)]
 	public string OrderNumber { get; set; } = string.Empty;
 
-	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", Sortable = true)]
+	[Column("Статус", Order = 3, IsBadge = true, DisplayGroup = "workplace_name", Sortable = true, ShowCompletionCheck = true,
+		IconConditions = new[] { "IsCompletedOnCurrentWorkplace:WorkplaceComplete" })]
 	public string? CurrentStatus { get; set; }
 
 	[Column("Дата запуска", Order = 4, DisplayFormat = "dd.MM.yyyy", Sortable = true)]
@@ -57,7 +58,6 @@ public class OrderViewModel
 
 	public bool IsNew { get; set; }
 
-
 	[Column("***", Order = 2, Visible = false, IconConditions = new[] { "IsClaim:Claim",
 																		"IsEconom:Econom",
 																		"IsOnlyPaid:Paid",
@@ -72,6 +72,9 @@ public class OrderViewModel
 			return WindowCount == 0 && PlateCount > 0;
 		}
 	}
+
+	public bool IsCompletedOnCurrentWorkplace { get; set; }
+
 
 	public OrderViewModel() {}
 

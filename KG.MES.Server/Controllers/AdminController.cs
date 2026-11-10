@@ -105,4 +105,8 @@ public partial class AdminController : BaseController
 
 	[HttpGet("notifications/events")]
 	public Task<IActionResult> GetEvents() => GetEventsHandler();
+
+	[HttpPut("notifications/subscriptions/{id}")]
+	public Task<IActionResult> UpdateSubscription(Guid id, [FromBody] UpdateSubscriptionRequestDto dto)
+	=> UpdateSubscriptionHandler(id, dto);
 }

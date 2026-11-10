@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace KG.MES.Shared.Models.Config
+namespace KG.MES.Shared.Config
 {
 	public class OrderViewSettings
 	{

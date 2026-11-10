@@ -28,7 +28,8 @@ public static class ColumnHelper
 				IconConditions = x.Attr.IconConditions,
 				ShowTotal = x.Attr.ShowTotal,
 				Sortable = x.Attr.Sortable,
-				Filterable = x.Attr.Filterable
+				Filterable = x.Attr.Filterable,
+				ShowCompletionCheck = x.Attr.ShowCompletionCheck
 			})
 			.ToList();
 	}
@@ -110,7 +111,8 @@ public static class ColumnHelper
 					{
 						Class = attr.IconClass,
 						Css = attr.CssClass,
-						Title = attr.Title
+						Title = attr.Title,
+						Forvard = attr.Forvard
 					});
 				}
 			}

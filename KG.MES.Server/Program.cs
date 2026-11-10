@@ -44,6 +44,8 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, ServerAuthService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<INotificationAdminService, NotificationAdminService>();
+
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "super-secret-key-change-me-in-production";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "KG.MES.Server";
@@ -100,16 +102,36 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
-	options.AddPolicy("AllowAll", policy =>
+	//options.AddPolicy("AllowAll", policy =>
+	//{
+	//	// Читаем массив из конфига. Если его нет, берем пустой массив
+	//	var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+	//	policy.WithOrigins(allowedOrigins)
+	//		.AllowAnyMethod()
+	//		.AllowAnyHeader()
+	//		.AllowCredentials();
+	//});
+	// Политика для SignalR (браузерные клиенты)
+	options.AddPolicy("SignalRPolicy", policy =>
 	{
-		// Читаем массив из конфига. Если его нет, берем пустой массив
 		var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
-		policy.WithOrigins(allowedOrigins)
+		policy.WithOrigins(allowedOrigins) // ← твой клиент Blazor
 			.AllowAnyMethod()
 			.AllowAnyHeader()
-			.AllowCredentials();
+			.AllowCredentials(); // Обязательно для SignalR
 	});
+
+	// Политика для API (мобильные приложения)
+	options.AddPolicy("ApiPolicy", policy =>
+	{
+		policy.AllowAnyOrigin()   // ← Мобильные приложения не имеют Origin
+			.AllowAnyMethod()
+			.AllowAnyHeader();
+		// Без AllowCredentials!
+	});
+
 });
 
 var app = builder.Build();
@@ -124,7 +146,8 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseCors("AllowAll");
+app.UseCors();
+//app.UseCors("AllowAll");
 
 if (app.Environment.IsDevelopment())
 {
@@ -136,9 +159,9 @@ var hubContext = app.Services.GetRequiredService<IHubContext<SignalRHub>>();
 SignalRHelper.Initialize(hubContext);
 
 
-app.MapControllers();
+app.MapControllers().RequireCors("ApiPolicy");
 
-app.MapHub<SignalRHub>("/signalRHub");
+app.MapHub<SignalRHub>("/signalRHub").RequireCors("SignalRPolicy");
 
 app.Run();
 

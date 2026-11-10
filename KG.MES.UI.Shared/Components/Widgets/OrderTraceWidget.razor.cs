@@ -47,7 +47,7 @@ public partial class OrderTraceWidget : ComponentBase, ISavableWidget
 		isLoading = false;
 	}
 
-	private void OnSocketMessage(string channel, object data)
+	private void OnSocketMessage(string channel, object? data)
 	{
 		if (channel == "order")
 		{

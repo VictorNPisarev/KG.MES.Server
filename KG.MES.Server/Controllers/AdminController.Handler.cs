@@ -247,4 +247,11 @@ public partial class AdminController
 		var result = await notificationAdminService.GetEventsAsync();
 		return Ok(result);
 	}
+
+	public async Task<IActionResult> UpdateSubscriptionHandler(Guid id, UpdateSubscriptionRequestDto dto)
+	{
+		var success = await notificationAdminService.UpdateSubscriptionSeverityAsync(id, dto.Severity);
+		if (!success) return NotFound();
+		return Ok();
+	}
 }

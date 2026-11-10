@@ -328,4 +328,110 @@ public class AdminService : AuthorizedApiService
 			return false;
 		}
 	}
+
+	// ========== ОПОВЕЩЕНИЯ ==========
+
+	public async Task<List<NotificationSubscriptionDto>> GetSubscriptionsAsync()
+	{
+		try
+		{
+			EnsureAuthorization();
+			return await httpClient.GetFromJsonAsync<List<NotificationSubscriptionDto>>(
+				$"{baseUrl}/admin/notifications/subscriptions") ?? new();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching notification subscriptions");
+			return new();
+		}
+	}
+
+	public async Task<Guid?> CreateSubscriptionAsync(NotificationSubscribeRequestDto dto)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PostAsJsonAsync(
+				$"{baseUrl}/admin/notifications/subscriptions", dto);
+
+			if (!response.IsSuccessStatusCode) return null;
+
+			var result = await response.Content.ReadFromJsonAsync<CreateSubscriptionResponse>();
+			return result?.Id;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error creating notification subscription");
+			return null;
+		}
+	}
+
+	public async Task<bool> ToggleSubscriptionAsync(Guid id)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PostAsync(
+				$"{baseUrl}/admin/notifications/subscriptions/{id}/toggle", null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error toggling subscription {Id}", id);
+			return false;
+		}
+	}
+
+	public async Task<bool> UpdateSubscriptionSeverityAsync(Guid id, string severity)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.PutAsJsonAsync(
+				$"{baseUrl}/admin/notifications/subscriptions/{id}",
+				new UpdateSubscriptionRequestDto { Severity = severity });
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error updating subscription severity {Id}", id);
+			return false;
+		}
+	}
+
+	public async Task<bool> DeleteSubscriptionAsync(Guid id)
+	{
+		try
+		{
+			EnsureAuthorization();
+			var response = await httpClient.DeleteAsync(
+				$"{baseUrl}/admin/notifications/subscriptions/{id}");
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error deleting subscription {Id}", id);
+			return false;
+		}
+	}
+
+	public async Task<List<NotificationEventDto>> GetNotificationEventsAsync()
+	{
+		try
+		{
+			EnsureAuthorization();
+			return await httpClient.GetFromJsonAsync<List<NotificationEventDto>>(
+				$"{baseUrl}/admin/notifications/events") ?? new();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching notification events");
+			return new();
+		}
+	}
+
+	private class CreateSubscriptionResponse
+	{
+		public Guid Id { get; set; }
+	}
 }

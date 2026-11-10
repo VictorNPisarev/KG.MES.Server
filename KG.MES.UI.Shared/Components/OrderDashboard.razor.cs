@@ -1,7 +1,7 @@
 using System.Text.Json;
 using KG.MES.Shared.Events;
 using KG.MES.Shared.Interfaces;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Enums;
 using KG.MES.Shared.Models.ViewModels;
@@ -166,7 +166,6 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 		}
 	}
 
-	private WidgetSettings? draggedWidget;
 	private WidgetSettings? dragOverWidget;
 
 	private DotNetObjectReference<OrderDashboard<TOrder>>? dotnetRef;

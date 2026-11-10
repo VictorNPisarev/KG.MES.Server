@@ -1,7 +1,7 @@
 using KG.MES.Sales.Components;
 using KG.MES.Shared.Helpers;
 using KG.MES.Shared.Interfaces;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Services;
 using System.Text.Json;
 

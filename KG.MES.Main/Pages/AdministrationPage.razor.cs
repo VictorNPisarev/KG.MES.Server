@@ -1,3 +1,4 @@
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Enums;
 using KG.MES.Shared.Services;
 using Microsoft.AspNetCore.Components;
@@ -18,6 +19,11 @@ public partial class AdministrationPage
 		AllowSetRole = true,
 		AllowResetPassword = true,
 		AllowedRolesToCreate = ["Worker", "Master"],
-		AllowedLicenseTypes = [LicenseType.SingleDevice, LicenseType.MultiDevice]
+		AllowedLicenseTypes = [LicenseType.SingleDevice, LicenseType.MultiDevice],
+		AllowViewNotifications = true,
+		AllowCreateNotification = true,
+		AllowToggleNotification = true,
+		AllowDeleteNotification = true,
+		AllowEditNotificationSeverity = true
 	};
 }

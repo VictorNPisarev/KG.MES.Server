@@ -21,6 +21,7 @@ public class NotificationAdminService : INotificationAdminService
 			.Include(s => s.Event)
 			.Include(s => s.Role)
 			.Include(s => s.User)
+			.OrderBy(s => s.CreatedAt)
 			.Select(s => new NotificationSubscriptionDto
 			{
 				Id = s.Id,
@@ -87,5 +88,18 @@ public class NotificationAdminService : INotificationAdminService
 		return await _context.Roles
 			.Select(r => new RoleDto { Id = r.Id, Name = r.Name })
 			.ToListAsync();
+	}
+
+	public async Task<bool> UpdateSubscriptionSeverityAsync(Guid id, string severity)
+	{
+		var subscription = await _context.NotificationSubscriptions.FindAsync(id);
+		if (subscription == null) return false;
+
+		if (string.IsNullOrWhiteSpace(severity))
+			return false;
+
+		subscription.Severity = severity;
+		await _context.SaveChangesAsync();
+		return true;
 	}
 }

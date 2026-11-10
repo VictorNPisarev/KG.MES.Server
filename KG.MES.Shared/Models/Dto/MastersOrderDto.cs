@@ -60,4 +60,7 @@ public class MastersOrderDto
 
 	[JsonPropertyName("is_new")]
 	public bool IsNew { get; set; }
+
+	[JsonPropertyName("is_completed_on_current_workplace")]
+	public bool IsCompletedOnCurrentWorkplace { get; set; }
 }

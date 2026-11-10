@@ -21,6 +21,15 @@
 				<i class="bi bi-key me-1"></i> Лицензии
 			</button>
 		</li>
+		@if (CanViewNotifications)
+		{
+			<li class="nav-item">
+				<button class="nav-link @(activeTab == "notifications" ? "active" : "")"
+					@onclick='() => activeTab = "notifications"'>
+					<i class="bi bi-bell me-1"></i> Оповещения
+				</button>
+			</li>
+		}
 	</ul>
 
 	@if (activeTab == "licenses")
@@ -180,6 +189,110 @@
 				else
 				{
 					<p class="text-muted">Нет сотрудников</p>
+				}
+			</div>
+		</div>
+	}
+	else if (activeTab == "notifications")
+	{
+		<div class="card shadow-sm">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="mb-0">Подписки на оповещения</h5>
+				@if (CanCreateNotification)
+				{
+					<button class="btn btn-primary btn-sm" @onclick="OpenCreateSubscriptionModal">
+						<i class="bi bi-plus-lg me-1"></i> Создать подписку
+					</button>
+				}
+			</div>
+			<div class="card-body">
+				@if (subscriptions.Any())
+				{
+					<div class="table-responsive">
+						<table class="table table-hover align-middle">
+							<thead>
+								<tr>
+									<th>Событие</th>
+									<th>Кому</th>
+									<th style="width:160px;">Важность</th>
+									<th>Статус</th>
+									<th>Действия</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var sub in subscriptions)
+								{
+									<tr>
+										<td>
+											<div class="fw-semibold">@sub.EventDescription</div>
+											<div class="small text-muted"><code>@sub.EventCode</code></div>
+										</td>
+										<td>
+											@if (sub.RoleId != null)
+											{
+												<span class="badge bg-secondary">Роль: @sub.RoleName</span>
+											}
+											else if (sub.UserId != null)
+											{
+												<span class="badge bg-info text-dark">Пользователь: @sub.UserName</span>
+											}
+										</td>
+										<td>
+											@if (CanEditNotificationSeverity)
+											{
+												<select class="form-select form-select-sm" value="@sub.Severity"
+													@onchange='(e) => ChangeSeverity(sub.Id, e.Value?.ToString() ?? "Info")'>
+													@foreach (var s in severities)
+													{
+														<option value="@s" selected="@(s == sub.Severity)">@s</option>
+													}
+												</select>
+											}
+											else
+											{
+												<span>@sub.Severity</span>
+											}
+										</td>
+										<td>
+											@if (CanToggleNotification)
+											{
+												<div class="user-toggle-block" @onclick="() => ToggleSubscription(sub.Id)">
+													<div class="user-toggle-icons">
+														<i class="bi bi-bell-fill @(sub.IsActive ? "text-success" : "text-muted")"
+															style="font-size: 0.6rem;"></i>
+														<i class="bi bi-bell-slash-fill @(!sub.IsActive ? "text-danger" : "text-muted")"
+															style="font-size: 0.6rem;"></i>
+													</div>
+													<div class="toggle-track-slim @(sub.IsActive ? "" : "block")">
+														<div class="toggle-thumb-slim"></div>
+													</div>
+												</div>
+											}
+											else
+											{
+												<span class="badge @(sub.IsActive ? "bg-success" : "bg-secondary")">
+													@(sub.IsActive ? "Активна" : "Отключена")
+												</span>
+											}
+										</td>
+										<td>
+											@if (CanDeleteNotification)
+											{
+												<button class="btn btn-sm btn-outline-danger"
+													@onclick="() => ConfirmDeleteSubscription(sub)">
+													<i class="bi bi-trash"></i>
+												</button>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+				else
+				{
+					<p class="text-muted">Нет подписок на оповещения</p>
 				}
 			</div>
 		</div>
@@ -528,6 +641,124 @@
 						}
 						Сбросить
 					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка создания подписки *@
+@if (showCreateSubscription)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Создать подписку на оповещение</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Событие</label>
+						<select class="form-select" @bind="newSubscriptionEventId">
+							@foreach (var ev in notificationEvents)
+							{
+								<option value="@ev.Id">@ev.Description (@ev.EventCode)</option>
+							}
+						</select>
+					</div>
+
+					<div class="mb-3">
+						<label class="form-label d-block">Получатель</label>
+						<div class="form-check form-check-inline">
+							<input type="radio" class="form-check-input" id="targetRole" name="targetType"
+								checked="@(newSubscriptionTargetType == "role")"
+								@onchange='() => OnTargetTypeChanged("role")' />
+							<label class="form-check-label" for="targetRole">Роль</label>
+						</div>
+						<div class="form-check form-check-inline">
+							<input type="radio" class="form-check-input" id="targetUser" name="targetType"
+								checked="@(newSubscriptionTargetType == "user")"
+								@onchange='() => OnTargetTypeChanged("user")' />
+							<label class="form-check-label" for="targetUser">Пользователь</label>
+						</div>
+					</div>
+
+					@if (newSubscriptionTargetType == "role")
+					{
+						<div class="mb-3">
+							<label class="form-label">Роль</label>
+							<select class="form-select" @bind="newSubscriptionRoleId">
+								@foreach (var r in roles)
+								{
+									<option value="@r.Id">@r.Name</option>
+								}
+							</select>
+						</div>
+					}
+					else
+					{
+						<div class="mb-3">
+							<label class="form-label">Пользователь</label>
+							@if (activeUsers.Any())
+							{
+								<select class="form-select" @bind="newSubscriptionUserId">
+									@foreach (var u in activeUsers)
+									{
+										<option value="@u.Id">@u.Name (@u.Email)</option>
+									}
+								</select>
+							}
+							else
+							{
+								<div class="alert alert-warning py-2 mb-0">Нет активных пользователей</div>
+							}
+						</div>
+					}
+
+					<div class="mb-3">
+						<label class="form-label">Важность</label>
+						<select class="form-select" @bind="newSubscriptionSeverity">
+							@foreach (var s in severities)
+							{
+								<option value="@s">@s</option>
+							}
+						</select>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-primary" @onclick="CreateSubscription" disabled="@isCreating">
+						@if (isCreating)
+						{
+							<span class="spinner-border spinner-border-sm me-1"></span>
+						}
+						Создать
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="modal-backdrop fade show"></div>
+}
+
+@* Модалка удаления подписки *@
+@if (showDeleteSubscriptionModal)
+{
+	<div class="modal fade show" style="display: block;" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Удалить подписку</h5>
+					<button class="btn-close" @onclick="CloseModals"></button>
+				</div>
+				<div class="modal-body">
+					<p>Удалить подписку для @subscriptionToDeleteLabel?</p>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="CloseModals">Отмена</button>
+					<button class="btn btn-danger" @onclick="DeleteSubscription">Удалить</button>
 				</div>
 			</div>
 		</div>

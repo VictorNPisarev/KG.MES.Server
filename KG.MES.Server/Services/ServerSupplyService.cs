@@ -257,7 +257,7 @@ public class ServerSupplyService : ISupplyService
 			.Select(sl => new SupplyItemHistoryDto
 			{
 				Id = sl.Id,
-				SupplyTypeName = sl.SupplyItem != null ? sl.SupplyItem.SupplyType.Name : null,
+				SupplyTypeName = sl.SupplyItem != null && sl.SupplyItem.SupplyType != null ? sl.SupplyItem.SupplyType.Name : null,
 				ConditionCode = sl.Condition != null ? sl.Condition.ConditionCode : null,
 				Comment = sl.Comment,
 				UserId = sl.UserId,

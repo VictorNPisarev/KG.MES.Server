@@ -1,5 +1,5 @@
 using KG.MES.Shared.Helpers;
-using KG.MES.Shared.Models.Config;
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.ViewModels;
 using KG.MES.UI.Shared.Interfaces;
 using Microsoft.AspNetCore.Components;

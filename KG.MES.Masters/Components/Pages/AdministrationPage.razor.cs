@@ -1,3 +1,4 @@
+using KG.MES.Shared.Config;
 using KG.MES.Shared.Models.Enums;
 using KG.MES.Shared.Services;
 using Microsoft.AspNetCore.Components;

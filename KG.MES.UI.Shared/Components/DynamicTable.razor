@@ -125,9 +125,10 @@
 									<td>
 										@if(item != null)
 										{
-											@if (col.Info.IconConditions?.Length > 0)
+											var icons = ColumnHelper.GetIcons(item, col.Info.IconConditions);
+
+											@if (!col.Info.IsBadge)
 											{
-												var icons = ColumnHelper.GetIcons(item, col.Info.IconConditions);
 												foreach (var icon in icons)
 												{
 													<i class="@icon.Class @icon.Css fs-6 me-1" title="@icon.Title"></i>
@@ -140,7 +141,23 @@
 												var value = prop?.GetValue(item);
 
 												<span class="badge @BadgeHelper.GetBadgeClass(value?.ToString())">
+													@foreach (var icon in icons)
+													{
+														if(icon.Forvard)
+														{
+															<i class="@icon.Class fs-6 me-1" title="@icon.Title"></i>
+														}
+													}
+
 													@BadgeHelper.GetFormattedBadgeValue(item, col.Info)
+
+													@foreach (var icon in icons)
+													{
+														if (!icon.Forvard)
+														{
+															<i class="@icon.Class fs-6 ms-1" title="@icon.Title"></i>
+														}
+													}
 												</span>
 											}
 											else

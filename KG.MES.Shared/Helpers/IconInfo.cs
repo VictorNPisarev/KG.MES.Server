@@ -4,4 +4,5 @@ public class IconInfo
 	public string Class { get; set; } = "";
 	public string Css { get; set; } = "";
 	public string Title { get; set; } = "";
+	public bool Forvard { get; set; } = true;
 }

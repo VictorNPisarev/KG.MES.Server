@@ -231,7 +231,8 @@ public partial class OrderService : IOrderService
 								.Where(n => !context.OrderNotificationReads
 												.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
 								.Any()
-							: false
+							: false,
+				IsCompletedOnCurrentWorkplace = o.IsCompletedOnCurrentWorkplace
 			})
 			.ToListAsync();
 
@@ -562,37 +563,14 @@ public partial class OrderService : IOrderService
 	{
 		return context.Orders
 			.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
-			{
-				Id = x.o.Id,
-				OrderNumber = x.o.OrderNumber,
-				ReadyDate = x.o.ReadyDate,
-				WindowCount = x.o.WindowCount,
-				WindowArea = x.o.WindowArea,
-				PlateCount = x.o.PlateCount,
-				PlateArea = x.o.PlateArea,
-				IsEconom = x.o.IsEconom,
-				IsClaim = x.o.IsClaim,
-				IsOnlyPaid = x.o.IsOnlyPaid,
-				IsTwoSidePaint = x.po.IsTwoSidePaint,
-				CreatedAt = x.o.CreatedAt,
-				ProductionOrderId = x.po.Id,
-				CurrentWorkplaceId = x.po.CurrentWorkplaceId,
-				CurrentStatus = w.Name,
-				Machine = x.po.Machine,
-				RtmDate = x.o.RtmDate
-			});
-	}
-
-	private IQueryable<TDto> BuildBaseQuery<TDto>(FilterFacetsRequestDto request)
-	where TDto : class
-	{
-		// В зависимости от типа — свой базовый query
-		if (typeof(TDto) == typeof(OrderDto))
-		{
-			return (IQueryable<TDto>)context.Orders
-				.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-				.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new OrderDto
+			.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
+			.GroupJoin(context.OrderFootprints,
+				x => new { ProductionOrderId = x.po.Id, WorkplaceId = x.po.CurrentWorkplaceId },
+				fp => new { fp.ProductionOrderId, WorkplaceId = (Guid?)fp.WorkplaceId },
+				(x, fps) => new { x.o, x.po, x.w, fps })
+			.SelectMany(
+				x => x.fps.DefaultIfEmpty(),
+				(x, fp) => new OrderDto
 				{
 					Id = x.o.Id,
 					OrderNumber = x.o.OrderNumber,
@@ -608,9 +586,48 @@ public partial class OrderService : IOrderService
 					CreatedAt = x.o.CreatedAt,
 					ProductionOrderId = x.po.Id,
 					CurrentWorkplaceId = x.po.CurrentWorkplaceId,
-					CurrentStatus = w.Name,
+					CurrentStatus = x.w.Name,
 					Machine = x.po.Machine,
-					RtmDate = x.o.RtmDate
+					RtmDate = x.o.RtmDate,
+					IsCompletedOnCurrentWorkplace = x.w.IsWorkplace && fp != null && fp.Status == "completed"
+				});
+	}
+
+	private IQueryable<TDto> BuildBaseQuery<TDto>(FilterFacetsRequestDto request)
+	where TDto : class
+	{
+		// В зависимости от типа — свой базовый query
+		if (typeof(TDto) == typeof(OrderDto))
+		{
+			return (IQueryable<TDto>)context.Orders
+				.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
+				.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
+			.GroupJoin(context.OrderFootprints,
+				x => new { ProductionOrderId = x.po.Id, WorkplaceId = x.po.CurrentWorkplaceId },
+				fp => new { fp.ProductionOrderId, WorkplaceId = (Guid?)fp.WorkplaceId },
+				(x, fps) => new { x.o, x.po, x.w, fps })
+			.SelectMany(
+				x => x.fps.DefaultIfEmpty(),
+				(x, fp) => new OrderDto
+				{
+					Id = x.o.Id,
+					OrderNumber = x.o.OrderNumber,
+					ReadyDate = x.o.ReadyDate,
+					WindowCount = x.o.WindowCount,
+					WindowArea = x.o.WindowArea,
+					PlateCount = x.o.PlateCount,
+					PlateArea = x.o.PlateArea,
+					IsEconom = x.o.IsEconom,
+					IsClaim = x.o.IsClaim,
+					IsOnlyPaid = x.o.IsOnlyPaid,
+					IsTwoSidePaint = x.po.IsTwoSidePaint,
+					CreatedAt = x.o.CreatedAt,
+					ProductionOrderId = x.po.Id,
+					CurrentWorkplaceId = x.po.CurrentWorkplaceId,
+					CurrentStatus = x.w.Name,
+					Machine = x.po.Machine,
+					RtmDate = x.o.RtmDate,
+					IsCompletedOnCurrentWorkplace = x.w.IsWorkplace && fp != null && fp.Status == OrderStatus.WorkplaceStatus.Completed
 				});
 		}
 		else if (typeof(TDto) == typeof(SalesOrderDto))

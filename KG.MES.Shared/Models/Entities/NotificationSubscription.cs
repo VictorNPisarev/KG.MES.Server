@@ -26,6 +26,9 @@ public class NotificationSubscription
 	[Column("is_active")]
 	public bool IsActive { get; set; } = true;
 
+	[Column("created_at")]
+	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
 	// Навигация
 	[ForeignKey(nameof(EventId))]
 	public NotificationEvent? Event { get; set; }

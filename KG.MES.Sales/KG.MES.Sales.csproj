@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KG.MES.Shared\KG.MES.Shared.csproj" />
     <ProjectReference Include="..\KG.MES.UI.Shared\KG.MES.UI.Shared.csproj" />
+	<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>
