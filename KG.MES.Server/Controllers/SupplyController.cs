@@ -1,12 +1,14 @@
 // KG.MES.Server/Controllers/SupplyController.cs
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public partial class SupplyController : BaseController
 {
 	#region GET

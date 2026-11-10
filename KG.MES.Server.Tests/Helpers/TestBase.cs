@@ -12,6 +12,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Tests.Helpers;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
+using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace KG.MES.Server.Tests.Helpers;
 
@@ -67,6 +72,15 @@ public abstract class TestBase : IClassFixture<WebApplicationFactory<Program>>, 
 				services.AddHttpClient();
 				services.AddSignalR();
 				 services.AddLogging();
+
+				services.AddAuthentication("Test")
+					.AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
+
+				services.Configure<AuthenticationOptions>(options =>
+				{
+					options.DefaultAuthenticateScheme = "Test";
+					options.DefaultChallengeScheme = "Test";
+				});
 
 			});
 
@@ -137,5 +151,26 @@ public abstract class TestBase : IClassFixture<WebApplicationFactory<Program>>, 
 		}
 
 		_disposed = true;
+	}
+}
+
+public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+	public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
+		ILoggerFactory logger, UrlEncoder encoder) : base(options, logger, encoder) { }
+
+	protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+	{
+		var claims = new[]
+		{
+			new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+			new Claim(ClaimTypes.Role, "Admin"), // Даем все права
+            new Claim(ClaimTypes.Email, "test@admin.com")
+		};
+		var identity = new ClaimsIdentity(claims, "Test");
+		var principal = new ClaimsPrincipal(identity);
+		var ticket = new AuthenticationTicket(principal, "Test");
+
+		return Task.FromResult(AuthenticateResult.Success(ticket));
 	}
 }
