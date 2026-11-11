@@ -12,7 +12,17 @@ else if (orderTrace?.WorkplaceTraces != null && orderTrace.WorkplaceTraces.Any()
 {
 	<div class="trace-panel">
 		<div class="d-flex justify-content-between align-items-center mb-2">
-			<h6 class="trace-title"><i class="bi bi-clock-history"></i> История производства</h6>
+			<h6 class="trace-title">
+				@if (ShowLogs)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="OpenAllLogs"
+						title="Показать все логи по заказу">
+						<i class="bi bi-clock-history me-1"></i>
+					</button>
+				}
+				@*<i class="bi bi-clock-history"></i>*@
+				История производства
+			</h6>
 			<div class="d-flex gap-1">
 				@if (EditMode)
 				{
@@ -37,6 +47,15 @@ else if (orderTrace?.WorkplaceTraces != null && orderTrace.WorkplaceTraces.Any()
 					@foreach (WorkplaceTraceViewModel wp in orderTrace.WorkplaceTraces)
 					{
 						<tr>
+							@if (ShowLogs)
+							{
+								<td>
+									<button class="btn btn-sm btn-link text-secondary p-0"
+										@onclick="() => OpenWorkplaceLogs(wp)" title="Логи участка @wp.WorkplaceName">
+										<i class="bi bi-clock-history"></i>
+									</button>
+								</td>
+							}
 							<td class="trace-workplace">@wp.WorkplaceName</td>
 							<td class="trace-status">
 								@if (EditMode)
@@ -98,5 +117,69 @@ else
 			}
 			Отгружен
 		</button>
+	</div>
+}
+
+@if (showLogs)
+{
+	<div class="operation-log-overlay" tabindex="0" @ref="logsOverlayRef" @onkeydown="OnLogsKeyDown">
+		<div class="operation-log-panel" @onclick:stopPropagation="true">
+			<div class="operation-log-header">
+				<h6 class="mb-0">
+					<i class="bi bi-clock-history me-1"></i>
+					@if (logsFilterWorkplaceId.HasValue)
+					{
+						<span>Логи: @logsFilterWorkplaceName</span>
+					}
+					else
+					{
+						<span>Логи заказа @orderTrace?.OrderNumber</span>
+					}
+				</h6>
+				<button class="btn-close" @onclick="CloseLogs"></button>
+			</div>
+			<div class="operation-log-body">
+				@if (isLoadingLogs)
+				{
+					<div class="text-muted text-center py-3">
+						<span class="spinner-border spinner-border-sm me-2"></span>Загрузка...
+					</div>
+				}
+				else if (!filteredLogs.Any())
+				{
+					<div class="text-muted text-center py-3">Логов нет</div>
+				}
+				else
+				{
+					<table class="table table-sm table-hover mb-0">
+						<thead>
+							<tr>
+								<th style="width:140px;">Время</th>
+								<th>Участок</th>
+								<th style="width:110px;">Операция</th>
+								<th>Сотрудник</th>
+								<th>Примечание</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var log in filteredLogs)
+							{
+								<tr>
+									<td class="text-nowrap">@log.OperationTime.ToString("dd.MM.yyyy HH:mm")</td>
+									<td>@log.WorkplaceName</td>
+									<td>
+										<span class="badge @(log.OperationType == "START" ? "bg-primary" : "bg-success")">
+											@(log.OperationType == "START" ? "Начало" : "Завершение")
+										</span>
+									</td>
+									<td>@(string.IsNullOrEmpty(log.UserName) ? "—" : log.UserName)</td>
+									<td>@(string.IsNullOrEmpty(log.Notes) ? "—" : log.Notes)</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</div>
 	</div>
 }

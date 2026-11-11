@@ -61,7 +61,7 @@ else if (order != null)
 						case WidgetType.Trace:
 							<div class="card">
 								<div class="card-body">
-									<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId" CanEdit="@Settings.EditTrace"/>
+									<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId" CanEdit="@Settings.EditTrace" ShowLogs="@Settings.ShowLogs"/>
 								</div>
 							</div>
 							break;
@@ -98,7 +98,7 @@ else if (order != null)
 							@*<OrderFieldsWidget @ref="fieldsWidget" TOrder="OrderDto" Order="@orderDto" Settings="@Settings" />*@
 							break;
 						case WidgetType.Trace:
-							<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId"  CanEdit="@Settings.EditTrace" />
+							<OrderTraceWidget @ref="traceWidget" OrderId="@OrderId" CanEdit="@Settings.EditTrace" ShowLogs="@Settings.ShowLogs" />
 							break;
 						case WidgetType.Supplies:
 							<OrderSuppliesWidget @ref="suppliesWidget" OrderId="@OrderId" CanEdit="@Settings.EditSupply" />

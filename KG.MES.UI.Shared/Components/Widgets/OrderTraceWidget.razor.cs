@@ -1,10 +1,12 @@
 using KG.MES.Shared.Events;
 using KG.MES.Shared.Interfaces;
+using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.ViewModels;
 using KG.MES.Shared.Services;
 using KG.MES.UI.Shared.Interfaces;
 using Mapster;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace KG.MES.UI.Shared.Components.Widgets;
 
@@ -12,6 +14,7 @@ public partial class OrderTraceWidget : ComponentBase, ISavableWidget
 {
 	[Parameter] public Guid OrderId { get; set; }
 	[Parameter] public bool CanEdit { get; set; }
+	[Parameter] public bool ShowLogs { get; set; } = false;
 
 	[Inject] private ProductionApiService ApiService { get; set; } = null!;
 	[Inject] private ISocketService SocketService { get; set; } = null!;
@@ -25,6 +28,20 @@ public partial class OrderTraceWidget : ComponentBase, ISavableWidget
 	private Dictionary<string, bool> openDropdowns = [];
 	private bool isCompleting;
 	private bool isDeparturing;
+	private List<OrderOperationLogDto> operationLogs = [];
+	private bool showLogs;
+	private bool isLoadingLogs;
+	private Guid? logsFilterWorkplaceId;
+	private string? logsFilterWorkplaceName;
+	private ElementReference logsOverlayRef;
+
+	private IEnumerable<OrderOperationLogDto> filteredLogs =>
+	logsFilterWorkplaceId.HasValue
+		? operationLogs
+			.Where(l => l.WorkplaceId == logsFilterWorkplaceId.Value)
+			.OrderByDescending(l => l.OperationTime)
+		: operationLogs
+			.OrderByDescending(l => l.OperationTime);
 
 
 	protected override async Task OnInitializedAsync()
@@ -179,5 +196,63 @@ public partial class OrderTraceWidget : ComponentBase, ISavableWidget
 	}
 
 	public bool HasUnsavedChanges() => EditMode && orderTrace != null && !orderTrace.Equals(backupTrace);
+	
 	public Task SaveAllAsync() => SaveChanges();
+
+	private async Task OpenAllLogs()
+	{
+		logsFilterWorkplaceId = null;
+		logsFilterWorkplaceName = null;
+		await OpenLogsInternal();
+	}
+
+	private async Task OpenWorkplaceLogs(WorkplaceTraceViewModel trace)
+	{
+		logsFilterWorkplaceId = trace.WorkplaceId;
+		logsFilterWorkplaceName = trace.WorkplaceName;
+		await OpenLogsInternal();
+	}
+
+	private async Task OpenLogsInternal()
+	{
+		showLogs = true;
+		isLoadingLogs = true;
+		operationLogs = [];
+		StateHasChanged();
+
+		try
+		{
+			var identifier = orderTrace?.OrderNumber;
+			if (string.IsNullOrEmpty(identifier))
+				identifier = OrderId.ToString();
+
+			operationLogs = await ApiService.GetOrderOperationLogsAsync(identifier);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Failed to load operation logs: {ex.Message}");
+		}
+		finally
+		{
+			isLoadingLogs = false;
+			StateHasChanged();
+		}
+
+		await Task.Yield();
+		try { await logsOverlayRef.FocusAsync(); } catch { }
+	}
+
+	private void CloseLogs()
+	{
+		showLogs = false;
+		logsFilterWorkplaceId = null;
+		logsFilterWorkplaceName = null;
+		operationLogs = [];
+	}
+
+	private void OnLogsKeyDown(KeyboardEventArgs e)
+	{
+		if (e.Key == "Escape")
+			CloseLogs();
+	}
 }
