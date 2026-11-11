@@ -1,6 +1,6 @@
 using KG.MES.Shared.Models.Dto;
 
-namespace KG.MES.Shared.Services.Interfaces;
+namespace KG.MES.Server.Services.Interfaces;
 
 public interface IOrderService
 {
@@ -40,4 +40,5 @@ public interface IOrderService
 	Task<bool> DeleteOrderAsync(Guid orderId);
 	Task<FilterFacetsResponseDto> GetFilterFacetsAsync<TDto>(FilterFacetsRequestDto request) where TDto : class;
 	Task<List<NotificationGroupDto<OrderDto>>> GetNewOrdersAsync(Guid userId, Guid? roleId);
+	Task<List<OrderOperationLogDto>?> GetOrderOperationLogsAsync(string identifier);
 }

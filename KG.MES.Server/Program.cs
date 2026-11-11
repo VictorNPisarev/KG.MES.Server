@@ -7,7 +7,7 @@ using KG.MES.Server.Extensions;
 using KG.MES.Server.Hubs;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;

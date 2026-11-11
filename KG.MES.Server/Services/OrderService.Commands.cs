@@ -4,8 +4,9 @@ using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Shared.Model.Enums;
 using KG.MES.Server.Hubs;
+using KG.MES.Shared.Services;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public partial class OrderService
 {

@@ -1,5 +1,5 @@
 // KG.MES.Server/Controllers/SalesController.cs
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;

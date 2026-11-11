@@ -2,6 +2,7 @@
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 
+namespace KG.MES.Server.Services.Interfaces;
 public interface IUserDeviceService
 {
 	Task<Device> RegisterDeviceAsync(Guid userId, string deviceId, string? deviceName = null);

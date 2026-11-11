@@ -2,7 +2,7 @@ using KG.MES.Server.Data;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public class OrderAttributeService(AppDbContext context, ILogger<OrderAttributeService> logger)
 {

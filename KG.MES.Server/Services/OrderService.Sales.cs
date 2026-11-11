@@ -5,7 +5,7 @@ using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public partial class OrderService
 {

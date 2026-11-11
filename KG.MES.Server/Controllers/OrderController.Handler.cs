@@ -2,7 +2,7 @@
 using System.Text.Json;
 using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -234,6 +234,16 @@ public partial class OrderController : BaseController
 	{
 		var commercial = await orderService.GetOrderCommercialAsync(orderId);
 		return Ok(commercial);
+	}
+
+	public async Task<IActionResult> GetOrderOperationLogsHandler(string identifier)   // ← новый
+	{
+		var logs = await orderService.GetOrderOperationLogsAsync(identifier);
+
+		if (logs == null)
+			return NotFound(new { error = "Order not found" });
+
+		return Ok(logs);
 	}
 
 	public async Task<IActionResult> UpdateOrderCommercialHandler(
