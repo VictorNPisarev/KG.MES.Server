@@ -121,6 +121,20 @@ public partial class OrderService
 			}
 
 			await context.SaveChangesAsync();
+
+			// 4.5. Создаем пустую запись коммерческих данных
+			var orderCommercial = new OrderCommercial
+			{
+				Id = Guid.NewGuid(),
+				OrderId = order.Id,
+				Currency = "RUB",
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow
+			};
+
+			context.OrderCommercials.Add(orderCommercial);
+			await context.SaveChangesAsync();
+
 			await transaction.CommitAsync();
 
 			//Добавляю уведомление о новом заказе
@@ -157,6 +171,7 @@ public partial class OrderService
 				OrderId = order.Id,
 				ProductionOrderId = productionOrder.Id,
 				OrderSupplyId = orderSupply.Id,
+				OrderCommercialId = orderCommercial.Id,
 				SupplyItemIds = supplyItemIds
 			};
 		}

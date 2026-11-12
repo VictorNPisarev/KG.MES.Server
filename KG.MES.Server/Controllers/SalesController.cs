@@ -13,7 +13,7 @@ public partial class SalesController : BaseController
 {
 	// GET: api/sales/orders
 	[HttpGet("orders")]
-	public Task<IActionResult> GetSalesOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
+	public Task<IActionResult> GetSalesOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ReadyDate",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null,
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null,
 			[FromQuery] string? customerName = null, [FromQuery] Guid? managerId = null)
@@ -93,9 +93,8 @@ public partial class SalesController : BaseController
 		Guid orderId,
 		[FromBody] OrderCommercialRequestDto request)
 	{
-		//var result = await _orderService.UpsertOrderCommercialAsync(orderId, request);
-		//return Ok(result);
-		return Ok();
+		var result = await _orderService.UpdateOrderCommercialAsync(orderId, request);
+		return Ok(result);
 	}
 
 	// GET: api/sales/managers

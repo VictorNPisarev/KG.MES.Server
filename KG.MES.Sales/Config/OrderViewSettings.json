@@ -6,10 +6,13 @@
 	"canEdit": false,
 	"showTrace": true,
 	"editTrace": false,
+	"showLogs": false,
 	"showSupply": false,
 	"editSupply": false,
 	"showComment": false,
 	"editComment": false,
+	"showCommercial": true,
+	"editCommercial": true,
 	"additional": {
 		"defaultSortBy": "ReadyDate",
 		"defaultSortOrder": "asc"

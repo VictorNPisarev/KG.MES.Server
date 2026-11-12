@@ -6,8 +6,11 @@
 	"canEdit": false,
 	"showTrace": true,
 	"editTrace": true,
+	"showLogs": true,
 	"showSupply": true,
 	"editSupply": false,
+	"showCommercial": false,
+	"editCommercial": false,
 	"additional": 
 	{
 		"defaultSortBy": "ReadyDate",

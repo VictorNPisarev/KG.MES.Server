@@ -64,7 +64,7 @@ public partial class OrderController : BaseController
 	// GET: api/orders
 	[HttpGet("orders")]
 	[AllowAnonymous]
-	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ready_date",
+	public Task<IActionResult> GetOrders([FromQuery] int page = 1, [FromQuery] int limit = 50, [FromQuery] string? sortBy = "ReadyDate",
 			[FromQuery] string? sortOrder = "asc", [FromQuery] string? orderNumber = null, 
 			[FromQuery] Guid? workplaceId = null, [FromQuery] List<Guid>? workplaceIds = null, [FromQuery] string? filters = null)
 		=> GetOrdersHandler(page, limit, sortBy, sortOrder, orderNumber, workplaceId, workplaceIds, filters);

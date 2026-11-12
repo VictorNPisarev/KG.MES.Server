@@ -67,18 +67,36 @@ public class OrderLifecycleControllerTests : TestBase
 		json.GetProperty("orderSupplyId").GetString().Should().NotBeEmpty();
 
 		var supplyItemIds = json.GetProperty("supplyItemIds");
-		supplyItemIds.GetArrayLength().Should().Be(2); // По одному на каждый активный SupplyType
+		supplyItemIds.GetArrayLength().Should().Be(2);
 
-		// Дополнительная проверка в БД: ProductionOrder должен указывать на "none"
+		// === Коммерческие данные ===
+		json.GetProperty("orderCommercialId").GetString().Should().NotBeNullOrEmpty();
+
 		var productionOrderId = Guid.Parse(json.GetProperty("productionOrderId").GetString()!);
+		var orderCommercialId = Guid.Parse(json.GetProperty("orderCommercialId").GetString()!);
 		using var scope = Services.CreateScope();
 		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		var prodOrder = await db.ProductionOrders.FindAsync(productionOrderId);
 		prodOrder.Should().NotBeNull();
 		prodOrder!.CurrentWorkplaceId.Should().Be(noneId);
-	}
 
+		// Проверяем, что OrderCommercial создан пустым
+		var commercial = await db.OrderCommercials.FirstOrDefaultAsync(oc => oc.Id == orderCommercialId);
+		commercial.Should().NotBeNull();
+		commercial!.OrderId.Should().Be(Guid.Parse(json.GetProperty("orderId").GetString()!));
+		commercial.Currency.Should().Be("RUB");
+		commercial.Amount.Should().BeNull();
+		commercial.ManagerId.Should().BeNull();
+		commercial.CustomerId.Should().BeNull();
+		commercial.CustomerName.Should().BeNull();
+
+		// Ровно одна запись на заказ (без дубликатов)
+		var commercialCount = await db.OrderCommercials
+			.CountAsync(oc => oc.OrderId == commercial.OrderId);
+		commercialCount.Should().Be(1);
+	}
+	
 	[Fact]
 	public async Task BeginOrderWorkplace_WhenNoFootprints_ShouldBuildFullPathAndLog()
 	{

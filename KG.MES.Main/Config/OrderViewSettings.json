@@ -8,11 +8,13 @@
 	"canDelete": false,
 	"showTrace": true,
 	"editTrace": false,
-  "showLogs": true,
+	"showLogs": true,
 	"showSupply": true,
 	"editSupply": false,
+	"showCommercial": false,
+	"editCommercial": false,
 	"additional":
-  {
+	{
 		"defaultSortBy": "ReadyDate",
 		"defaultSortOrder": "asc"
 	}

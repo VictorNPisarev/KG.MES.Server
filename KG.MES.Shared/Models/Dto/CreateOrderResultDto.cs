@@ -6,5 +6,6 @@ public class CreateOrderResultDto
 	public Guid OrderId { get; set; }
 	public Guid ProductionOrderId { get; set; }
 	public Guid? OrderSupplyId { get; set; }
+	public Guid? OrderCommercialId { get; set; }
 	public List<Guid> SupplyItemIds { get; set; } = [];
 }

@@ -5,5 +5,6 @@ public enum WidgetType
 	Main,
 	Trace,
 	Comments,
-	Supplies
+	Supplies,
+	Commercial
 }
