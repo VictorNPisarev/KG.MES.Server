@@ -1,6 +1,6 @@
 // KG.MES.Server/Services/SupplyService.cs
 using KG.MES.Server.Data;
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.EntityFrameworkCore;
 using KG.MES.Shared.Models.Entities;
@@ -9,7 +9,7 @@ using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
 using KG.MES.Shared.Common.Extensions;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public class ServerSupplyService : ISupplyService
 {

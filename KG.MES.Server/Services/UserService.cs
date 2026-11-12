@@ -1,11 +1,11 @@
 using KG.MES.Server.Data;
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public class UserService : IUserService
 {

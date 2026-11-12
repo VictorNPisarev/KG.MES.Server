@@ -107,6 +107,10 @@ public partial class OrderController : BaseController
 	[HttpGet("orders/{orderId}/commercial")]
 	public Task<IActionResult> GetOrderCommercial(Guid orderId) => GetOrderCommercialHandler(orderId);
 
+	// GET: api/orders/{identifier}/operation-logs
+	[HttpGet("orders/{identifier}/operation-logs")]
+	public Task<IActionResult> GetOrderOperationLogs(string identifier) => GetOrderOperationLogsHandler(identifier);
+
 	// GET: api/orders/{orderId}/edit
 	[HttpGet("orders/{orderId}/edit")]
 	public Task<IActionResult> GetOrderForEdit(Guid orderId) => GetOrderForEditHandler(orderId);

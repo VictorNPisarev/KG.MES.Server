@@ -1,9 +1,8 @@
 using KG.MES.Shared.Constants;
 using KG.MES.Server.Data;
-using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public static class OrderServiceHelper
 {
@@ -15,7 +14,7 @@ public static class OrderServiceHelper
 	public static async Task<Guid?> GetNoneWorkplaceIdAsync(AppDbContext context)
 	{
 		var workplace = await context.Workplaces
-			.FirstOrDefaultAsync(w => w.Code == Constants.WorkplaceCodes.None || w.Level == 0);
+			.FirstOrDefaultAsync(w => w.Code == WorkplaceCodes.None || w.Level == 0);
 		return workplace?.Id;
 	}
 
@@ -64,7 +63,7 @@ public static class OrderServiceHelper
 
 	public static async Task<bool> IsJoineryWorkplaceAsync(AppDbContext context, Guid workplaceId)
 	{
-		var joineryId = await GetWorkplaceIdAsync(context, Constants.WorkplaceCodes.Joinery);
+		var joineryId = await GetWorkplaceIdAsync(context, WorkplaceCodes.Joinery);
 
 		return workplaceId == joineryId;
 

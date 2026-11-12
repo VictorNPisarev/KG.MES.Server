@@ -1057,4 +1057,24 @@ public class ProductionApiService : AuthorizedApiService
 			return false;
 		}
 	}
+
+	/// <summary>
+	/// Логи операций по заказу (START/COMPLETE на участках).
+	/// identifier — Guid заказа или номер заказа.
+	/// </summary>
+	public async Task<List<OrderOperationLogDto>> GetOrderOperationLogsAsync(string identifier)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var url = $"{BaseUrl}/orders/{Uri.EscapeDataString(identifier)}/operation-logs";
+			return await httpClient.GetFromJsonAsync<List<OrderOperationLogDto>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching operation logs for order {Identifier}", identifier);
+			return [];
+		}
+	}
 }

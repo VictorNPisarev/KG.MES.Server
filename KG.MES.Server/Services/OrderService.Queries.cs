@@ -1,9 +1,10 @@
 using KG.MES.Server.Extensions;
+using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public partial class OrderService
 {
@@ -87,7 +88,7 @@ public partial class OrderService
 					ProductionOrderId = productionOrder.Id,
 					OrderNumber = order.OrderNumber,
 					ReadyDate = order.ReadyDate,
-					Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
+					Departed = productionOrder.CurrentWorkplace?.Code == WorkplaceCodes.Departed,
 					WorkplaceTraces = footprints
 				});
 			}
@@ -146,8 +147,56 @@ public partial class OrderService
 				ProductionOrderId = productionOrder.Id,
 				OrderNumber = order.OrderNumber,
 				ReadyDate = order.ReadyDate,
-				Departed = productionOrder.CurrentWorkplace?.Code == Constants.WorkplaceCodes.Departed,
+				Departed = productionOrder.CurrentWorkplace?.Code == WorkplaceCodes.Departed,
 				WorkplaceTraces = workplaces
 			};
+	}
+
+	public async Task<List<OrderOperationLogDto>?> GetOrderOperationLogsAsync(string identifier)
+	{
+		// 1. Резолвим identifier → Order
+		var isUuid = Guid.TryParse(identifier, out var orderId);
+
+		var order = await context.Orders
+			.FirstOrDefaultAsync(o => isUuid ? o.Id == orderId : o.OrderNumber == identifier);
+
+		if (order == null)
+			return null;
+
+		// 2. Находим ProductionOrder (инвариант: один Order ↔ один ProductionOrder)
+		var productionOrder = await context.ProductionOrders
+			.FirstOrDefaultAsync(po => po.OrderId == order.Id);
+
+		if (productionOrder == null)
+			return [];
+
+		// 3. Выбираем логи (LEFT JOIN с Users, INNER JOIN с Workplaces)
+		var logs = await (
+			from ol in context.OperationLogs
+			join w in context.Workplaces on ol.WorkplaceId equals w.Id
+			join u in context.Users on ol.UserId equals u.Id into ug
+			from u in ug.DefaultIfEmpty()
+			where ol.ProductionOrderId == productionOrder.Id
+			orderby ol.OperationTime descending
+			select new OrderOperationLogDto
+			{
+				Id = ol.Id,
+				WorkplaceId = ol.WorkplaceId,
+				WorkplaceName = w.Name,
+				WorkplaceCode = w.Code,
+				UserId = ol.UserId,
+				UserName = u != null ? u.Name : null,
+				OperationType = ol.OperationType,
+				OperationTime = ol.OperationTime,
+				Notes = ol.Notes,
+				Source = ol.Source
+			})
+			.ToListAsync();
+
+		// 4. Конвертация времени — в памяти, после ToListAsync (правило проекта)
+		foreach (var log in logs)
+			log.OperationTime = log.OperationTime.ToProductionTime();
+
+		return logs;
 	}
 }

@@ -5,7 +5,7 @@ using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public partial class OrderService
 {
@@ -241,7 +241,7 @@ public partial class OrderService
 			var workplace = await context.Workplaces
 				.FirstOrDefaultAsync(w => w.Id == workplaceId);
 
-			if (productionOrder!= null && workplace?.Code == WorkplaceCodes.Packing && status == Constants.OrderStatus.WorkplaceStatus.Completed)
+			if (productionOrder!= null && workplace?.Code == WorkplaceCodes.Packing && status == OrderStatus.WorkplaceStatus.Completed)
 			{
 				await SetOrderCompleteAsync(productionOrder.OrderId, null, null);
 			}

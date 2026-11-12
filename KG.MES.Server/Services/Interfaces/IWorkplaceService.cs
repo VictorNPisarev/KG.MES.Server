@@ -1,7 +1,7 @@
 // KG.MES.Server/Services/Interfaces/IWorkplaceService.cs
 using KG.MES.Shared.Models.Dto;
 
-namespace KG.MES.Shared.Services.Interfaces;
+namespace KG.MES.Server.Services.Interfaces;
 
 public interface IWorkplaceService
 {

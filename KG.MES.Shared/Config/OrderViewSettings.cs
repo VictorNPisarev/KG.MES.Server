@@ -59,6 +59,12 @@ namespace KG.MES.Shared.Config
 		public bool EditTrace { get; set; }
 
 		/// <summary>
+		/// Права на просмотр логов операций по заказу
+		/// </summary>
+		[JsonPropertyName("showLogs")]
+		public bool ShowLogs { get; set; } = true;
+
+		/// <summary>
 		/// Права на видимость отметок снабжения
 		/// </summary>
 		[JsonPropertyName("showSupply")]

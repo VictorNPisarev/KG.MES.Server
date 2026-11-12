@@ -1,0 +1,66 @@
+.operation-log-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1050;
+}
+
+.operation-log-panel {
+	background: white;
+	border-radius: 0.75rem;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+	width: 100%;
+	max-width: 900px;
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.operation-log-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.25rem;
+	border-bottom: 1px solid #e9ecef;
+}
+
+.operation-log-body {
+	overflow-y: auto;
+	padding: 0.5rem 0;
+	flex: 1;
+}
+
+.operation-log-body .table th {
+	background: #f8f9fa;
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding-left: 1.25rem;
+	padding-right: 1.25rem;
+}
+
+.operation-log-body .table td {
+	padding-left: 1.25rem;
+	padding-right: 1.25rem;
+	vertical-align: middle;
+}
+
+.operation-log-pivot th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: #f8f9fa;
+	white-space: nowrap;
+}
+
+.operation-log-pivot td {
+	vertical-align: middle;
+}
+
+.operation-log-pivot .badge {
+	font-size: 0.85rem;
+}

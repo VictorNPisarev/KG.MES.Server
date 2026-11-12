@@ -11,6 +11,7 @@
 @import 'sortIcons.css';
 @import 'inputError.css';
 @import 'supplyHistory.css';
+@import 'operationLogs.css';
 
 .sticky-header {
 	position: sticky;

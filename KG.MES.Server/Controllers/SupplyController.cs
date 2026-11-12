@@ -1,6 +1,6 @@
 // KG.MES.Server/Controllers/SupplyController.cs
 using KG.MES.Shared.Models.Dto;
-using KG.MES.Shared.Services.Interfaces;
+using KG.MES.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

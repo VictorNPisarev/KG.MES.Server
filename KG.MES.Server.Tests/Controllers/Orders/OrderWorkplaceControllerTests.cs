@@ -2,15 +2,11 @@ using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using KG.MES.Server.Data;
-using KG.MES.Shared.Tests.Helpers;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net.Http.Json;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using KG.MES.Server.Tests.Helpers;
 
 namespace KG.MES.Server.Tests.Controllers.Orders;
@@ -727,23 +723,5 @@ public class OrdersWorkplaceControllerTests : TestBase
 
 		torcovkaLogs.Should().HaveCount(1);
 		torcovkaLogs[0].Source.Should().Be("Test"); // ← не "auto"
-	}
-
-	private WebApplicationFactory<Program> SetupTestFactory(string dbName = "TestDb")
-	{
-		return _factory.WithWebHostBuilder(builder =>
-		{
-			builder.ConfigureServices(services =>
-			{
-				services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-				services.RemoveAll<DbContextOptions<AppDbContext>>();
-				services.AddDbContext<AppDbContext>(options =>
-				{
-					options.UseInMemoryDatabase(dbName);
-					options.ConfigureWarnings(warnings =>
-						warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning));
-				});
-			});
-		});
 	}
 }

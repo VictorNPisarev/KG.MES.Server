@@ -8,6 +8,7 @@
 	"canDelete": false,
 	"showTrace": true,
 	"editTrace": false,
+  "showLogs": true,
 	"showSupply": true,
 	"editSupply": false,
 	"additional":

@@ -1,7 +1,6 @@
 using KG.MES.Shared.Constants;
 using KG.MES.Server.Data;
 using KG.MES.Server.Extensions;
-using KG.MES.Shared.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +8,11 @@ using System.Reflection;
 using System.Linq.Expressions;
 using System.Text.Json;
 using KG.MES.Shared.Common.Extensions;
-using KG.MES.Server.Services;
 using KG.MES.Shared.Model.Enums;
 using KG.MES.Server.Hubs;
+using KG.MES.Server.Services.Interfaces;
 
-namespace KG.MES.Shared.Services;
+namespace KG.MES.Server.Services;
 
 public partial class OrderService : IOrderService
 {
@@ -320,7 +319,7 @@ public partial class OrderService : IOrderService
 		context.OperationLogs.Add(operationLog);
 		await context.SaveChangesAsync();
 
-		if (targetStatusName == Constants.OrderStatus.CommonStatus.Complete)
+		if (targetStatusName == OrderStatus.CommonStatus.Complete)
 		{
 			await notificationService.PublishAsync(NotificationEventType.OrderReady, orderId);
 
@@ -367,7 +366,7 @@ public partial class OrderService : IOrderService
 	internal async Task<SetOrderStatusResultDto> SetOrderCompleteInternalAsync(Guid orderId, Guid? userId, string? notes)
 	{
 		// 1. Меняем статус на "ГОТОВО" (через SetOrderStatusAsync, который тоже БЕЗ транзакции)
-		var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Complete, userId, notes);
+		var result = await SetOrderStatusAsync(orderId, OrderStatus.CommonStatus.Complete, userId, notes);
 
 		if (!result.Success)
 			return result; // Возвращаем ошибку, публичный метод сделает Rollback
@@ -389,14 +388,14 @@ public partial class OrderService : IOrderService
 		// 3. Меняем все следы на completed
 		var footprints = await context.OrderFootprints
 			.Where(fp => fp.ProductionOrderId == order.ProductionOrder.Id)
-			.Where(fp => fp.Status != Constants.OrderStatus.WorkplaceStatus.Completed)
+			.Where(fp => fp.Status != OrderStatus.WorkplaceStatus.Completed)
 			.ToListAsync();
 
 		if (footprints.Any())
 		{
 			foreach (var footprint in footprints)
 			{
-				footprint.Status = Constants.OrderStatus.WorkplaceStatus.Completed;
+				footprint.Status = OrderStatus.WorkplaceStatus.Completed;
 
 				// Логируем операцию
 				context.OperationLogs.Add(new OperationLog
@@ -440,7 +439,7 @@ public partial class OrderService : IOrderService
 
 		try
 		{
-			var result = await SetOrderStatusAsync(orderId, Constants.OrderStatus.CommonStatus.Departure, userId, notes);
+			var result = await SetOrderStatusAsync(orderId, OrderStatus.CommonStatus.Departure, userId, notes);
 
 			if (!result.Success)
 			{

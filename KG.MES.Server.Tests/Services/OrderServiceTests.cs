@@ -245,4 +245,163 @@ public class OrderServiceTests : IDisposable
 		// Assert
 		result.Should().BeFalse();
 	}
+
+	// ====== GetOrderOperationLogsAsync ======
+
+	[Fact]
+	public async Task GetOrderOperationLogsAsync_ShouldReturnLogsSortedDescWithJoins()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+		var workplace1Id = Guid.NewGuid();
+		var workplace2Id = Guid.NewGuid();
+		var userId = Guid.NewGuid();
+		var log1Id = Guid.NewGuid();
+		var log2Id = Guid.NewGuid();
+		var log3Id = Guid.NewGuid();
+
+		var t1 = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+		var t2 = new DateTime(2026, 1, 2, 10, 0, 0, DateTimeKind.Utc);
+		var t3 = new DateTime(2026, 1, 3, 10, 0, 0, DateTimeKind.Utc);
+
+		_context.Workplaces.AddRange(
+			new Workplace { Id = workplace1Id, Name = "Торцовка", Code = "CUTTING", IsWorkplace = true },
+			new Workplace { Id = workplace2Id, Name = "Упаковка", Code = "PACKING", IsWorkplace = true });
+		_context.Users.Add(new User { Id = userId, Email = "master@test.com", Name = "Мастер" });
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "OP-001" });
+		_context.ProductionOrders.Add(new ProductionOrder { Id = productionOrderId, OrderId = orderId });
+		_context.OperationLogs.AddRange(
+			new OperationLog
+			{
+				Id = log1Id,
+				ProductionOrderId = productionOrderId,
+				WorkplaceId = workplace1Id,
+				UserId = userId,
+				OperationType = "START",
+				OperationTime = t1,
+				Notes = "Начало",
+				Source = "API",
+				CreatedAt = t1
+			},
+			new OperationLog
+			{
+				Id = log2Id,
+				ProductionOrderId = productionOrderId,
+				WorkplaceId = workplace1Id,
+				UserId = userId,
+				OperationType = "COMPLETE",
+				OperationTime = t2,
+				Notes = "Завершено",
+				Source = "API",
+				CreatedAt = t2
+			},
+			new OperationLog
+			{
+				Id = log3Id,
+				ProductionOrderId = productionOrderId,
+				WorkplaceId = workplace2Id,
+				UserId = null,
+				OperationType = "COMPLETE",
+				OperationTime = t3,
+				Notes = "Авто",
+				Source = "auto",
+				CreatedAt = t3
+			});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetOrderOperationLogsAsync("OP-001");
+
+		// Assert
+		result.Should().NotBeNull();
+		result!.Should().HaveCount(3);
+
+		// Сортировка: свежие сверху
+		result[0].Id.Should().Be(log3Id);
+		result[1].Id.Should().Be(log2Id);
+		result[2].Id.Should().Be(log1Id);
+
+		// JOIN с Workplace
+		result[0].WorkplaceName.Should().Be("Упаковка");
+		result[0].WorkplaceCode.Should().Be("PACKING");
+		result[1].WorkplaceName.Should().Be("Торцовка");
+		result[1].WorkplaceCode.Should().Be("CUTTING");
+
+		// JOIN с Users: null для системного, имя для пользовательского
+		result[0].UserId.Should().BeNull();
+		result[0].UserName.Should().BeNull();
+		result[2].UserId.Should().Be(userId);
+		result[2].UserName.Should().Be("Мастер");
+
+		// Остальные поля
+		result[2].OperationType.Should().Be("START");
+		result[2].Notes.Should().Be("Начало");
+		result[2].Source.Should().Be("API");
+	}
+
+	[Fact]
+	public async Task GetOrderOperationLogsAsync_ByIdentifier_ShouldResolveBothGuidAndOrderNumber()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+		var workplaceId = Guid.NewGuid();
+		var t = DateTime.UtcNow;
+
+		_context.Workplaces.Add(new Workplace { Id = workplaceId, Name = "Сборка", Code = "ASSEMBLY", IsWorkplace = true });
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "OP-123" });
+		_context.ProductionOrders.Add(new ProductionOrder { Id = productionOrderId, OrderId = orderId });
+		_context.OperationLogs.Add(new OperationLog
+		{
+			Id = Guid.NewGuid(),
+			ProductionOrderId = productionOrderId,
+			WorkplaceId = workplaceId,
+			OperationType = "START",
+			OperationTime = t,
+			CreatedAt = t
+		});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var byGuid = await _service.GetOrderOperationLogsAsync(orderId.ToString());
+		var byNumber = await _service.GetOrderOperationLogsAsync("OP-123");
+
+		// Assert
+		byGuid.Should().NotBeNull();
+		byGuid!.Should().HaveCount(1);
+		byGuid[0].WorkplaceName.Should().Be("Сборка");
+
+		byNumber.Should().NotBeNull();
+		byNumber!.Should().HaveCount(1);
+		byNumber[0].Id.Should().Be(byGuid[0].Id);
+	}
+
+	[Fact]
+	public async Task GetOrderOperationLogsAsync_WithoutProductionOrder_ShouldReturnEmptyList()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "NO-PROD" });
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetOrderOperationLogsAsync("NO-PROD");
+
+		// Assert
+		result.Should().NotBeNull();     // не null — заказ есть
+		result!.Should().BeEmpty();       // но логов нет
+	}
+
+	[Fact]
+	public async Task GetOrderOperationLogsAsync_WhenOrderNotFound_ShouldReturnNull()
+	{
+		// Act
+		var result = await _service.GetOrderOperationLogsAsync("NON-EXISTENT");
+		var resultByGuid = await _service.GetOrderOperationLogsAsync(Guid.NewGuid().ToString());
+
+		// Assert
+		result.Should().BeNull();
+		resultByGuid.Should().BeNull();
+	}
 }

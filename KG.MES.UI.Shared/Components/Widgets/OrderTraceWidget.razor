@@ -12,7 +12,17 @@ else if (orderTrace?.WorkplaceTraces != null && orderTrace.WorkplaceTraces.Any()
 {
 	<div class="trace-panel">
 		<div class="d-flex justify-content-between align-items-center mb-2">
-			<h6 class="trace-title"><i class="bi bi-clock-history"></i> История производства</h6>
+			<h6 class="trace-title">
+				@if (ShowLogs)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="OpenAllLogs"
+						title="Показать все логи по заказу">
+						<i class="bi bi-clock-history me-1"></i>
+					</button>
+				}
+				@*<i class="bi bi-clock-history"></i>*@
+				История производства
+			</h6>
 			<div class="d-flex gap-1">
 				@if (EditMode)
 				{
@@ -37,6 +47,15 @@ else if (orderTrace?.WorkplaceTraces != null && orderTrace.WorkplaceTraces.Any()
 					@foreach (WorkplaceTraceViewModel wp in orderTrace.WorkplaceTraces)
 					{
 						<tr>
+							@if (ShowLogs)
+							{
+								<td>
+									<button class="btn btn-sm btn-link text-secondary p-0"
+										@onclick="() => OpenWorkplaceLogs(wp)" title="Логи участка @wp.WorkplaceName">
+										<i class="bi bi-clock-history"></i>
+									</button>
+								</td>
+							}
 							<td class="trace-workplace">@wp.WorkplaceName</td>
 							<td class="trace-status">
 								@if (EditMode)
@@ -98,5 +117,159 @@ else
 			}
 			Отгружен
 		</button>
+	</div>
+}
+
+@if (showLogs && logsFilterWorkplaceId.HasValue)
+{
+	<div class="operation-log-overlay" tabindex="0" @ref="logsOverlayRef" @onkeydown="OnLogsKeyDown">
+		<div class="operation-log-panel" @onclick:stopPropagation="true">
+			<div class="operation-log-header">
+				<h6 class="mb-0">
+					<i class="bi bi-clock-history me-1"></i>
+					@if (logsFilterWorkplaceId.HasValue)
+					{
+						<span>Логи: @logsFilterWorkplaceName</span>
+					}
+				</h6>
+				<button class="btn-close" @onclick="CloseLogs"></button>
+			</div>
+			<div class="operation-log-body">
+				@if (isLoadingLogs)
+				{
+					<div class="text-muted text-center py-3">
+						<span class="spinner-border spinner-border-sm me-2"></span>Загрузка...
+					</div>
+				}
+				else if (!filteredLogs.Any())
+				{
+					<div class="text-muted text-center py-3">Логов нет</div>
+				}
+				else
+				{
+					<table class="table table-sm table-hover mb-0">
+						<thead>
+							<tr>
+								<th style="width:140px;">Время</th>
+								<th>Участок</th>
+								<th style="width:110px;">Операция</th>
+								<th>Сотрудник</th>
+								<th>Примечание</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var log in filteredLogs)
+							{
+								<tr>
+									<td class="text-nowrap">@log.OperationTime.ToString("dd.MM.yyyy HH:mm")</td>
+									<td>@log.WorkplaceName</td>
+									<td>
+										<span class="badge @(log.OperationType == "START" ? "bg-primary" : "bg-success")">
+											@(log.OperationType == "START" ? "Начало" : "Завершение")
+										</span>
+									</td>
+									<td>@(string.IsNullOrEmpty(log.UserName) ? "—" : log.UserName)</td>
+									<td>@(string.IsNullOrEmpty(log.Notes) ? "—" : log.Notes)</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+@if (showLogs && !logsFilterWorkplaceId.HasValue)
+{
+	<div class="operation-log-overlay" tabindex="0" @ref="logsOverlayRef" @onkeydown="OnLogsKeyDown">
+		<div class="operation-log-panel" @onclick:stopPropagation="true">
+			<div class="operation-log-header">
+				<h6 class="mb-0">
+					<i class="bi bi-clock-history me-1"></i>
+					<span>Логи заказа @orderTrace?.OrderNumber</span>
+				</h6>
+				<button class="btn-close" @onclick="CloseLogs"></button>
+			</div>
+			<div class="operation-log-body">
+				@if (isLoadingLogs)
+				{
+					<div class="text-muted text-center py-3">
+						<span class="spinner-border spinner-border-sm me-2"></span>Загрузка...
+					</div>
+				}
+				else if (!pivotLogs.Any())
+				{
+					<div class="text-muted text-center py-3">Логов нет</div>
+				}
+				else
+				{
+					<table class="table table-sm table-hover mb-0 operation-log-pivot">
+						<thead>
+							<tr>
+								<th>Участок</th>
+								<th style="width:140px;">Начало</th>
+								<th style="width:150px;">Завершение</th>
+								<th>Кто начал</th>
+								<th>Кто завершил</th>
+								@*<th>Примечания</th>*@
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var row in pivotLogs)
+							{
+								<tr>
+									<td>
+										<span class="badge @GetWorkplaceBadgeClass(row.WorkplaceName)">
+											@row.WorkplaceName
+										</span>
+									</td>
+									<td class="text-nowrap">
+										@(row.StartedAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")
+									</td>
+									<td class="text-nowrap">
+										@if (row.CompletedAt.HasValue)
+										{
+											@row.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")
+										}
+										else if (row.InProgress)
+										{
+											<span class="badge bg-warning text-dark">В работе</span>
+										}
+										else
+										{
+											@:—
+										}
+									</td>
+									<td>@(string.IsNullOrEmpty(row.StartedByUserName) ? "—" : row.StartedByUserName)</td>
+									<td>@(string.IsNullOrEmpty(row.CompletedByUserName) ? "—" : row.CompletedByUserName)</td>
+									@*<td>
+										@if (!string.IsNullOrEmpty(row.StartedNotes) || !string.IsNullOrEmpty(row.CompletedNotes))
+										{
+											@if (!string.IsNullOrEmpty(row.StartedNotes))
+											{
+												<div class="small">
+													<span class="text-primary">▶</span> @row.StartedNotes
+												</div>
+											}
+											@if (!string.IsNullOrEmpty(row.CompletedNotes))
+											{
+												<div class="small">
+													<span class="text-success">■</span> @row.CompletedNotes
+												</div>
+											}
+										}
+										else
+										{
+											@:—
+										}
+									</td>*@
+								</tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</div>
 	</div>
 }

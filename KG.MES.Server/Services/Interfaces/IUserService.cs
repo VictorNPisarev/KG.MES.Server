@@ -1,7 +1,7 @@
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 
-namespace KG.MES.Shared.Services.Interfaces;
+namespace KG.MES.Server.Services.Interfaces;
 
 public interface IUserService
 {

@@ -1,10 +1,7 @@
-// KG.MES.Server/Services/UserDeviceService.cs
-using System.Runtime.InteropServices;
 using KG.MES.Server.Data;
-using KG.MES.Shared.Models.Dto;
+using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KG.MES.Server.Services;
 
