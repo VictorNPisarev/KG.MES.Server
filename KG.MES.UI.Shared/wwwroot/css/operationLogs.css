@@ -48,3 +48,19 @@
 	padding-right: 1.25rem;
 	vertical-align: middle;
 }
+
+.operation-log-pivot th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: #f8f9fa;
+	white-space: nowrap;
+}
+
+.operation-log-pivot td {
+	vertical-align: middle;
+}
+
+.operation-log-pivot .badge {
+	font-size: 0.85rem;
+}
