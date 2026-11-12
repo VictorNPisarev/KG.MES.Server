@@ -125,17 +125,30 @@ public partial class OrderService
 		if (!orderExists)
 			throw new Exception($"Заказ {orderId} не найден");
 
+		// Резолвим контрагента:
+		// - если передан CustomerId — используем существующего (иначе throw)
+		// - если CustomerId нет, но есть CustomerName — ищем/создаём
+		Customer? resolvedCustomer = null;
+
+		if (dto.CustomerId.HasValue)
+		{
+			resolvedCustomer = await context.Customers
+				.FirstOrDefaultAsync(c => c.Id == dto.CustomerId.Value);
+
+			if (resolvedCustomer == null)
+				throw new Exception($"Контрагент {dto.CustomerId} не найден");
+		}
+		else if (!string.IsNullOrWhiteSpace(dto.CustomerName))
+		{
+			resolvedCustomer = await GetOrCreateCustomerByNameAsync(dto.CustomerName);
+		}
+
+		var resolvedCustomerId = resolvedCustomer?.Id;
+		var resolvedCustomerName = resolvedCustomer?.Name ?? dto.CustomerName?.Trim();
+
 		// Ищем существующую запись
 		var existing = await context.OrderCommercials
 			.FirstOrDefaultAsync(oc => oc.OrderId == orderId);
-
-		// Если есть контрагент по ID — проверим его существование
-		if (dto.CustomerId.HasValue)
-		{
-			var customerExists = await context.Customers.AnyAsync(c => c.Id == dto.CustomerId.Value);
-			if (!customerExists)
-				throw new Exception($"Контрагент {dto.CustomerId} не найден");
-		}
 
 		if (existing == null)
 		{
@@ -145,8 +158,8 @@ public partial class OrderService
 				Id = Guid.NewGuid(),
 				OrderId = orderId,
 				ManagerId = dto.ManagerId,
-				CustomerId = dto.CustomerId,
-				CustomerName = dto.CustomerName,
+				CustomerId = resolvedCustomerId,
+				CustomerName = resolvedCustomerName,
 				Amount = dto.Amount,
 				Currency = dto.Currency ?? "RUB",
 				CreatedAt = DateTime.UtcNow,
@@ -174,8 +187,8 @@ public partial class OrderService
 		{
 			// Обновляем существующую запись
 			existing.ManagerId = dto.ManagerId;
-			existing.CustomerId = dto.CustomerId;
-			existing.CustomerName = dto.CustomerName;
+			existing.CustomerId = resolvedCustomerId;
+			existing.CustomerName = resolvedCustomerName;
 			existing.Amount = dto.Amount;
 			existing.Currency = dto.Currency ?? existing.Currency;
 			existing.UpdatedAt = DateTime.UtcNow;
@@ -230,8 +243,39 @@ public partial class OrderService
 	}
 
 	/// <summary>
+	/// Находит контрагента по имени (case-insensitive) или создаёт нового.
+	/// Возвращает null, если имя пустое.
+	/// </summary>
+	private async Task<Customer?> GetOrCreateCustomerByNameAsync(string? name)
+	{
+		if (string.IsNullOrWhiteSpace(name))
+			return null;
+
+		var trimmed = name.Trim();
+		var lower = trimmed.ToLower();
+
+		var existing = await context.Customers
+			.FirstOrDefaultAsync(c => c.Name.ToLower() == lower);
+
+		if (existing != null)
+			return existing;
+
+		var customer = new Customer
+		{
+			Id = Guid.NewGuid(),
+			Name = trimmed,
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		};
+
+		context.Customers.Add(customer);
+		return customer;
+	}
+
+	/// <summary>
 	/// Базовый запрос для списка продаж (без фильтров и пагинации)
 	/// </summary>
+	public IQueryable<SalesOrderDto> BuildBaseQuerySalesDto() => BuildSalesQuery();
 	private IQueryable<SalesOrderDto> BuildSalesQuery()
 	{
 		return from o in context.Orders

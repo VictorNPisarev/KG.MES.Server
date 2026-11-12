@@ -273,6 +273,7 @@ public class ServerSupplyService : ISupplyService
 		return logs;
 	}
 
+	public IQueryable<SupplyDto> BuildBaseQuerySupplyDto() => BuildSupplyQuery();
 	private IQueryable<SupplyDto> BuildSupplyQuery(List<Guid>? workplaceIds = null, string? orderNumber = null)
 	{
 		var orderQuery = context.Orders.Where(o => !o.IsOnlyPaid).AsQueryable();

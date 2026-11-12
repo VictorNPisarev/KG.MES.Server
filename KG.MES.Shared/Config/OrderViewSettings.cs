@@ -88,6 +88,18 @@ namespace KG.MES.Shared.Config
 		[JsonPropertyName("editComment")]
 		public bool EditComment { get; set; } = true;
 
+		/// <summary>
+		/// Права на видимость коммерческих данных (менеджер, контрагент, сумма)
+		/// </summary>
+		[JsonPropertyName("showCommercial")]
+		public bool ShowCommercial { get; set; } = false;
+
+		/// <summary>
+		/// Права на редактирование коммерческих данных
+		/// </summary>
+		[JsonPropertyName("editCommercial")]
+		public bool EditCommercial { get; set; } = false;
+
 		//public bool UseSplitView { get; set; } = false;  // false = модалка, true = split-view
 
 		/// <summary>

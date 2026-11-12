@@ -404,4 +404,222 @@ public class OrderServiceTests : IDisposable
 		result.Should().BeNull();
 		resultByGuid.Should().BeNull();
 	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WhenCommercialExists_ShouldUpdateNotCreateDuplicate()
+	{
+		// Arrange: заказ + уже существующая пустая OrderCommercial (как после CreateOrderAsync)
+		var orderId = Guid.NewGuid();
+		var existingCommercialId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "UPD-COMM-001" });
+		_context.OrderCommercials.Add(new OrderCommercial
+		{
+			Id = existingCommercialId,
+			OrderId = orderId,
+			Currency = "RUB",
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		});
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			Amount = 150000m,
+			Currency = "RUB",
+			CustomerName = "ООО Тест"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert
+		result.Should().NotBeNull();
+		result.Amount.Should().Be(150000m);
+		result.CustomerName.Should().Be("ООО Тест");
+		result.Currency.Should().Be("RUB");
+
+		// В БД — ровно одна запись (та же самая), без дубликата
+		var allCommercials = await _context.OrderCommercials
+			.Where(oc => oc.OrderId == orderId)
+			.ToListAsync();
+		allCommercials.Should().HaveCount(1);
+		allCommercials[0].Id.Should().Be(existingCommercialId);
+		allCommercials[0].Amount.Should().Be(150000m);
+		allCommercials[0].CustomerName.Should().Be("ООО Тест");
+	}
+
+	// ====== UpdateOrderCommercialAsync: резолвинг Customer ======
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNewCustomerName_ShouldCreateCustomerAndLinkIt()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "CUST-NEW" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			CustomerName = "ООО Новая Компания",
+			Amount = 100000m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert: Customer создан
+		var customers = await _context.Customers.ToListAsync();
+		customers.Should().HaveCount(1);
+		var customer = customers[0];
+		customer.Name.Should().Be("ООО Новая Компания");
+		customer.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+		customer.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+
+		// OrderCommercial связан с Customer
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.CustomerId.Should().Be(customer.Id);
+		commercial.CustomerName.Should().Be("ООО Новая Компания");
+
+		// Ответ DTO тоже содержит связь
+		result.CustomerId.Should().Be(customer.Id);
+		result.CustomerName.Should().Be("ООО Новая Компания");
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithExistingCustomerName_ShouldReuseCustomerCaseInsensitive()
+	{
+		// Arrange: в БД уже есть "ООО Ромашка" (с правильным регистром)
+		var orderId = Guid.NewGuid();
+		var existingCustomerId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "CUST-EXIST" });
+		_context.Customers.Add(new Customer
+		{
+			Id = existingCustomerId,
+			Name = "ООО Ромашка",
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		});
+		await _context.SaveChangesAsync();
+
+		// Пользователь вводит то же имя в нижнем регистре
+		var dto = new OrderCommercialRequestDto
+		{
+			CustomerName = "ооо ромашка",
+			Amount = 50000m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert: новый Customer НЕ создан
+		var customers = await _context.Customers.ToListAsync();
+		customers.Should().HaveCount(1);
+
+		// OrderCommercial связан с существующим, а CustomerName нормализован
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.CustomerId.Should().Be(existingCustomerId);
+		commercial.CustomerName.Should().Be("ООО Ромашка");  // ← нормализовано
+
+		result.CustomerId.Should().Be(existingCustomerId);
+		result.CustomerName.Should().Be("ООО Ромашка");
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithCustomerId_ShouldNotCreateNewCustomer()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var customerId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "CUST-BY-ID" });
+		_context.Customers.Add(new Customer
+		{
+			Id = customerId,
+			Name = "ООО Существующий",
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		});
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			CustomerId = customerId,
+			// CustomerName не передаём — должен взяться из Customer.Name
+			Amount = 75000m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert: новых Customer не создано
+		var customerCount = await _context.Customers.CountAsync();
+		customerCount.Should().Be(1);
+
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.CustomerId.Should().Be(customerId);
+		commercial.CustomerName.Should().Be("ООО Существующий");  // ← из Customer.Name
+
+		result.CustomerId.Should().Be(customerId);
+		result.CustomerName.Should().Be("ООО Существующий");
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNonExistentCustomerId_ShouldThrow()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "CUST-BAD-ID" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			CustomerId = Guid.NewGuid(),  // не существует
+			Amount = 10000m
+		};
+
+		// Act + Assert
+		var act = async () => await _service.UpdateOrderCommercialAsync(orderId, dto);
+		await act.Should().ThrowAsync<Exception>()
+			.WithMessage($"Контрагент {dto.CustomerId} не найден");
+
+		// В БД ничего не создалось
+		(await _context.Customers.CountAsync()).Should().Be(0);
+		(await _context.OrderCommercials.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNullCustomerData_ShouldKeepBothNull()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "CUST-NULL" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			CustomerId = null,
+			CustomerName = null,
+			Amount = 999m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert: Customer не создан, OrderCommercial.CustomerId/Name = null
+		(await _context.Customers.CountAsync()).Should().Be(0);
+
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.CustomerId.Should().BeNull();
+		commercial.CustomerName.Should().BeNull();
+
+		result.CustomerId.Should().BeNull();
+		result.CustomerName.Should().BeNull();
+		result.Amount.Should().Be(999m);
+	}
 }

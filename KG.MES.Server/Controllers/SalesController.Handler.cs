@@ -16,7 +16,7 @@ public partial class SalesController : BaseController
 		_logger = logger;
 	}
 
-	public async Task<IActionResult> GetSalesOrdersHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
+	public async Task<IActionResult> GetSalesOrdersHandler(int page = 1, int limit = 50, string? sortBy = "ReadyDate",
 			string? sortOrder = "asc", string? orderNumber = null,
 			Guid? workplaceId = null, List<Guid>? workplaceIds = null,
 			string? customerName = null, Guid? managerId = null)

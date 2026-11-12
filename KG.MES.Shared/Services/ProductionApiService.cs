@@ -863,18 +863,43 @@ public class ProductionApiService : AuthorizedApiService
 		}
 	}
 
-	public async Task<CommerceOrderDto?> GetCommerceAsync(Guid orderId)
+	public async Task<OrderCommercialDto?> GetCommerceAsync(Guid orderId)
 	{
 		try
 		{
 			EnsureAuthorization();
 
-			var url = $"{BaseUrl}/orders/{orderId}/commerce";
-			return await httpClient.GetFromJsonAsync<CommerceOrderDto>(url);
+			var url = $"{BaseUrl}/sales/orders/{orderId}/commercial";
+			return await httpClient.GetFromJsonAsync<OrderCommercialDto>(url);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching commerce data for order {Id}", orderId);
+			return null;
+		}
+	}
+
+	public async Task<OrderCommercialDto?> UpdateOrderCommercialAsync(Guid orderId, OrderCommercialRequestDto dto)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var url = $"{BaseUrl}/sales/orders/{orderId}/commercial";
+			var response = await httpClient.PutAsJsonAsync(url, dto);
+
+			if (!response.IsSuccessStatusCode)
+			{
+				var error = await response.Content.ReadAsStringAsync();
+				logger.LogWarning("Update order commercial failed: {Status} {Error}", response.StatusCode, error);
+				return null;
+			}
+
+			return await response.Content.ReadFromJsonAsync<OrderCommercialDto>();
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error updating commerce data for order {Id}", orderId);
 			return null;
 		}
 	}
@@ -1074,6 +1099,25 @@ public class ProductionApiService : AuthorizedApiService
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching operation logs for order {Identifier}", identifier);
+			return [];
+		}
+	}
+
+	public async Task<List<CustomerDto>> GetCustomersAsync(string? search = null)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var url = $"{BaseUrl}/sales/customers";
+			if (!string.IsNullOrWhiteSpace(search))
+				url += $"?search={Uri.EscapeDataString(search)}";
+
+			return await httpClient.GetFromJsonAsync<List<CustomerDto>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching customers");
 			return [];
 		}
 	}

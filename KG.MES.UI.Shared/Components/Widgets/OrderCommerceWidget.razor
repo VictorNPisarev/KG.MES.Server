@@ -1,33 +1,144 @@
+@using KG.MES.Shared.Models.Dto
+
 @if (isLoading)
 {
 	<div class="text-center py-3">
 		<div class="spinner-border spinner-border-sm text-primary" role="status"></div>
 	</div>
 }
-else if (commerceOrder != null)
+else if (commercial == null && !EditMode)
 {
 	<div class="commerce-panel">
-		<h6 class="trace-title"><i class="bi bi-briefcase"></i> Коммерческая информация</h6>
-		<table class="commerce-table">
-			<tbody>
-				<tr>
-					<td class="commerce-label">Менеджер</td>
-					<td><strong>@(commerceOrder.Manager ?? "—")</strong></td>
-				</tr>
-				<tr>
-					<td class="commerce-label">Контрагент</td>
-					<td><strong>@(commerceOrder.CustomerName ?? "—")</strong></td>
-				</tr>
-				<tr>
-					<td class="commerce-label">Цена</td>
-					<td><strong>@commerceOrder.Price.ToString("C")</strong></td>
-				</tr>
-			</tbody>
-		</table>
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<h6 class="commerce-title">Коммерческие данные</h6>
+			@if (CanEdit)
+			{
+				<button class="btn btn-sm btn-link text-secondary p-0" @onclick="EnterEditMode" title="Заполнить">
+					<i class="bi bi-pencil"></i>
+				</button>
+			}
+		</div>
+		<p class="text-muted mb-0">Данные не заполнены</p>
 	</div>
 }
 else
 {
-	<p class="text-muted small mb-0">Нет коммерческих данных</p>
-}
+	<div class="commerce-panel">
+		<div class="d-flex justify-content-between align-items-center mb-2">
+			<h6 class="commerce-title">Коммерческие данные</h6>
+			<div class="d-flex gap-1">
+				@if (EditMode)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="SaveChanges" disabled="@isSaving"
+						title="Сохранить">
+						@if (isSaving)
+						{
+							<span class="spinner-border spinner-border-sm"></span>
+						}
+						else
+						{
+							<i class="bi bi-check-lg"></i>
+						}
+					</button>
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="CancelEdit" disabled="@isSaving"
+						title="Отмена">
+						<i class="bi bi-x-lg"></i>
+					</button>
+				}
+				else if (CanEdit)
+				{
+					<button class="btn btn-sm btn-link text-secondary p-0" @onclick="EnterEditMode" title="Редактировать">
+						<i class="bi bi-pencil"></i>
+					</button>
+				}
+			</div>
+		</div>
 
+		<div>
+			<table class="commerce-table">
+				<tbody>
+					@* Менеджер *@
+					<tr>
+						<td class="commerce-label">Менеджер</td>
+						<td class="commerce-value">
+							@(string.IsNullOrEmpty(commercial?.ManagerName) ? "—" : commercial.ManagerName)
+						</td>
+					</tr>
+
+					@* Контрагент *@
+					<tr>
+						<td class="commerce-label">Контрагент</td>
+						<td class="commerce-value" style="position: relative;">
+							@if (EditMode)
+							{
+								<div class="input-group input-group-sm">
+									<input type="text" class="form-control form-control-sm" placeholder="Начните вводить имя..."
+										@bind="customerSearch" @bind:event="oninput" @bind:after="OnCustomerSearchChanged" />
+									@if (!string.IsNullOrEmpty(customerSearch))
+									{
+										<button class="btn btn-outline-secondary" type="button" @onclick="ClearCustomer"
+											title="Очистить">
+											<i class="bi bi-x-lg"></i>
+										</button>
+									}
+								</div>
+
+								@if (showCustomerDropdown && filteredCustomers.Any())
+								{
+									<ul class="dropdown-menu show w-100"
+										style="max-height: 240px; overflow-y: auto; position: absolute; z-index: 1000;">
+										@foreach (var customer in filteredCustomers.Take(20))
+										{
+											<li>
+												<button type="button" class="dropdown-item" @onclick="() => SelectCustomer(customer)">
+													<div class="fw-semibold">@customer.Name</div>
+													@if (!string.IsNullOrEmpty(customer.Inn))
+													{
+														<small class="text-muted">ИНН: @customer.Inn</small>
+													}
+												</button>
+											</li>
+										}
+									</ul>
+								}
+							}
+							else
+							{
+								@(string.IsNullOrEmpty(commercial?.CustomerName) ? "—" : commercial.CustomerName)
+							}
+						</td>
+					</tr>
+
+					@* Сумма *@
+					<tr>
+						<td class="commerce-label">Сумма</td>
+						<td class="commerce-value">
+							@if (EditMode)
+							{
+								<div class="d-flex gap-1">
+									<input type="number" step="0.01" class="form-control form-control-sm"
+										style="max-width: 140px;" @bind="editAmount" />
+									<input type="text" class="form-control form-control-sm" style="max-width: 70px;"
+										@bind="editCurrency" />
+								</div>
+							}
+							else if (commercial?.Amount.HasValue == true)
+							{
+								<span>@commercial.Amount.Value.ToString("N2") @commercial.Currency</span>
+							}
+							else
+							{
+								<span>—</span>
+							}
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		@if (!string.IsNullOrEmpty(saveError))
+		{
+			<div class="alert alert-danger py-1 px-2 mt-2 mb-0 small">@saveError</div>
+		}
+	</div>
+}

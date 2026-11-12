@@ -558,6 +558,7 @@ public partial class OrderService : IOrderService
 
 	//Вспомогательные методы
 
+	public IQueryable<OrderDto> BuildBaseQueryOrderDto() => BuildBaseQuery();
 	private IQueryable<OrderDto> BuildBaseQuery()
 	{
 		return context.Orders
@@ -598,44 +599,15 @@ public partial class OrderService : IOrderService
 		// В зависимости от типа — свой базовый query
 		if (typeof(TDto) == typeof(OrderDto))
 		{
-			return (IQueryable<TDto>)context.Orders
-				.Join(context.ProductionOrders, o => o.Id, po => po.OrderId, (o, po) => new { o, po })
-				.Join(context.Workplaces, x => x.po.CurrentWorkplaceId, w => w.Id, (x, w) => new { x.o, x.po, w })
-			.GroupJoin(context.OrderFootprints,
-				x => new { ProductionOrderId = x.po.Id, WorkplaceId = x.po.CurrentWorkplaceId },
-				fp => new { fp.ProductionOrderId, WorkplaceId = (Guid?)fp.WorkplaceId },
-				(x, fps) => new { x.o, x.po, x.w, fps })
-			.SelectMany(
-				x => x.fps.DefaultIfEmpty(),
-				(x, fp) => new OrderDto
-				{
-					Id = x.o.Id,
-					OrderNumber = x.o.OrderNumber,
-					ReadyDate = x.o.ReadyDate,
-					WindowCount = x.o.WindowCount,
-					WindowArea = x.o.WindowArea,
-					PlateCount = x.o.PlateCount,
-					PlateArea = x.o.PlateArea,
-					IsEconom = x.o.IsEconom,
-					IsClaim = x.o.IsClaim,
-					IsOnlyPaid = x.o.IsOnlyPaid,
-					IsTwoSidePaint = x.po.IsTwoSidePaint,
-					CreatedAt = x.o.CreatedAt,
-					ProductionOrderId = x.po.Id,
-					CurrentWorkplaceId = x.po.CurrentWorkplaceId,
-					CurrentStatus = x.w.Name,
-					Machine = x.po.Machine,
-					RtmDate = x.o.RtmDate,
-					IsCompletedOnCurrentWorkplace = x.w.IsWorkplace && fp != null && fp.Status == OrderStatus.WorkplaceStatus.Completed
-				});
+			return (IQueryable<TDto>)(object)BuildBaseQueryOrderDto();
 		}
 		else if (typeof(TDto) == typeof(SalesOrderDto))
 		{
-			// ... другой query для Sales
+			return (IQueryable<TDto>)(object)BuildBaseQuerySalesDto();
 		}
 		else if (typeof(TDto) == typeof(OrderSupplyDto))
 		{
-			// ... другой query для Supply
+			//return (IQueryable<TDto>)(object)BuildBaseQuerySupplyDto();
 		}
 
 		throw new NotSupportedException($"Тип {typeof(TDto).Name} не поддерживается для фасетов");

@@ -1,0 +1,41 @@
+.commerce-panel {
+	background: #f8f9fa;
+	border-radius: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid rgba(0, 0, 0, .06);
+	margin: 0rem;
+	display: inline-block;
+	min-width: 320px;
+}
+
+.commerce-title {
+	margin-bottom: 0.5rem;
+	color: #000000;
+	font-size: 0.9rem;
+}
+
+.commerce-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.commerce-table td {
+	padding: 0.5rem 0.5rem;
+	vertical-align: middle;
+}
+
+.commerce-table tr+tr td {
+	border-top: 1px solid rgba(0, 0, 0, .05);
+}
+
+.commerce-label {
+	color: #6c757d;
+	font-size: 0.85rem;
+	white-space: nowrap;
+	width: 120px;
+}
+
+.commerce-value {
+	color: #000000;
+	font-size: 0.9rem;
+}

@@ -34,11 +34,11 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 	private bool isLoading = true;
 	private bool showWidgetSettings;
 
+	private OrderFieldsWidget<TOrder>? fieldsWidget;
 	private OrderSuppliesWidget? suppliesWidget;
 	private OrderTraceWidget? traceWidget;
-	private OrderFieldsWidget<TOrder>? fieldsWidget;
-	//private OrderFieldsWidget<OrderDto>? fieldsWidget;
 	private OrderCommentsWidget? commentsWidget;
+	private OrderCommerceWidget? commerceWidget;
 
 	private List<WidgetSettings> visibleWidgets => dashboardSettings.Widgets
 		.Where(w => w.Visible)
@@ -47,8 +47,14 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 
 	private string dashboardKey => $"dashboard_{typeof(TOrder).Name}";
 
-	public ISavableWidget[] widgets => new ISavableWidget[] { fieldsWidget!, traceWidget!, suppliesWidget! };
-
+	public ISavableWidget[] widgets => new ISavableWidget[]
+	{
+	fieldsWidget!,
+	traceWidget!,
+	suppliesWidget!,
+	commentsWidget!,
+	commerceWidget!
+	};
 	protected override async Task OnInitializedAsync()
 	{
 		EventAggregator.Subscribe<OrderUpdatedEvent>(OnOrderUpdated);
@@ -111,6 +117,9 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 
 		if (Settings.ShowSupply)
 			widgets.Add(new() { WidgetId = WidgetType.Supplies, Title = "Снабжение", Order = widgets.Count });
+
+		if (Settings.ShowCommercial)
+			widgets.Add(new() { WidgetId = WidgetType.Commercial, Title = "Коммерческие данные", Order = widgets.Count });
 
 		return new DashboardSettings { Widgets = widgets };
 	}
@@ -379,31 +388,34 @@ public partial class OrderDashboard<TOrder> : ComponentBase, IAsyncDisposable
 			builder.AddComponentParameter(1, "Order", order);
 			builder.AddComponentParameter(2, "Settings", Settings);
 			builder.CloseComponent();
-		}
-		,
+		},
 		WidgetType.Trace => builder =>
 		{
 			builder.OpenComponent<OrderTraceWidget>(0);
 			builder.AddComponentParameter(1, "OrderId", OrderId);
 			builder.AddComponentParameter(2, "CanEdit", Settings.EditTrace);
 			builder.CloseComponent();
-		}
-		,
+		},
 		WidgetType.Supplies => builder =>
 		{
 			builder.OpenComponent<OrderSuppliesWidget>(0);
 			builder.AddComponentParameter(1, "OrderId", OrderId);
 			builder.AddComponentParameter(2, "CanEdit", Settings.EditSupply);
 			builder.CloseComponent();
-		}
-		,
+		},
 		WidgetType.Comments => builder =>
 		{
 			builder.OpenComponent<OrderCommentsWidget>(0);
 			builder.AddComponentParameter(1, "OrderId", OrderId);
 			builder.CloseComponent();
-		}
-		,
+		},
+		WidgetType.Commercial => builder =>
+		{
+			builder.OpenComponent<OrderCommerceWidget>(0);
+			builder.AddComponentParameter(1, "OrderId", OrderId);
+			builder.AddComponentParameter(2, "CanEdit", Settings.EditCommercial);
+			builder.CloseComponent();
+		},
 		_ => builder => { }
 	};
 }

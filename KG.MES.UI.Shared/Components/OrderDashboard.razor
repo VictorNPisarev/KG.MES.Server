@@ -79,7 +79,14 @@ else if (order != null)
 								</div>
 							</div>
 							break;
-					}
+										case WidgetType.Commercial:
+								<div class="card">
+									<div class="card-body">
+										<OrderCommerceWidget @ref="commerceWidget" OrderId="@OrderId" CanEdit="@Settings.EditCommercial" />
+									</div>
+								</div>
+								break;
+				}
 				</div>
 			}
 		</div>
@@ -105,6 +112,9 @@ else if (order != null)
 							break;
 						case WidgetType.Comments:
 							<OrderCommentsWidget @ref="commentsWidget" OrderId="@OrderId" />
+							break;
+						case WidgetType.Commercial:
+							<OrderCommerceWidget @ref="commerceWidget" OrderId="@OrderId" CanEdit="@Settings.EditCommercial" />
 							break;
 					}
 				</div>

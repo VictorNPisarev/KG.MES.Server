@@ -12,6 +12,7 @@
 @import 'inputError.css';
 @import 'supplyHistory.css';
 @import 'operationLogs.css';
+@import 'commercial.css';
 
 .sticky-header {
 	position: sticky;
