@@ -622,4 +622,148 @@ public class OrderServiceTests : IDisposable
 		result.CustomerName.Should().BeNull();
 		result.Amount.Should().Be(999m);
 	}
+
+	// ====== UpdateOrderCommercialAsync: резолвинг Manager ======
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithManagerId_ShouldSetManager()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var managerId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "MGR-BY-ID" });
+		_context.Users.Add(new User
+		{
+			Id = managerId,
+			Email = "manager@test.com",
+			Name = "Иван Менеджеров",
+			IsActive = true
+		});
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			ManagerId = managerId,
+			Amount = 50000m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.ManagerId.Should().Be(managerId);
+
+		result.ManagerId.Should().Be(managerId);
+		result.ManagerName.Should().Be("Иван Менеджеров");
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithManagerName_ShouldResolveManagerByName()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var managerId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "MGR-BY-NAME" });
+		_context.Users.Add(new User
+		{
+			Id = managerId,
+			Email = "petr@test.com",
+			Name = "Пётр Продавцов",
+			IsActive = true
+		});
+		await _context.SaveChangesAsync();
+
+		// Вводим имя в нижнем регистре — должно найтись case-insensitive
+		var dto = new OrderCommercialRequestDto
+		{
+			ManagerName = "пётр продавцов",
+			Amount = 80000m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.ManagerId.Should().Be(managerId);
+
+		result.ManagerId.Should().Be(managerId);
+		result.ManagerName.Should().Be("Пётр Продавцов");  // нормализовано из User.Name
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNonExistentManagerId_ShouldThrow()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "MGR-BAD-ID" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			ManagerId = Guid.NewGuid(),
+			Amount = 10000m
+		};
+
+		// Act + Assert
+		var act = async () => await _service.UpdateOrderCommercialAsync(orderId, dto);
+		await act.Should().ThrowAsync<Exception>()
+			.WithMessage($"Менеджер {dto.ManagerId} не найден");
+
+		(await _context.OrderCommercials.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNonExistentManagerName_ShouldThrow()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "MGR-BAD-NAME" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			ManagerName = "Несуществующий Менеджер",
+			Amount = 10000m
+		};
+
+		// Act + Assert
+		var act = async () => await _service.UpdateOrderCommercialAsync(orderId, dto);
+		await act.Should().ThrowAsync<Exception>()
+			.WithMessage("Менеджер 'Несуществующий Менеджер' не найден");
+
+		(await _context.OrderCommercials.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task UpdateOrderCommercialAsync_WithNullManager_ShouldKeepNull()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "MGR-NULL" });
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderCommercialRequestDto
+		{
+			ManagerId = null,
+			ManagerName = null,
+			Amount = 12345m,
+			Currency = "RUB"
+		};
+
+		// Act
+		var result = await _service.UpdateOrderCommercialAsync(orderId, dto);
+
+		// Assert
+		var commercial = await _context.OrderCommercials.FirstAsync(oc => oc.OrderId == orderId);
+		commercial.ManagerId.Should().BeNull();
+
+		result.ManagerId.Should().BeNull();
+		result.ManagerName.Should().BeNull();
+	}
 }

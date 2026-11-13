@@ -2,7 +2,6 @@ using System.Security.Claims;
 using KG.MES.Server.Models.Dto;
 using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Models.Dto;
-using KG.MES.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KG.MES.Server.Controllers;
@@ -80,5 +79,17 @@ public partial class UsersController
 			return BadRequest(new { error = "Текущий пароль не подходит", currentPasswordError = true });
 
 		return Ok(new { message = "Password changed successfully" });
+	}
+
+	public async Task<IActionResult> GetManagersHandler(string? search)
+	{
+		var managers = await userService.GetManagersAsync(search);
+		return Ok(managers);
+	}
+
+	public async Task<IActionResult> SearchUsersHandler(string? search)
+	{
+		var users = await userService.SearchUsersAsync(search);
+		return Ok(users);
 	}
 }

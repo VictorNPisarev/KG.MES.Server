@@ -33,4 +33,9 @@ public interface IUserService
 	Task<bool> ApproveUserAsync(Guid userId, Guid adminId);
 	
 	Task<bool> RevokeUserApprovalAsync(Guid userId, Guid adminId);
+
+	Task<List<SalesManagerDto>> GetManagersAsync(string? search = null);
+	
+	Task<List<SalesManagerDto>> SearchUsersAsync(string? search = null);
+
 }
