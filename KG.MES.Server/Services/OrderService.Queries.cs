@@ -176,7 +176,8 @@ public partial class OrderService
 			join w in context.Workplaces on ol.WorkplaceId equals w.Id
 			join u in context.Users on ol.UserId equals u.Id into ug
 			from u in ug.DefaultIfEmpty()
-			where ol.ProductionOrderId == productionOrder.Id
+			where ol.ProductionOrderId == productionOrder.Id 
+				&& w.IsWorkplace
 			orderby ol.OperationTime descending
 			select new OrderOperationLogDto
 			{
