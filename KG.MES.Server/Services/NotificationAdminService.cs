@@ -86,7 +86,7 @@ public class NotificationAdminService : INotificationAdminService
 	public async Task<List<RoleDto>> GetRolesAsync()
 	{
 		return await _context.Roles
-			.Select(r => new RoleDto { Id = r.Id, Name = r.Name })
+			.Select(r => new RoleDto { Id = r.Id, Code = r.Code, Name = r.Name, Level = r.Level })
 			.ToListAsync();
 	}
 

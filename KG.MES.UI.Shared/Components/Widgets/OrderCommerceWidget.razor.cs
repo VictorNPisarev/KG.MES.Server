@@ -32,8 +32,19 @@ public partial class OrderCommerceWidget : ComponentBase, ISavableWidget
 	private List<CustomerDto> filteredCustomers = [];
 	private bool showCustomerDropdown;
 
+	// === Автокомплит менеджера ===
+	private Guid? editManagerId;
+	private string? editManagerName;
+	private string managerSearch = string.Empty;
+	private List<SalesManagerDto> managerList = [];            // полный список менеджеров (для <select>-режима)
+	private List<SalesManagerDto> filteredManagers = [];       // результаты поиска по всем сотрудникам
+	private bool isManagerSearchMode;                          // true — пользователь печатает
+	private bool showManagerDropdown;
+
 	public bool HasUnsavedChanges() =>
 		EditMode && (
+			editManagerId != commercial?.ManagerId ||
+			editManagerName != commercial?.ManagerName ||
 			editCustomerId != commercial?.CustomerId ||
 			editCustomerName != commercial?.CustomerName ||
 			editAmount != commercial?.Amount ||
@@ -52,19 +63,29 @@ public partial class OrderCommerceWidget : ComponentBase, ISavableWidget
 		commercial = await ApiService.GetCommerceAsync(OrderId);
 	}
 
-	private void EnterEditMode()
+	private async Task EnterEditMode()
 	{
 		EditMode = true;
 		saveError = null;
 
+		editManagerId = commercial?.ManagerId;
+		editManagerName = commercial?.ManagerName;
 		editCustomerId = commercial?.CustomerId;
 		editCustomerName = commercial?.CustomerName;
 		editAmount = commercial?.Amount;
 		editCurrency = commercial?.Currency ?? "RUB";
 
 		customerSearch = editCustomerName ?? string.Empty;
+		managerSearch = editManagerName ?? string.Empty;
+
 		filteredCustomers = [];
 		showCustomerDropdown = false;
+		filteredManagers = [];
+		isManagerSearchMode = false;
+		showManagerDropdown = false;
+
+		await EnsureManagersLoadedAsync();
+		StateHasChanged();
 	}
 
 	private void CancelEdit()
@@ -73,8 +94,11 @@ public partial class OrderCommerceWidget : ComponentBase, ISavableWidget
 		saveError = null;
 		filteredCustomers = [];
 		showCustomerDropdown = false;
+		filteredManagers = [];
+		isManagerSearchMode = false;
+		showManagerDropdown = false;
 	}
-
+	
 	private async Task SaveChanges()
 	{
 		isSaving = true;
@@ -84,8 +108,8 @@ public partial class OrderCommerceWidget : ComponentBase, ISavableWidget
 		{
 			var dto = new OrderCommercialRequestDto
 			{
-				ManagerId = commercial?.ManagerId,
-				ManagerName = commercial?.ManagerName,
+				ManagerId = editManagerId,
+				ManagerName = editManagerName,
 				CustomerId = editCustomerId,
 				CustomerName = editCustomerName,
 				Amount = editAmount,
@@ -153,5 +177,60 @@ public partial class OrderCommerceWidget : ComponentBase, ISavableWidget
 		customerSearch = string.Empty;
 		filteredCustomers = [];
 		showCustomerDropdown = false;
+	}
+
+	private async Task EnsureManagersLoadedAsync()
+	{
+		if (managerList.Count > 0) return;
+		managerList = await ApiService.GetManagersAsync();
+	}
+
+	// ========== АВТОКОМПЛИТ МЕНЕДЖЕРА ==========
+
+	private void ToggleManagerDropdown()
+	{
+		showManagerDropdown = !showManagerDropdown;
+		if (showManagerDropdown)
+		{
+			isManagerSearchMode = false;
+			filteredManagers = [];
+		}
+	}
+
+	private async Task OnManagerSearchChanged()
+	{
+		isManagerSearchMode = true;
+		editManagerId = null;
+		editManagerName = managerSearch;
+
+		if (managerSearch.Length < 2)
+		{
+			filteredManagers = [];
+			showManagerDropdown = false;
+			return;
+		}
+
+		filteredManagers = await ApiService.SearchUsersAsync(managerSearch);
+		showManagerDropdown = filteredManagers.Any();
+	}
+
+	private void SelectManager(SalesManagerDto manager)
+	{
+		editManagerId = manager.Id;
+		editManagerName = manager.Name;
+		managerSearch = manager.Name;
+		filteredManagers = [];
+		showManagerDropdown = false;
+		isManagerSearchMode = false;
+	}
+
+	private void ClearManager()
+	{
+		editManagerId = null;
+		editManagerName = null;
+		managerSearch = string.Empty;
+		filteredManagers = [];
+		showManagerDropdown = false;
+		isManagerSearchMode = false;
 	}
 }

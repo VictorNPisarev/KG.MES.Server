@@ -146,6 +146,31 @@ public partial class OrderService
 		var resolvedCustomerId = resolvedCustomer?.Id;
 		var resolvedCustomerName = resolvedCustomer?.Name ?? dto.CustomerName?.Trim();
 
+		// === Резолвим менеджера ===
+		User? resolvedManager = null;
+
+		if (dto.ManagerId.HasValue)
+		{
+			resolvedManager = await context.Users
+				.FirstOrDefaultAsync(u => u.Id == dto.ManagerId.Value);
+
+			if (resolvedManager == null)
+				throw new Exception($"Менеджер {dto.ManagerId} не найден");
+		}
+		else if (!string.IsNullOrWhiteSpace(dto.ManagerName))
+		{
+			var trimmedManagerName = dto.ManagerName.Trim();
+			var lowerManagerName = trimmedManagerName.ToLower();
+
+			resolvedManager = await context.Users
+				.FirstOrDefaultAsync(u => u.Name.ToLower() == lowerManagerName);
+
+			if (resolvedManager == null)
+				throw new Exception($"Менеджер '{trimmedManagerName}' не найден");
+		}
+
+		var resolvedManagerId = resolvedManager?.Id;
+
 		// Ищем существующую запись
 		var existing = await context.OrderCommercials
 			.FirstOrDefaultAsync(oc => oc.OrderId == orderId);
@@ -157,7 +182,7 @@ public partial class OrderService
 			{
 				Id = Guid.NewGuid(),
 				OrderId = orderId,
-				ManagerId = dto.ManagerId,
+				ManagerId = resolvedManagerId,
 				CustomerId = resolvedCustomerId,
 				CustomerName = resolvedCustomerName,
 				Amount = dto.Amount,
@@ -186,7 +211,7 @@ public partial class OrderService
 		else
 		{
 			// Обновляем существующую запись
-			existing.ManagerId = dto.ManagerId;
+			existing.ManagerId = resolvedManagerId;
 			existing.CustomerId = resolvedCustomerId;
 			existing.CustomerName = resolvedCustomerName;
 			existing.Amount = dto.Amount;

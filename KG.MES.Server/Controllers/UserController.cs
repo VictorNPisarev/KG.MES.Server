@@ -32,5 +32,13 @@ public partial class UsersController : BaseController
 	[HttpGet("users/{userId}/workplaces")]
 	public Task<IActionResult> GetUserWorkplaces(Guid userId) => GetUserWorkplacesHandler(userId);
 
+	[HttpGet("users/managers")]
+	[Authorize]
+	public Task<IActionResult> GetManagers([FromQuery] string? search = null) => GetManagersHandler(search);
+
+	[HttpGet("users/search")]
+	[Authorize]
+	public Task<IActionResult> SearchUsers([FromQuery] string? search = null) => SearchUsersHandler(search);
+
 	#endregion
 }
