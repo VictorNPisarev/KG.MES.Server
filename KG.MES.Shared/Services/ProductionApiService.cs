@@ -1121,4 +1121,42 @@ public class ProductionApiService : AuthorizedApiService
 			return [];
 		}
 	}
+
+	public async Task<List<SalesManagerDto>> GetManagersAsync(string? search = null)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var url = $"{BaseUrl}/users/managers";
+			if (!string.IsNullOrWhiteSpace(search))
+				url += $"?search={Uri.EscapeDataString(search)}";
+
+			return await httpClient.GetFromJsonAsync<List<SalesManagerDto>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching managers");
+			return [];
+		}
+	}
+
+	public async Task<List<SalesManagerDto>> SearchUsersAsync(string? search = null)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var url = $"{BaseUrl}/users/search";
+			if (!string.IsNullOrWhiteSpace(search))
+				url += $"?search={Uri.EscapeDataString(search)}";
+
+			return await httpClient.GetFromJsonAsync<List<SalesManagerDto>>(url) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error searching users");
+			return [];
+		}
+	}
 }

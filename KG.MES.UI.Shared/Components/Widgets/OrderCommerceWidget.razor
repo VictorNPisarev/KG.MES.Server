@@ -60,8 +60,80 @@ else
 					@* Менеджер *@
 					<tr>
 						<td class="commerce-label">Менеджер</td>
-						<td class="commerce-value">
-							@(string.IsNullOrEmpty(commercial?.ManagerName) ? "—" : commercial.ManagerName)
+						<td class="commerce-value" style="position: relative;">
+							@if (EditMode)
+							{
+								<div style="position: relative;">
+									<input type="text" class="form-control form-control-sm pe-5"
+										placeholder="Выберите менеджера или начните вводить..." @bind="managerSearch"
+										@bind:event="oninput" @bind:after="OnManagerSearchChanged" />
+
+									<div
+										style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; z-index: 2;">
+										@if (!string.IsNullOrEmpty(managerSearch))
+										{
+											<button class="btn btn-sm btn-link text-secondary p-0" type="button"
+												@onclick="ClearManager" title="Очистить">
+												<i class="bi bi-x-lg"></i>
+											</button>
+										}
+										<button class="btn btn-sm btn-link text-secondary p-0" type="button"
+											@onclick="ToggleManagerDropdown" title="Список менеджеров">
+											<i class="bi bi-chevron-down"></i>
+										</button>
+									</div>
+								</div>
+
+								@if (showManagerDropdown)
+								{
+									<ul class="dropdown-menu show"
+										style="min-width: 280px; max-height: 240px; overflow-y: auto; position: absolute; z-index: 1000;">
+										@if (isManagerSearchMode)
+										{
+											@if (filteredManagers.Any())
+											{
+												@foreach (var m in filteredManagers)
+												{
+													<li>
+														<button type="button" class="dropdown-item" @onclick="() => SelectManager(m)">
+															<div class="fw-semibold">@m.Name</div>
+															<small class="text-muted">@m.Email</small>
+														</button>
+													</li>
+												}
+											}
+											else
+											{
+												<li><span class="dropdown-item text-muted">Ничего не найдено</span></li>
+											}
+										}
+										else
+										{
+											@if (managerList.Any())
+											{
+												@foreach (var m in managerList)
+												{
+													<li>
+														<button type="button" class="dropdown-item @(m.Id == editManagerId ? "active" : "")"
+															@onclick="() => SelectManager(m)">
+															<div class="fw-semibold">@m.Name</div>
+															<small class="text-muted">@m.Email</small>
+														</button>
+													</li>
+												}
+											}
+											else
+											{
+												<li><span class="dropdown-item text-muted">Менеджеры не найдены</span></li>
+											}
+										}
+									</ul>
+								}
+							}
+							else
+							{
+								@(string.IsNullOrEmpty(commercial?.ManagerName) ? "—" : commercial.ManagerName)
+							}
 						</td>
 					</tr>
 
@@ -71,22 +143,27 @@ else
 						<td class="commerce-value" style="position: relative;">
 							@if (EditMode)
 							{
-								<div class="input-group input-group-sm">
-									<input type="text" class="form-control form-control-sm" placeholder="Начните вводить имя..."
-										@bind="customerSearch" @bind:event="oninput" @bind:after="OnCustomerSearchChanged" />
+								<div style="position: relative;">
+									<input type="text" class="form-control form-control-sm pe-5"
+										placeholder="Начните вводить имя..." @bind="customerSearch" @bind:event="oninput"
+										@bind:after="OnCustomerSearchChanged" />
+
 									@if (!string.IsNullOrEmpty(customerSearch))
 									{
-										<button class="btn btn-outline-secondary" type="button" @onclick="ClearCustomer"
-											title="Очистить">
-											<i class="bi bi-x-lg"></i>
-										</button>
+										<div
+											style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); z-index: 2;">
+											<button class="btn btn-sm btn-link text-secondary p-0" type="button"
+												@onclick="ClearCustomer" title="Очистить">
+												<i class="bi bi-x-lg"></i>
+											</button>
+										</div>
 									}
 								</div>
 
 								@if (showCustomerDropdown && filteredCustomers.Any())
 								{
-									<ul class="dropdown-menu show w-100"
-										style="max-height: 240px; overflow-y: auto; position: absolute; z-index: 1000;">
+									<ul class="dropdown-menu show"
+										style="min-width: 280px; max-height: 240px; overflow-y: auto; position: absolute; z-index: 1000;">
 										@foreach (var customer in filteredCustomers.Take(20))
 										{
 											<li>

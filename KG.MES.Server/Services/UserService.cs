@@ -1,5 +1,6 @@
 using KG.MES.Server.Data;
 using KG.MES.Server.Services.Interfaces;
+using KG.MES.Shared.Constants;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -346,10 +347,11 @@ public class UserService : IUserService
 	public async Task<List<RoleDto>> GetAllRolesAsync()
 	{
 		return await context.Roles
-			.OrderBy(r => r.Level)
+			.OrderBy(r => r.Code)
 			.Select(r => new RoleDto
 			{
 				Id = r.Id,
+				Code = r.Code,
 				Name = r.Name,
 				Level = r.Level
 			})
@@ -434,6 +436,66 @@ public class UserService : IUserService
 			user.Email, adminId);
 
 		return true;
+	}
+
+	/// <summary>
+	/// Возвращает пользователей с ролью Sales manager (roles.code = SALES_MANAGER).
+	/// Опционально фильтрует по имени/email (case-insensitive). Лимит — 20.
+	/// </summary>
+	public async Task<List<SalesManagerDto>> GetManagersAsync(string? search = null)
+	{
+		var query =
+			from u in context.Users
+			join r in context.Roles on u.RoleId equals r.Id
+			where r.Code == RoleCodes.SalesManager && u.IsActive
+			select new { u, r };
+
+		if (!string.IsNullOrWhiteSpace(search))
+		{
+			var s = search.Trim().ToLower();
+			query = query.Where(x =>
+				x.u.Name.ToLower().Contains(s) ||
+				x.u.Email.ToLower().Contains(s));
+		}
+
+		return await query
+			.OrderBy(x => x.u.Name)
+			.Take(20)
+			.Select(x => new SalesManagerDto
+			{
+				Id = x.u.Id,
+				Name = x.u.Name,
+				Email = x.u.Email
+			})
+			.ToListAsync();
+	}
+
+	/// <summary>
+	/// Поиск по всем пользователям (не только менеджерам).
+	/// Фильтр по имени/email (case-insensitive). Лимит — 20.
+	/// </summary>
+	public async Task<List<SalesManagerDto>> SearchUsersAsync(string? search = null)
+	{
+		var query = context.Users.Where(u => u.IsActive);
+
+		if (!string.IsNullOrWhiteSpace(search))
+		{
+			var s = search.Trim().ToLower();
+			query = query.Where(u =>
+				u.Name.ToLower().Contains(s) ||
+				u.Email.ToLower().Contains(s));
+		}
+
+		return await query
+			.OrderBy(u => u.Name)
+			.Take(20)
+			.Select(u => new SalesManagerDto
+			{
+				Id = u.Id,
+				Name = u.Name,
+				Email = u.Email
+			})
+			.ToListAsync();
 	}
 
 	/// <summary>
