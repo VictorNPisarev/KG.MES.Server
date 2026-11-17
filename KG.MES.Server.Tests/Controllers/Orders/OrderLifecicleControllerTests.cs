@@ -104,8 +104,8 @@ public class OrderLifecycleControllerTests : TestBase
 		var client = CreateClient();
 
 		var noneId = Guid.NewGuid();
-		var startWorkplaceId = Guid.NewGuid(); // "Торцовка"
-		var nextWorkplaceId = Guid.NewGuid();  // "Профилирование"
+		var startWorkplaceId = Guid.NewGuid();
+		var nextWorkplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
 		var productionOrderId = Guid.NewGuid();
 		var userId = Guid.NewGuid();
@@ -124,6 +124,31 @@ public class OrderLifecycleControllerTests : TestBase
 				po.CurrentWorkplaceId = noneId;
 			}));
 
+		// Добавляем подписку "для всех" на ORDER_STARTED
+		// NotificationEventSeeder уже добавил событие при старте хоста
+		Guid startedEventId;
+		using (var scope = Services.CreateScope())
+		{
+			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+			var startedEvent = await db.NotificationEvents
+				.FirstOrDefaultAsync(e => e.EventCode == "ORDER_STARTED");
+			startedEvent.Should().NotBeNull("NotificationEventSeeder должен добавить ORDER_STARTED");
+			startedEventId = startedEvent!.Id;
+
+			db.NotificationSubscriptions.Add(new NotificationSubscription
+			{
+				Id = Guid.NewGuid(),
+				EventId = startedEventId,
+				RoleId = null,
+				UserId = null,  // "для всех"
+				Severity = "Info",
+				IsActive = true,
+				CreatedAt = DateTime.UtcNow
+			});
+			await db.SaveChangesAsync();
+		}
+
 		var request = new BeginWorkplaceRequestDto
 		{
 			ProductionOrderId = productionOrderId,
@@ -139,33 +164,39 @@ public class OrderLifecycleControllerTests : TestBase
 		// Assert
 		response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		using var scope = Services.CreateScope();
-		var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		using var scope2 = Services.CreateScope();
+		var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
 
 		// 1. CurrentWorkplaceId обновился
-		var prodOrder = await db.ProductionOrders.FindAsync(productionOrderId);
+		var prodOrder = await db2.ProductionOrders.FindAsync(productionOrderId);
 		prodOrder!.CurrentWorkplaceId.Should().Be(startWorkplaceId);
 
-		// 2. Футпринты созданы для ВСЕХ рабочих мест
-		var footprints = await db.OrderFootprints
+		// 2. Футпринты созданы
+		var footprints = await db2.OrderFootprints
 			.Where(fp => fp.ProductionOrderId == productionOrderId)
 			.ToListAsync();
-
 		footprints.Should().HaveCount(2);
 
 		var startFp = footprints.Single(f => f.WorkplaceId == startWorkplaceId);
-		startFp.Status.Should().Be("active"); // Стартовое = active
+		startFp.Status.Should().Be("active");
 
-		// 3. ИСПРАВЛЕНИЕ: Следующий участок = pending (не planned!)
 		var nextFp = footprints.Single(f => f.WorkplaceId == nextWorkplaceId);
-		nextFp.Status.Should().Be("pending"); // ← ИСПРАВЛЕНО!
+		nextFp.Status.Should().Be("pending");
 
-		// 4. OperationLog создан
-		var logs = await db.OperationLogs
+		// 3. OperationLog создан
+		var logs = await db2.OperationLogs
 			.Where(l => l.ProductionOrderId == productionOrderId && l.OperationType == "START")
 			.ToListAsync();
 		logs.Should().HaveCount(1);
 		logs[0].UserId.Should().Be(userId);
+
+		// 4. Уведомление ORDER_STARTED создано
+		var notification = await db2.OrderNotifications
+			.FirstOrDefaultAsync(n => n.OrderId == orderId);
+		notification.Should().NotBeNull();
+		notification!.EventId.Should().Be(startedEventId);
+		notification.RoleId.Should().BeNull();
+		notification.UserId.Should().BeNull();
 	}
 
 	[Fact]
