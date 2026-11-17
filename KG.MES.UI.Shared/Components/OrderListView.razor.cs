@@ -88,6 +88,8 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	private static int _instanceCounter = 0;
 	private int _myInstanceId;
 
+	private bool IsAdmin => Session.User?.RoleName == "Admin";
+
 	private IconInfo testIcon = new IconInfo
 	{
 						Class = "bi bi-piggy-bank-fill",
@@ -482,6 +484,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		if (useSplitView)
 		{
 			// Без перезагрузки списка — просто скрываем панель
+			await LoadNotifications();
 			StateHasChanged();
 		}
 		else
