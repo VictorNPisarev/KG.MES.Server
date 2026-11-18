@@ -9,6 +9,10 @@ public enum NotificationEventType
 	[Description("Создан новый заказ")]
 	NewOrder,
 
+	[EventCode("ORDER_STARTED")]
+	[Description("Заказ взят в работу")]
+	OrderStarted,
+
 	[EventCode("ORDER_READY")]
 	[Description("Заказ переведен в статус Готово")]
 	OrderReady,

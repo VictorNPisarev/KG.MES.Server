@@ -1,6 +1,7 @@
 using KG.MES.Server.Extensions;
 using KG.MES.Server.Hubs;
 using KG.MES.Shared.Constants;
+using KG.MES.Shared.Model.Enums;
 using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -313,6 +314,27 @@ public partial class OrderService
 
 		await ActivateNextWorkplacesAsync(productionOrderId, startWorkplaceId);
 		await ActivateParallelWorkplacesAsync(productionOrderId, startWorkplaceId);
+
+		// === NEW: публикуем событие "Заказ взят в работу" ===
+		// BuildFullPathAsync вызывается ТОЛЬКО когда footprints ещё нет (hasExisting == false),
+		// значит это всегда "первый запуск" заказа.
+		var productionOrder = await context.ProductionOrders
+			.FirstOrDefaultAsync(po => po.Id == productionOrderId);
+
+		if (productionOrder != null)
+		{
+			await notificationService.PublishAsync(NotificationEventType.OrderStarted, productionOrder.OrderId);
+
+			try
+			{
+				await SignalRHelper.OrderNotificationAvailable();
+			}
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Failed to send SignalR notification for OrderStarted");
+			}
+		}
+
 	}
 
 	private async Task ActivateNextWorkplacesAsync(Guid productionOrderId, Guid startedWorkplaceId)
