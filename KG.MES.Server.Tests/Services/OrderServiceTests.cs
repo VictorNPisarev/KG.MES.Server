@@ -766,4 +766,77 @@ public class OrderServiceTests : IDisposable
 		result.ManagerId.Should().BeNull();
 		result.ManagerName.Should().BeNull();
 	}
+
+	// ====== BeginOrderWorkplaceAsync: публикация OrderStarted ======
+
+	[Fact]
+	public async Task BeginOrderWorkplaceAsync_WhenNoFootprints_ShouldPublishOrderStarted()
+	{
+		// Arrange
+		var noneId = Guid.NewGuid();
+		var startWorkplaceId = Guid.NewGuid();
+		var nextWorkplaceId = Guid.NewGuid();
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+		var userId = Guid.NewGuid();
+		var eventId = Guid.NewGuid();
+		var roleId = Guid.NewGuid();
+
+		_context.Workplaces.AddRange(
+			new Workplace { Id = noneId, Name = "none", Code = "NONE", IsWorkplace = false },
+			new Workplace { Id = startWorkplaceId, Name = "Торцовка", Code = "CUTTING", IsWorkplace = true },
+			new Workplace { Id = nextWorkplaceId, Name = "Профилирование", Code = "PROFILING", IsWorkplace = true });
+
+		_context.WorkplaceTransitions.AddRange(
+			new WorkplaceTransition { Id = Guid.NewGuid(), FromWorkplaceId = noneId, ToWorkplaceId = startWorkplaceId, CreatedAt = DateTime.UtcNow },
+			new WorkplaceTransition { Id = Guid.NewGuid(), FromWorkplaceId = startWorkplaceId, ToWorkplaceId = nextWorkplaceId, CreatedAt = DateTime.UtcNow });
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "START-NOTIF-001" });
+		_context.ProductionOrders.Add(new ProductionOrder
+		{
+			Id = productionOrderId,
+			OrderId = orderId,
+			CurrentWorkplaceId = noneId
+		});
+
+		// Событие ORDER_STARTED + активная подписка на роль
+		_context.NotificationEvents.Add(new NotificationEvent
+		{
+			Id = eventId,
+			EventCode = "ORDER_STARTED",
+			Description = "Заказ взят в работу"
+		});
+		_context.NotificationSubscriptions.Add(new NotificationSubscription
+		{
+			Id = Guid.NewGuid(),
+			EventId = eventId,
+			RoleId = roleId,
+			Severity = "Info",
+			IsActive = true,
+			CreatedAt = DateTime.UtcNow
+		});
+
+		await _context.SaveChangesAsync();
+
+		// Sanity check: до вызова уведомлений нет
+		(await _context.OrderNotifications.CountAsync()).Should().Be(0);
+
+		// Act
+		var result = await _service.BeginOrderWorkplaceAsync(
+			productionOrderId, startWorkplaceId, userId, "Старт", "Test");
+
+		// Assert: операция успешна
+		result.Success.Should().BeTrue();
+
+		// Assert: уведомление OrderStarted создано
+		var notifications = await _context.OrderNotifications.ToListAsync();
+		notifications.Should().HaveCount(1);
+
+		var notification = notifications[0];
+		notification.OrderId.Should().Be(orderId);
+		notification.EventId.Should().Be(eventId);
+		notification.RoleId.Should().Be(roleId);
+		notification.UserId.Should().BeNull();
+		notification.Severity.Should().Be("Info");
+	}
 }

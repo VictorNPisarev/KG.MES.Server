@@ -258,7 +258,7 @@
 									<i class="bi bi-pencil"></i>
 								</button>
 							}
-							@if (Settings.CanDelete)
+							@if (Settings.CanDelete || IsAdmin)
 							{
 								<button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteOrder(context!)"
 									title="Удалить">
