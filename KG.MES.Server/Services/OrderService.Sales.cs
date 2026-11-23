@@ -340,6 +340,8 @@ public partial class OrderService
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
 				PlateArea = o.PlateArea,
+				BuckCount = o.BuckCount,
+				BuckArea = o.BuckArea,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
 				IsOnlyPaid = o.IsOnlyPaid,

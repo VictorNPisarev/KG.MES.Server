@@ -41,6 +41,9 @@ public class OrdersControllerTests : TestBase
 				o.ReadyDate = DateTime.Parse("2025-06-26T21:00:00.000Z");
 				o.WindowCount = 0;
 				o.WindowArea = 0;
+				o.BuckCount = 3;
+				o.BuckArea = 2.5m;
+
 			})
 			.WithProductionOrder(po =>
 			{
@@ -96,6 +99,8 @@ public class OrdersControllerTests : TestBase
 		result.Data[0].Id.Should().Be(order1Id);
 		result.Data[0].OrderNumber.Should().Be("1362");
 		result.Data[0].ReadyDate.Should().Be(DateTime.Parse("2025-06-26T21:00:00.000Z"));
+		result.Data[0].BuckCount.Should().Be(3);
+		result.Data[0].BuckArea.Should().Be(2.5m);
 
 		result.Data[1].Id.Should().Be(order2Id);
 		result.Data[1].OrderNumber.Should().Be("3376");

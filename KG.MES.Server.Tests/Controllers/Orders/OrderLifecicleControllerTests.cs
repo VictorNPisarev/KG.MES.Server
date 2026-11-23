@@ -46,6 +46,8 @@ public class OrderLifecycleControllerTests : TestBase
 			WindowArea = 4.5m,
 			PlateCount = 0,
 			PlateArea = 0m,
+			BuckCount = 6,
+			BuckArea = 3.25m,
 			IsEconom = false,
 			IsClaim = false,
 			IsOnlyPaid = false,
@@ -346,6 +348,9 @@ public class OrderLifecycleControllerTests : TestBase
 			WindowArea = 30.5m,
 			PlateCount = 8,
 			PlateArea = 15.0m,
+			BuckCount = 12,
+			BuckArea = 8.75m,
+
 			IsEconom = true,
 			IsClaim = false,
 			IsOnlyPaid = true,
@@ -383,6 +388,8 @@ public class OrderLifecycleControllerTests : TestBase
 		updatedOrder.WindowArea.Should().Be(30.5m);
 		updatedOrder.PlateCount.Should().Be(8);
 		updatedOrder.PlateArea.Should().Be(15.0m);
+		updatedOrder.BuckCount.Should().Be(12);
+		updatedOrder.BuckArea.Should().Be(8.75m);
 		updatedOrder.IsEconom.Should().BeTrue();
 		updatedOrder.IsOnlyPaid.Should().BeTrue();
 		updatedOrder.RtmDate.Should().Be(DateTime.Parse("2026-07-01"));

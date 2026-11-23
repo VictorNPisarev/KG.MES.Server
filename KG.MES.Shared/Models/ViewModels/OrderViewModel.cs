@@ -33,16 +33,22 @@ public class OrderViewModel
 	[Column("Щитовые, м2", Order = 9, ShowTotal = true, DisplayFormat = "F2")]
 	public double? PlateArea { get; set; }
 
-	[Column("Эконом", Order = 10, IsBadge = true, Filterable = true)]
+	[Column("Обсада, шт", Order = 10, ShowTotal = true)]
+	public int BuckCount { get; set; }
+
+	[Column("Обсада, м2", Order = 11, ShowTotal = true, DisplayFormat = "F2")]
+	public double? BuckArea { get; set; }
+
+	[Column("Эконом", Order = 12, IsBadge = true, Filterable = true)]
 	public bool IsEconom { get; set; }
 
-	[Column("Рекламация", Order = 11, IsBadge = true, Filterable = true)]
+	[Column("Рекламация", Order = 13, IsBadge = true, Filterable = true)]
 	public bool IsClaim { get; set; }
 
-	[Column("Оплачен, не запущен", Order = 12, IsBadge = true, Filterable = true)]
+	[Column("Оплачен, не запущен", Order = 14, IsBadge = true, Filterable = true)]
 	public bool IsOnlyPaid { get; set; }
 
-	[Column("2-стор. покраска", Order = 13, IsBadge = true, Filterable = true)]
+	[Column("2-стор. покраска", Order = 15, IsBadge = true, Filterable = true)]
 	public bool IsTwoSidePaint { get; set; }
 	public string? ProductionOrderId { get; set; }
 
@@ -53,7 +59,7 @@ public class OrderViewModel
 
 	public string? CurrentWorkplaceName { get; set; }
 
-	[Column("Станок", Order = 12, Visible = true, IsBadge = true, Filterable = true)]
+	[Column("Станок", Order = 16, Visible = true, IsBadge = true, Filterable = true)]
 	public string? Machine { get; set; }
 
 	public bool IsNew { get; set; }

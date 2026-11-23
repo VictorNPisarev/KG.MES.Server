@@ -16,6 +16,12 @@ public class MastersOrderDto : OrderDtoBase
 	[JsonPropertyName("plate_area")]
 	public double? PlateArea { get; set; }
 
+	[JsonPropertyName("buck_count")]
+	public int BuckCount { get; set; }
+
+	[JsonPropertyName("buck_area")]
+	public decimal? BuckArea { get; set; }
+
 	[JsonPropertyName("customer_name")]
 	public string CustomerName { get; set; } = string.Empty;
 

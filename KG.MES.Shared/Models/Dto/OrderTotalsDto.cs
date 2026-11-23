@@ -20,4 +20,10 @@ public class OrderTotalsDto : ITotalsDto
 
 	[JsonPropertyName("plate_area_total")]
 	public decimal? PlateAreaTotal { get; set; }
+
+	[JsonPropertyName("buck_count_total")]
+	public int? BuckCountTotal { get; set; }
+
+	[JsonPropertyName("buck_area_total")]
+	public decimal? BuckAreaTotal { get; set; }
 }

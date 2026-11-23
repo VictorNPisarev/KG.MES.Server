@@ -16,6 +16,12 @@ public class SalesOrderDto : OrderDtoBase
 	[JsonPropertyName("plate_area")]
 	public decimal? PlateArea { get; set; }
 
+	[JsonPropertyName("buck_count")]
+	public int BuckCount { get; set; }
+
+	[JsonPropertyName("buck_area")]
+	public decimal? BuckArea { get; set; }
+
 	[JsonPropertyName("manager_id")]
 	public Guid? ManagerId { get; set; }
 
