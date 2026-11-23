@@ -9,8 +9,6 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using KG.MES.Shared.Services;
-using KG.MES.Server.Services.Interfaces;
 using KG.MES.Shared.Tests.Helpers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
@@ -161,9 +159,14 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
 	protected override Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
+		var userIdHeader = Context.Request.Headers["X-Test-UserId"].FirstOrDefault();
+		var userId = !string.IsNullOrEmpty(userIdHeader) && Guid.TryParse(userIdHeader, out var parsed)
+			? parsed
+			: Guid.NewGuid();
+
 		var claims = new[]
 		{
-			new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+			new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
 			new Claim(ClaimTypes.Role, "Admin"), // Даем все права
             new Claim(ClaimTypes.Email, "test@admin.com")
 		};

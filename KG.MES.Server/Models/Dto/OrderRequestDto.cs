@@ -8,6 +8,8 @@ public class OrderRequestDto
 	public decimal WindowArea { get; set; }
 	public int PlateCount { get; set; }
 	public decimal PlateArea { get; set; }
+	public int BuckCount { get; set; }
+	public decimal BuckArea { get; set; }
 	public bool IsEconom { get; set; }
 	public bool IsClaim { get; set; }
 	public bool IsOnlyPaid { get; set; }

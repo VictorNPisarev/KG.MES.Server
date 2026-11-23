@@ -19,6 +19,8 @@ public partial class CreateOrderPage
 	private double WindowArea { get; set; }
 	private int PlateCount { get; set; }
 	private double PlateArea { get; set; }
+	private int BuckCount { get; set; }
+	private double BuckArea { get; set; }
 	private string Machine { get; set; } = string.Empty;
 	private DateTime? RtmDate { get; set; } = DateTime.Now;
 	private DateTime? RtmDateCash { get; set; } = DateTime.Now;
@@ -62,6 +64,8 @@ public partial class CreateOrderPage
 			WindowArea = order.WindowArea;
 			PlateCount = order.PlateCount;
 			PlateArea = order.PlateArea;
+			BuckCount = order.BuckCount;
+			BuckArea = order.BuckArea;
 			Machine = order.Machine ?? "";
 			RtmDate = order.RtmDate;
 			RtmDateCash = order.RtmDate;
@@ -115,6 +119,8 @@ public partial class CreateOrderPage
 				WindowArea = WindowArea,
 				PlateCount = PlateCount,
 				PlateArea = PlateArea,
+				BuckCount = BuckCount,
+				BuckArea = BuckArea,
 				Comment = Comment,
 				IsEconom = IsEconom,
 				IsClaim = IsClaim,
@@ -167,6 +173,8 @@ public partial class CreateOrderPage
 		WindowArea = 0;
 		PlateCount = 0;
 		PlateArea = 0;
+		BuckCount = 0;
+		BuckArea = 0;
 		Comment = string.Empty;
 		IsEconom = false;
 		IsClaim = false;

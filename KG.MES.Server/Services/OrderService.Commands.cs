@@ -26,6 +26,8 @@ public partial class OrderService
 				WindowArea = request.WindowArea,
 				PlateCount = request.PlateCount,
 				PlateArea = request.PlateArea,
+				BuckCount = request.BuckCount,
+				BuckArea = request.BuckArea,
 				IsEconom = request.IsEconom,
 				IsClaim = request.IsClaim,
 				IsOnlyPaid = request.IsOnlyPaid,
@@ -435,6 +437,8 @@ public partial class OrderService
 			WindowArea = order.WindowArea,
 			PlateCount = order.PlateCount,
 			PlateArea = order.PlateArea,
+			BuckCount = order.BuckCount,
+			BuckArea = order.BuckArea,
 			IsEconom = order.IsEconom,
 			IsClaim = order.IsClaim,
 			IsOnlyPaid = order.IsOnlyPaid,
@@ -478,6 +482,8 @@ public partial class OrderService
 			order.WindowArea = dto.WindowArea;
 			order.PlateCount = dto.PlateCount;
 			order.PlateArea = dto.PlateArea;
+			order.BuckCount = dto.BuckCount;
+			order.BuckArea = dto.BuckArea; 
 			order.IsEconom = dto.IsEconom;
 			order.IsClaim = dto.IsClaim;
 			order.IsOnlyPaid = dto.IsOnlyPaid;
@@ -649,5 +655,51 @@ public partial class OrderService
 		}
 
 		await context.SaveChangesAsync();
+	}
+
+	/// <summary>
+	/// Добавляет заказ в избранное пользователя. Idempotent.
+	/// Возвращает false, если заказ не найден.
+	/// </summary>
+	public async Task<bool> AddFavoriteAsync(Guid userId, Guid orderId)
+	{
+		// Проверяем, что заказ существует
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
+		if (!orderExists)
+			return false;
+
+		// Idempotency: если уже в избранном — ничего не делаем
+		var alreadyExists = await context.OrderFavorites
+			.AnyAsync(f => f.UserId == userId && f.OrderId == orderId);
+
+		if (alreadyExists)
+			return true;
+
+		context.OrderFavorites.Add(new OrderFavorite
+		{
+			Id = Guid.NewGuid(),
+			UserId = userId,
+			OrderId = orderId,
+			CreatedAt = DateTime.UtcNow
+		});
+
+		await context.SaveChangesAsync();
+		return true;
+	}
+
+	/// <summary>
+	/// Удаляет заказ из избранного. Idempotent: если записи нет — успех.
+	/// </summary>
+	public async Task<bool> RemoveFavoriteAsync(Guid userId, Guid orderId)
+	{
+		var favorite = await context.OrderFavorites
+			.FirstOrDefaultAsync(f => f.UserId == userId && f.OrderId == orderId);
+
+		if (favorite == null)
+			return true;  // idempotent
+
+		context.OrderFavorites.Remove(favorite);
+		await context.SaveChangesAsync();
+		return true;
 	}
 }

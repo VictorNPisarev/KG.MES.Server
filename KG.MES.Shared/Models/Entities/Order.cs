@@ -17,6 +17,8 @@ public class Order
 	[Column("window_area")] public decimal WindowArea { get; set; }
 	[Column("plate_count")] public int PlateCount { get; set; }
 	[Column("plate_area")] public decimal PlateArea { get; set; }
+	[Column("buck_count")] public int BuckCount { get; set; }
+	[Column("buck_area")] public decimal BuckArea { get; set; }
 	[Column("is_econom")] public bool IsEconom { get; set; }
 	[Column("is_claim")] public bool IsClaim { get; set; }
 	[Column("is_only_paid")] public bool IsOnlyPaid { get; set; }

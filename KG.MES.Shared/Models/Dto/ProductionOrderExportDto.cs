@@ -8,6 +8,8 @@ public class ProductionOrderExportDto
 	public double WindowArea { get; set; }
 	public int PlateCount { get; set; }
 	public double PlateArea { get; set; }
+	public int BuckCount { get; set; }
+	public double BuckArea { get; set; }
 	public string? Lumber { get; set; }
 	public string? GlazingBead { get; set; }
 	public bool IsTwoSidePaint { get; set; }

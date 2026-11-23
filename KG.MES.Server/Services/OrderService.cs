@@ -43,6 +43,8 @@ public partial class OrderService : IOrderService
 				WindowArea = x.o.WindowArea,
 				PlateCount = x.o.PlateCount,
 				PlateArea = x.o.PlateArea,
+				BuckCount = x.o.BuckCount,
+				BuckArea = x.o.BuckArea,
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
@@ -210,6 +212,8 @@ public partial class OrderService : IOrderService
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
 				PlateArea = o.PlateArea,
+				BuckCount = o.BuckCount,
+				BuckArea = o.BuckArea,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
 				IsOnlyPaid = o.IsOnlyPaid,
@@ -231,6 +235,10 @@ public partial class OrderService : IOrderService
 												.Any(r => r.NotificationId == n.Id && r.UserId == currentUserId))
 								.Any()
 							: false,
+				IsFavorite = currentUserId.HasValue
+					? context.OrderFavorites
+						.Any(f => f.OrderId == o.Id && f.UserId == currentUserId)
+					: false,
 				IsCompletedOnCurrentWorkplace = o.IsCompletedOnCurrentWorkplace
 			})
 			.ToListAsync();
@@ -249,7 +257,9 @@ public partial class OrderService : IOrderService
 				WindowCountTotal = g.Sum(x => x.WindowCount),
 				WindowAreaTotal = g.Sum(x => x.WindowArea),
 				PlateCountTotal = g.Sum(x => x.PlateCount),
-				PlateAreaTotal = g.Sum(x => x.PlateArea)
+				PlateAreaTotal = g.Sum(x => x.PlateArea),
+				BuckCountTotal = g.Sum(x => x.BuckCount),
+				BuckAreaTotal = g.Sum(x => x.BuckArea)
 			})
 			.FirstOrDefaultAsync();
 
@@ -579,6 +589,8 @@ public partial class OrderService : IOrderService
 					WindowArea = x.o.WindowArea,
 					PlateCount = x.o.PlateCount,
 					PlateArea = x.o.PlateArea,
+					BuckCount = x.o.BuckCount,
+					BuckArea = x.o.BuckArea,
 					IsEconom = x.o.IsEconom,
 					IsClaim = x.o.IsClaim,
 					IsOnlyPaid = x.o.IsOnlyPaid,
@@ -901,6 +913,44 @@ public partial class OrderService : IOrderService
 				Items = g.Select(n => orderDict[n.OrderId]).ToList()
 			})
 			.ToList();
+
+		return result;
+	}
+
+	/// <summary>
+	/// Избранные заказы пользователя, свежие закладки сверху.
+	/// </summary>
+	public async Task<List<OrderDto>> GetFavoriteOrdersAsync(Guid userId)
+	{
+		// Получаем id заказов в избранном, отсортированные по времени добавления (desc)
+		var favoriteOrderIds = await context.OrderFavorites
+			.Where(f => f.UserId == userId)
+			.OrderByDescending(f => f.CreatedAt)
+			.Select(f => f.OrderId)
+			.ToListAsync();
+
+		if (favoriteOrderIds.Count == 0)
+			return [];
+
+		// Тянем заказы через базовый query (с JOIN'ами и IsNew)
+		var orders = await BuildBaseQuery()
+			.Where(o => favoriteOrderIds.Contains(o.Id))
+			.ToListAsync();
+
+		// Восстанавливаем порядок по favoriteOrderIds (SQL IN не сохраняет порядок)
+		var orderDict = orders.ToDictionary(o => o.Id);
+		var result = favoriteOrderIds
+			.Where(id => orderDict.ContainsKey(id))
+			.Select(id => orderDict[id])
+			.ToList();
+
+		// Помечаем IsFavorite = true (все они из избранного)
+		foreach (var order in result)
+			order.IsFavorite = true;
+
+		// Конвертация времени
+		foreach (var order in result)
+			order.CreatedAt = order.CreatedAt.ToProductionTime();
 
 		return result;
 	}

@@ -62,7 +62,7 @@ public partial class OrderService
 			.Take(limit)
 			.ToListAsync();
 
-		// 4. Пометка новых (если нужно)
+		// 4. Пометка новых
 		if (currentUserId.HasValue && currentRoleId.HasValue)
 		{
 			var newOrderIds = await notificationService.GetUnreadOrderIdsAsync(
@@ -72,6 +72,23 @@ public partial class OrderService
 			foreach (var item in items)
 			{
 				item.IsNew = newSet.Contains(item.Id);
+			}
+		}
+
+		// 5. Пометка избранных
+		if (currentUserId.HasValue)
+		{
+			var itemIds = items.Select(i => i.Id).ToList();
+
+			var favoriteIds = await context.OrderFavorites
+				.Where(f => f.UserId == currentUserId.Value && itemIds.Contains(f.OrderId))
+				.Select(f => f.OrderId)
+				.ToListAsync();
+
+			var favoriteSet = favoriteIds.ToHashSet();
+			foreach (var item in items)
+			{
+				item.IsFavorite = favoriteSet.Contains(item.Id);
 			}
 		}
 
@@ -323,12 +340,14 @@ public partial class OrderService
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
 				PlateArea = o.PlateArea,
+				BuckCount = o.BuckCount,
+				BuckArea = o.BuckArea,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
 				IsOnlyPaid = o.IsOnlyPaid,
 				CreatedAt = o.CreatedAt,
-				ProductionOrderId = po != null ? po.Id : (Guid?)null,
-				CurrentWorkplaceId = po != null ? po.CurrentWorkplaceId : (Guid?)null,
+				ProductionOrderId = po.Id,
+				CurrentWorkplaceId = po.CurrentWorkplaceId,
 				CurrentStatus = w != null ? w.Name : null,
 				CustomerName = c != null ? c.Name : oc != null ? oc.CustomerName : null,
 				ManagerName = u != null ? u.Name : null,

@@ -67,9 +67,17 @@ public partial class SupplyController
 	}
 
 	public async Task<IActionResult> GetAllSupplyStatusesHandler(int page = 1, int limit = 50, string? sortBy = "ready_date",
-		string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid>? workplaceIds = null)
+	string? sortOrder = "asc", string? orderNumber = null, Guid? workplaceId = null, List<Guid>? workplaceIds = null)
 	{
-		var result = await supplyService.GetAllSupplyItemsAsync(page, limit, sortBy, sortOrder, workplaceIds, orderNumber);
+		if (workplaceId.HasValue)
+		{
+			workplaceIds ??= [];
+			workplaceIds.Add(workplaceId.Value);
+		}
+
+		var result = await supplyService.GetAllSupplyItemsAsync(
+			page, limit, sortBy, sortOrder, workplaceIds, orderNumber, CurrentUserId);
+
 		return Ok(result);
 	}
 
