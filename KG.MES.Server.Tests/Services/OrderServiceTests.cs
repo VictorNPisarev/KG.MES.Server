@@ -839,4 +839,177 @@ public class OrderServiceTests : IDisposable
 		notification.UserId.Should().BeNull();
 		notification.Severity.Should().Be("Info");
 	}
+
+	// ====== Favorites ======
+
+	[Fact]
+	public async Task AddFavoriteAsync_ShouldCreateFavorite()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var orderId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "FAV-001" });
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.AddFavoriteAsync(userId, orderId);
+
+		// Assert
+		result.Should().BeTrue();
+
+		var favorites = await _context.OrderFavorites.ToListAsync();
+		favorites.Should().HaveCount(1);
+		favorites[0].UserId.Should().Be(userId);
+		favorites[0].OrderId.Should().Be(orderId);
+		favorites[0].CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+	}
+
+	[Fact]
+	public async Task AddFavoriteAsync_WhenAlreadyExists_ShouldBeIdempotent()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var orderId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "FAV-002" });
+		_context.OrderFavorites.Add(new OrderFavorite
+		{
+			Id = Guid.NewGuid(),
+			UserId = userId,
+			OrderId = orderId,
+			CreatedAt = DateTime.UtcNow.AddHours(-1)
+		});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.AddFavoriteAsync(userId, orderId);
+
+		// Assert
+		result.Should().BeTrue();
+		(await _context.OrderFavorites.CountAsync()).Should().Be(1);
+	}
+
+	[Fact]
+	public async Task AddFavoriteAsync_WhenOrderNotFound_ShouldReturnFalse()
+	{
+		// Act
+		var result = await _service.AddFavoriteAsync(Guid.NewGuid(), Guid.NewGuid());
+
+		// Assert
+		result.Should().BeFalse();
+		(await _context.OrderFavorites.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task RemoveFavoriteAsync_ShouldDeleteFavorite()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var orderId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order { Id = orderId, OrderNumber = "FAV-003" });
+		_context.OrderFavorites.Add(new OrderFavorite
+		{
+			Id = Guid.NewGuid(),
+			UserId = userId,
+			OrderId = orderId,
+			CreatedAt = DateTime.UtcNow
+		});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.RemoveFavoriteAsync(userId, orderId);
+
+		// Assert
+		result.Should().BeTrue();
+		(await _context.OrderFavorites.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task RemoveFavoriteAsync_WhenNotExists_ShouldBeIdempotent()
+	{
+		// Act
+		var result = await _service.RemoveFavoriteAsync(Guid.NewGuid(), Guid.NewGuid());
+
+		// Assert
+		result.Should().BeTrue();
+		(await _context.OrderFavorites.CountAsync()).Should().Be(0);
+	}
+
+	[Fact]
+	public async Task GetFavoriteOrdersAsync_ShouldReturnOnlyUserFavoritesOrderedByCreatedAtDesc()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var otherUserId = Guid.NewGuid();
+		var workplaceId = Guid.NewGuid();
+
+		var order1Id = Guid.NewGuid();
+		var order2Id = Guid.NewGuid();
+		var order3Id = Guid.NewGuid();  // не в избранном
+
+		_context.Workplaces.Add(new Workplace { Id = workplaceId, Name = "Сборка", IsWorkplace = true });
+
+		_context.Orders.AddRange(
+			new Order { Id = order1Id, OrderNumber = "FAV-101" },
+			new Order { Id = order2Id, OrderNumber = "FAV-102" },
+			new Order { Id = order3Id, OrderNumber = "FAV-103" });
+
+		_context.ProductionOrders.AddRange(
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order1Id, CurrentWorkplaceId = workplaceId },
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order2Id, CurrentWorkplaceId = workplaceId },
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order3Id, CurrentWorkplaceId = workplaceId });
+
+		_context.OrderFavorites.AddRange(
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = userId,
+				OrderId = order1Id,
+				CreatedAt = DateTime.UtcNow.AddHours(-2)  // старее
+			},
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = userId,
+				OrderId = order2Id,
+				CreatedAt = DateTime.UtcNow.AddHours(-1)  // свежее
+			},
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = otherUserId,                     // чужое избранное
+				OrderId = order3Id,
+				CreatedAt = DateTime.UtcNow
+			});
+
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetFavoriteOrdersAsync(userId);
+
+		// Assert
+		result.Should().HaveCount(2);
+		result.Should().OnlyContain(o => o.Id == order1Id || o.Id == order2Id);
+		result.Should().NotContain(o => o.Id == order3Id);
+
+		// Свежие закладки сверху (order2 раньше order1)
+		result[0].Id.Should().Be(order2Id);
+		result[1].Id.Should().Be(order1Id);
+
+		// Все помечены IsFavorite
+		result.Should().OnlyContain(o => o.IsFavorite);
+	}
+
+	[Fact]
+	public async Task GetFavoriteOrdersAsync_WhenNoFavorites_ShouldReturnEmptyList()
+	{
+		// Act
+		var result = await _service.GetFavoriteOrdersAsync(Guid.NewGuid());
+
+		// Assert
+		result.Should().NotBeNull();
+		result.Should().BeEmpty();
+	}
 }

@@ -189,7 +189,7 @@ public class ServerSupplyService : ISupplyService
 	}
 	
 	public async Task<PaginatedResponse<SupplyDto>> GetAllSupplyItemsAsync(
-		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber)
+		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, Guid? currentUserId = null)
 	{
 		var query = BuildSupplyQuery(workplaceIds, orderNumber);
 
@@ -200,6 +200,23 @@ public class ServerSupplyService : ISupplyService
 			.Skip((page - 1) * limit)
 			.Take(limit)
 			.ToListAsync();
+
+		// Пометка избранных (если пользователь авторизован)
+		if (currentUserId.HasValue && items.Count > 0)
+		{
+			var itemIds = items.Select(i => i.Id).ToList();
+
+			var favoriteIds = await context.OrderFavorites
+				.Where(f => f.UserId == currentUserId.Value && itemIds.Contains(f.OrderId))
+				.Select(f => f.OrderId)
+				.ToListAsync();
+
+			var favoriteSet = favoriteIds.ToHashSet();
+			foreach (var item in items)
+			{
+				item.IsFavorite = favoriteSet.Contains(item.Id);
+			}
+		}
 
 		return new PaginatedResponse<SupplyDto>
 		{
@@ -315,7 +332,7 @@ public class ServerSupplyService : ISupplyService
 				Machine = g.Key.Machine,
 				ProductionOrderId = g.Key.ProductionOrderId,
 				CurrentWorkplaceId = g.Key.CurrentWorkplaceId,
-				Status = g.Key.WorkplaceName,
+				CurrentStatus = g.Key.WorkplaceName,
 				IsClaim = g.Key.IsClaim,
 				IsEconom = g.Key.IsEconom,
 				IsOnlyPaid = g.Key.IsOnlyPaid,

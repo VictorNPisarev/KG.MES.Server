@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
 	public DbSet<NotificationSubscription> NotificationSubscriptions { get; set; }
 	public DbSet<OrderNotification> OrderNotifications { get; set; }
 	public DbSet<OrderNotificationRead> OrderNotificationReads { get; set; }
+	public DbSet<OrderFavorite> OrderFavorites { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -312,6 +313,23 @@ public class AppDbContext : DbContext
 			.HasOne(r => r.User)
 			.WithMany()
 			.HasForeignKey(r => r.UserId)
+			.OnDelete(DeleteBehavior.Cascade);
+
+		// Favorites
+		modelBuilder.Entity<OrderFavorite>()
+			.HasIndex(f => new { f.UserId, f.OrderId })
+			.IsUnique();
+
+		modelBuilder.Entity<OrderFavorite>()
+			.HasOne(f => f.User)
+			.WithMany()
+			.HasForeignKey(f => f.UserId)
+			.OnDelete(DeleteBehavior.Cascade);
+
+		modelBuilder.Entity<OrderFavorite>()
+			.HasOne(f => f.Order)
+			.WithMany()
+			.HasForeignKey(f => f.OrderId)
 			.OnDelete(DeleteBehavior.Cascade);
 
 		base.OnModelCreating(modelBuilder);

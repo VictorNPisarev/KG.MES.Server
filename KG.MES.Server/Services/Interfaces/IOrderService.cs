@@ -7,7 +7,9 @@ public interface IOrderService
 	Task<PaginatedResponse<OrderDto>> GetOrdersAsync(
 		int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber, Guid? currentUserId, 
 		Guid? currentRoleId, List<FilterCondition>? filters = null);
-
+	Task<bool> AddFavoriteAsync(Guid userId, Guid orderId);
+	Task<bool> RemoveFavoriteAsync(Guid userId, Guid orderId);
+	Task<List<OrderDto>> GetFavoriteOrdersAsync(Guid userId);
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
 	Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string orderNumber);

@@ -53,8 +53,11 @@ public partial class OrderController : BaseController
 	// POST: api/orders/fasets
 	[HttpPost("orders/facets")]
 	[AllowAnonymous]
-	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request)
-		=> GetFilterFacetsHandler(request);
+	public Task<IActionResult> GetFilterFacets([FromBody] FilterFacetsRequestDto request) => GetFilterFacetsHandler(request);
+
+	// POST: api/orders/{orderId}/favorite
+	[HttpPost("orders/{orderId}/favorite")]
+	public Task<IActionResult> AddFavorite(Guid orderId) => AddFavoriteHandler(orderId);
 
 	#endregion POST
 
@@ -115,13 +118,18 @@ public partial class OrderController : BaseController
 	[HttpGet("orders/{orderId}/edit")]
 	public Task<IActionResult> GetOrderForEdit(Guid orderId) => GetOrderForEditHandler(orderId);
 
+	// GET: api/orders/new
+	[HttpGet("orders/new")]
+	public Task<IActionResult> GetNewOrders() => GetNewOrdersHandler();
+
+	// GET: api/orders/favorites
+	[HttpGet("orders/favorites")]
+	public Task<IActionResult> GetFavorites() => GetFavoritesHandler();
+
 	// GET: api/orders/{identifier}
 	[HttpGet("orders/{identifier}")]
 	public Task<IActionResult> GetOrderByIdentifier(string identifier) => GetOrderByIdentifierHandler(identifier);
 
-	[HttpGet("orders/new")]
-	public Task<IActionResult> GetNewOrders() => GetNewOrdersHandler();
-	
 	#endregion GET
 
 
@@ -160,6 +168,10 @@ public partial class OrderController : BaseController
 	// DELETE: api/orders/{orderId}
 	[HttpDelete("orders/{orderId}")]
 	public Task<IActionResult> DeleteOrder(Guid orderId) => DeleteOrderHandler(orderId);
+
+	// DELETE: api/orders/{orderId}/favorite
+	[HttpDelete("orders/{orderId}/favorite")]
+	public Task<IActionResult> RemoveFavorite(Guid orderId) => RemoveFavoriteHandler(orderId);
 
 	#endregion DELETE
 }

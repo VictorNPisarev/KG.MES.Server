@@ -8,7 +8,8 @@ public interface ISupplyService
 	Task<List<SupplyTypeDto>> GetSupplyTypesAsync();
 	Task<List<SupplyConditionDto>> GetSupplyConditionsAsync();
 	Task<List<OrderSupplyDto>> GetOrderSupplyItemsAsync(Guid orderId);
-	Task<PaginatedResponse<SupplyDto>> GetAllSupplyItemsAsync(int page, int limit, string? sortBy, string? sortOrder, List<Guid>? workplaceIds, string? orderNumber);
+	Task<PaginatedResponse<SupplyDto>> GetAllSupplyItemsAsync(int page, int limit, string? sortBy, string? sortOrder
+										, List<Guid>? workplaceIds, string? orderNumber, Guid? currentUserId = null);
 	Task<OperationResultDto> UpdateSupplyItemAsync(Guid orderId, Guid supplyTypeId, UpdateSupplyItemRequest request);
 	Task<OperationResultDto> UpdateAllSupplyItemsAsync(Guid orderId, List<UpdateSupplyItemRequest> updates);
 	Task<List<SupplyItemHistoryDto>> GetSupplyHistoryAsync(Guid supplyItemId);

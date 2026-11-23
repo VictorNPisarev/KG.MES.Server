@@ -650,4 +650,50 @@ public partial class OrderService
 
 		await context.SaveChangesAsync();
 	}
+
+	/// <summary>
+	/// Добавляет заказ в избранное пользователя. Idempotent.
+	/// Возвращает false, если заказ не найден.
+	/// </summary>
+	public async Task<bool> AddFavoriteAsync(Guid userId, Guid orderId)
+	{
+		// Проверяем, что заказ существует
+		var orderExists = await context.Orders.AnyAsync(o => o.Id == orderId);
+		if (!orderExists)
+			return false;
+
+		// Idempotency: если уже в избранном — ничего не делаем
+		var alreadyExists = await context.OrderFavorites
+			.AnyAsync(f => f.UserId == userId && f.OrderId == orderId);
+
+		if (alreadyExists)
+			return true;
+
+		context.OrderFavorites.Add(new OrderFavorite
+		{
+			Id = Guid.NewGuid(),
+			UserId = userId,
+			OrderId = orderId,
+			CreatedAt = DateTime.UtcNow
+		});
+
+		await context.SaveChangesAsync();
+		return true;
+	}
+
+	/// <summary>
+	/// Удаляет заказ из избранного. Idempotent: если записи нет — успех.
+	/// </summary>
+	public async Task<bool> RemoveFavoriteAsync(Guid userId, Guid orderId)
+	{
+		var favorite = await context.OrderFavorites
+			.FirstOrDefaultAsync(f => f.UserId == userId && f.OrderId == orderId);
+
+		if (favorite == null)
+			return true;  // idempotent
+
+		context.OrderFavorites.Remove(favorite);
+		await context.SaveChangesAsync();
+		return true;
+	}
 }

@@ -306,4 +306,37 @@ public partial class OrderController : BaseController
 		var result = await orderService.GetNewOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
 		return Ok(result);
 	}
+
+	public async Task<IActionResult> GetFavoritesHandler()
+	{
+		if (!CurrentUserId.HasValue)
+			return Ok(new List<OrderDto>());
+
+		var result = await orderService.GetFavoriteOrdersAsync(CurrentUserId.Value);
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> AddFavoriteHandler(Guid orderId)
+	{
+		if (!CurrentUserId.HasValue)
+			return Unauthorized();
+
+		var success = await orderService.AddFavoriteAsync(CurrentUserId.Value, orderId);
+		if (!success)
+			return NotFound(new { error = "Order not found" });
+
+		return Ok(new { success = true });
+	}
+
+	public async Task<IActionResult> RemoveFavoriteHandler(Guid orderId)
+	{
+		if (!CurrentUserId.HasValue)
+			return Unauthorized();
+
+		var success = await orderService.RemoveFavoriteAsync(CurrentUserId.Value, orderId);
+		if (!success)
+			return NotFound(new { error = "Order not found" });
+
+		return Ok(new { success = true });
+	}
 }
