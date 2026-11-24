@@ -43,6 +43,8 @@ public partial class OrderService : IOrderService
 				WindowArea = x.o.WindowArea,
 				PlateCount = x.o.PlateCount,
 				PlateArea = x.o.PlateArea,
+				BuckCount = x.o.BuckCount,
+				BuckArea = x.o.BuckArea,
 				IsEconom = x.o.IsEconom,
 				IsClaim = x.o.IsClaim,
 				IsOnlyPaid = x.o.IsOnlyPaid,
@@ -210,6 +212,8 @@ public partial class OrderService : IOrderService
 				WindowArea = o.WindowArea,
 				PlateCount = o.PlateCount,
 				PlateArea = o.PlateArea,
+				BuckCount = o.BuckCount,
+				BuckArea = o.BuckArea,
 				IsEconom = o.IsEconom,
 				IsClaim = o.IsClaim,
 				IsOnlyPaid = o.IsOnlyPaid,
@@ -253,7 +257,9 @@ public partial class OrderService : IOrderService
 				WindowCountTotal = g.Sum(x => x.WindowCount),
 				WindowAreaTotal = g.Sum(x => x.WindowArea),
 				PlateCountTotal = g.Sum(x => x.PlateCount),
-				PlateAreaTotal = g.Sum(x => x.PlateArea)
+				PlateAreaTotal = g.Sum(x => x.PlateArea),
+				BuckCountTotal = g.Sum(x => x.BuckCount),
+				BuckAreaTotal = g.Sum(x => x.BuckArea)
 			})
 			.FirstOrDefaultAsync();
 
@@ -583,6 +589,8 @@ public partial class OrderService : IOrderService
 					WindowArea = x.o.WindowArea,
 					PlateCount = x.o.PlateCount,
 					PlateArea = x.o.PlateArea,
+					BuckCount = x.o.BuckCount,
+					BuckArea = x.o.BuckArea,
 					IsEconom = x.o.IsEconom,
 					IsClaim = x.o.IsClaim,
 					IsOnlyPaid = x.o.IsOnlyPaid,

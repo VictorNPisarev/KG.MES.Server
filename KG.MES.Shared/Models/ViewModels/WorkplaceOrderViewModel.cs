@@ -30,6 +30,12 @@ public class WorkplaceOrderViewModel
 	[Column("Щитовые, м2", Order = 9, DisplayFormat = "F2", ShowTotal = true)]
 	public decimal? PlateArea { get; set; }
 
+	[Column("Обсада, шт", Order = 16, ShowTotal = true)]
+	public int BuckCount { get; set; }
+
+	[Column("Обсада, м2", Order = 17, DisplayFormat = "F2", ShowTotal = true)]
+	public decimal? BuckArea { get; set; }
+
 	[Column("Готовность", Order = 5, DisplayFormat = "dd.MM.yyyy", Sortable = true)]
 	public DateTime? ReadyDate { get; set; }
 

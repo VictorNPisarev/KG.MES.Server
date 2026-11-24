@@ -33,6 +33,12 @@ public class MastersOrderViewModel
 	[Column("Щитовые, м2", Order = 9, DisplayFormat = "F2")]
 	public double? PlateArea { get; set; }
 
+	[Column("Обсада, шт", Order = 14)]
+	public int BuckCount { get; set; }
+
+	[Column("Обсада, м2", Order = 15, DisplayFormat = "F2")]
+	public double? BuckArea { get; set; }
+
 	[Column("Эконом", Order = 10, IsBadge = true, Filterable = true)]
 	public bool IsEconom { get; set; }
 

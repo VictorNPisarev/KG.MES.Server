@@ -43,6 +43,9 @@ public class OrderTotalsControllerTests : TestBase
 				o.WindowArea = 10.5m;
 				o.PlateCount = 2;
 				o.PlateArea = 3.25m;
+				o.BuckCount = 4;
+				o.BuckArea = 2.5m;
+
 			})
 			.WithProductionOrder(po => { po.OrderId = order1Id; po.CurrentWorkplaceId = workplaceId; })
 			.WithOrder(o =>
@@ -53,6 +56,9 @@ public class OrderTotalsControllerTests : TestBase
 				o.WindowArea = 6.75m;
 				o.PlateCount = 1;
 				o.PlateArea = 1.5m;
+				o.BuckCount = 2;
+				o.BuckArea = 1.5m;
+
 			})
 			.WithProductionOrder(po => { po.OrderId = order2Id; po.CurrentWorkplaceId = workplaceId; }));
 
@@ -78,6 +84,8 @@ public class OrderTotalsControllerTests : TestBase
 		totals?.WindowAreaTotal.Should().Be(17.25m); // 10.5 + 6.75
 		totals?.PlateCountTotal.Should().Be(3);       // 2 + 1
 		totals?.PlateAreaTotal.Should().Be(4.75m);  // 3.25 + 1.5
+		totals?.BuckCountTotal.Should().Be(6);       // 4 + 2
+		totals?.BuckAreaTotal.Should().Be(4.0m);    // 2.5 + 1.5
 	}
 
 	[Fact]

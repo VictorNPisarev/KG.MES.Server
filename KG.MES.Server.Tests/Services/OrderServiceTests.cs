@@ -1012,4 +1012,163 @@ public class OrderServiceTests : IDisposable
 		result.Should().NotBeNull();
 		result.Should().BeEmpty();
 	}
+
+	// ====== Buck (обсада) ======
+
+	[Fact]
+	public async Task CreateOrderAsync_ShouldPersistBuckFields()
+	{
+		// Arrange
+		var noneId = Guid.NewGuid();
+		_context.Workplaces.Add(new Workplace { Id = noneId, Name = "none", Code = "NONE", IsWorkplace = false });
+		_context.SupplyTypes.Add(new SupplyType { Id = Guid.NewGuid(), Name = "lumber", IsActive = true });
+		await _context.SaveChangesAsync();
+
+		var request = new OrderRequestDto
+		{
+			OrderNumber = "BUCK-001",
+			WindowCount = 2,
+			WindowArea = 4.5m,
+			PlateCount = 1,
+			PlateArea = 2.0m,
+			BuckCount = 5,
+			BuckArea = 3.75m
+		};
+
+		// Act
+		var result = await _service.CreateOrderAsync(request);
+
+		// Assert
+		var order = await _context.Orders.FindAsync(result.OrderId);
+		order.Should().NotBeNull();
+		order!.BuckCount.Should().Be(5);
+		order.BuckArea.Should().Be(3.75m);
+	}
+
+	[Fact]
+	public async Task UpdateOrderAsync_ShouldUpdateBuckFields()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		var productionOrderId = Guid.NewGuid();
+
+		_context.Orders.Add(new Order
+		{
+			Id = orderId,
+			OrderNumber = "BUCK-UPD-001",
+			BuckCount = 0,
+			BuckArea = 0m
+		});
+		_context.ProductionOrders.Add(new ProductionOrder
+		{
+			Id = productionOrderId,
+			OrderId = orderId
+		});
+		await _context.SaveChangesAsync();
+
+		var dto = new OrderRequestDto
+		{
+			OrderNumber = "BUCK-UPD-001",
+			BuckCount = 7,
+			BuckArea = 5.25m
+		};
+
+		// Act
+		var result = await _service.UpdateOrderAsync(orderId, dto);
+
+		// Assert
+		result.Should().BeTrue();
+		var updated = await _context.Orders.FindAsync(orderId);
+		updated!.BuckCount.Should().Be(7);
+		updated.BuckArea.Should().Be(5.25m);
+	}
+
+	[Fact]
+	public async Task GetOrderForEditAsync_ShouldReturnBuckFields()
+	{
+		// Arrange
+		var orderId = Guid.NewGuid();
+		_context.Orders.Add(new Order
+		{
+			Id = orderId,
+			OrderNumber = "BUCK-EDIT-001",
+			BuckCount = 3,
+			BuckArea = 1.5m
+		});
+		_context.ProductionOrders.Add(new ProductionOrder
+		{
+			Id = Guid.NewGuid(),
+			OrderId = orderId
+		});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetOrderForEditAsync(orderId);
+
+		// Assert
+		result.Should().NotBeNull();
+		result!.BuckCount.Should().Be(3);
+		result.BuckArea.Should().Be(1.5m);
+	}
+
+	[Fact]
+	public async Task GetOrdersAsync_ShouldIncludeBuckFieldsInOrderDto()
+	{
+		// Arrange
+		var workplaceId = Guid.NewGuid();
+		_context.Workplaces.Add(new Workplace { Id = workplaceId, Name = "Сборка", IsWorkplace = true });
+		_context.Orders.Add(new Order
+		{
+			Id = Guid.NewGuid(),
+			OrderNumber = "BUCK-LIST-001",
+			BuckCount = 4,
+			BuckArea = 2.5m,
+			ReadyDate = DateTime.UtcNow.AddDays(1)
+		});
+		_context.ProductionOrders.Add(new ProductionOrder
+		{
+			Id = Guid.NewGuid(),
+			OrderId = _context.Orders.Local.First().Id,
+			CurrentWorkplaceId = workplaceId
+		});
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetOrdersAsync(1, 10, "ReadyDate", "asc", null, null, null, null);
+
+		// Assert
+		result.Data.Should().HaveCount(1);
+		result.Data[0].BuckCount.Should().Be(4);
+		result.Data[0].BuckArea.Should().Be(2.5m);
+	}
+
+	[Fact]
+	public async Task GetOrdersAsync_ShouldSumBuckInTotals()
+	{
+		// Arrange
+		var workplaceId = Guid.NewGuid();
+		_context.Workplaces.Add(new Workplace { Id = workplaceId, Name = "Сборка", IsWorkplace = true });
+
+		var order1Id = Guid.NewGuid();
+		var order2Id = Guid.NewGuid();
+
+		_context.Orders.AddRange(
+			new Order { Id = order1Id, OrderNumber = "BUCK-TOT-001", BuckCount = 3, BuckArea = 1.5m, ReadyDate = DateTime.UtcNow },
+			new Order { Id = order2Id, OrderNumber = "BUCK-TOT-002", BuckCount = 2, BuckArea = 2.5m, ReadyDate = DateTime.UtcNow });
+
+		_context.ProductionOrders.AddRange(
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order1Id, CurrentWorkplaceId = workplaceId },
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order2Id, CurrentWorkplaceId = workplaceId });
+
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetOrdersAsync(1, 10, "ReadyDate", "asc", null, null, null, null);
+
+		// Assert
+		var totals = result.Totals as OrderTotalsDto;
+		totals.Should().NotBeNull();
+		totals!.BuckCountTotal.Should().Be(5);       // 3 + 2
+		totals.BuckAreaTotal.Should().Be(4.0m);      // 1.5 + 2.5
+	}
 }

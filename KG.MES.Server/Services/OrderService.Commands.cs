@@ -26,6 +26,8 @@ public partial class OrderService
 				WindowArea = request.WindowArea,
 				PlateCount = request.PlateCount,
 				PlateArea = request.PlateArea,
+				BuckCount = request.BuckCount,
+				BuckArea = request.BuckArea,
 				IsEconom = request.IsEconom,
 				IsClaim = request.IsClaim,
 				IsOnlyPaid = request.IsOnlyPaid,
@@ -435,6 +437,8 @@ public partial class OrderService
 			WindowArea = order.WindowArea,
 			PlateCount = order.PlateCount,
 			PlateArea = order.PlateArea,
+			BuckCount = order.BuckCount,
+			BuckArea = order.BuckArea,
 			IsEconom = order.IsEconom,
 			IsClaim = order.IsClaim,
 			IsOnlyPaid = order.IsOnlyPaid,
@@ -478,6 +482,8 @@ public partial class OrderService
 			order.WindowArea = dto.WindowArea;
 			order.PlateCount = dto.PlateCount;
 			order.PlateArea = dto.PlateArea;
+			order.BuckCount = dto.BuckCount;
+			order.BuckArea = dto.BuckArea; 
 			order.IsEconom = dto.IsEconom;
 			order.IsClaim = dto.IsClaim;
 			order.IsOnlyPaid = dto.IsOnlyPaid;

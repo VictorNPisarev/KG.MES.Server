@@ -31,21 +31,29 @@
 					<div class="card-header"><h6 class="mb-0">Изделия</h6></div>
 					<div class="card-body">
 						<div class="row g-3">
-							<div class="col-md-3">
+							<div class="col-md-2">
 								<label class="form-label">Окон, шт</label>
 								<input type="number" class="form-control" @bind="WindowCount" min="0" />
 							</div>
-							<div class="col-md-3">
+							<div class="col-md-2">
 								<label class="form-label">Окна, м²</label>
 								<input type="number" class="form-control" @bind="WindowArea" min="0" step="0.01" />
 							</div>
-							<div class="col-md-3">
+							<div class="col-md-2">
 								<label class="form-label">Щитовые, шт</label>
 								<input type="number" class="form-control" @bind="PlateCount" min="0" />
 							</div>
-							<div class="col-md-3">
+							<div class="col-md-2">
 								<label class="form-label">Щитовые, м²</label>
 								<input type="number" class="form-control" @bind="PlateArea" min="0" step="0.01" />
+							</div>
+							<div class="col-md-2">
+								<label class="form-label">Обсада, шт</label>
+								<input type="number" class="form-control" @bind="BuckCount" min="0" />
+							</div>
+							<div class="col-md-2">
+								<label class="form-label">Обсада, м²</label>
+								<input type="number" class="form-control" @bind="BuckArea" min="0" step="0.01" />
 							</div>
 						</div>
 					</div>

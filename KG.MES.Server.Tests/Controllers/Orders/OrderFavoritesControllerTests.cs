@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using KG.MES.Server.Tests.Helpers;
+using KG.MES.Shared.Serialization;
 
 namespace KG.MES.Server.Tests.Controllers.Orders;
 
@@ -24,6 +25,9 @@ public class OrderFavoritesControllerTests : TestBase
 	{
 		// Arrange
 		var client = CreateClient();
+
+		var userId = Guid.NewGuid();
+		client.DefaultRequestHeaders.Add("X-Test-UserId", userId.ToString());
 
 		var workplaceId = Guid.NewGuid();
 		var order1Id = Guid.NewGuid();
@@ -72,6 +76,9 @@ public class OrderFavoritesControllerTests : TestBase
 		// Arrange
 		var client = CreateClient();
 
+		var userId = Guid.NewGuid();
+		client.DefaultRequestHeaders.Add("X-Test-UserId", userId.ToString());
+		
 		var workplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
 
@@ -100,6 +107,9 @@ public class OrderFavoritesControllerTests : TestBase
 	{
 		// Arrange
 		var client = CreateClient();
+
+		var userId = Guid.NewGuid();
+		client.DefaultRequestHeaders.Add("X-Test-UserId", userId.ToString());
 
 		var workplaceId = Guid.NewGuid();
 		var orderId = Guid.NewGuid();
@@ -161,6 +171,9 @@ public class OrderFavoritesControllerTests : TestBase
 		// Arrange
 		var client = CreateClient();
 
+		var userId = Guid.NewGuid();
+		client.DefaultRequestHeaders.Add("X-Test-UserId", userId.ToString());
+
 		var workplaceId = Guid.NewGuid();
 		var favOrderId = Guid.NewGuid();
 		var normalOrderId = Guid.NewGuid();
@@ -183,8 +196,11 @@ public class OrderFavoritesControllerTests : TestBase
 
 		var content = await response.Content.ReadAsStringAsync();
 		var result = JsonSerializer.Deserialize<PaginatedResponse<OrderDto>>(content,
-			new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
+			new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true,
+				Converters = { new TotalsDtoConverter() }
+			});
 		result.Should().NotBeNull();
 		result!.Data.Should().HaveCount(2);
 
