@@ -10,6 +10,7 @@ public interface IOrderService
 	Task<bool> AddFavoriteAsync(Guid userId, Guid orderId);
 	Task<bool> RemoveFavoriteAsync(Guid userId, Guid orderId);
 	Task<List<OrderDto>> GetFavoriteOrdersAsync(Guid userId);
+	Task<List<SalesOrderDto>> GetFavoriteSalesOrdersAsync(Guid userId);
 	Task<OrderDetailDto?> GetOrderByIdAsync(Guid orderId);
 	Task<OrderDetailDto?> GetOrderByNumberAsync(string orderNumber);
 	Task<List<OrderTraceDto>> GetOrderTraceByNumberAsync(string orderNumber);

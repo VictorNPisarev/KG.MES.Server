@@ -13,6 +13,7 @@
 @import 'supplyHistory.css';
 @import 'operationLogs.css';
 @import 'commercial.css';
+@import 'rowActions.css';
 
 .sticky-header {
 	position: sticky;

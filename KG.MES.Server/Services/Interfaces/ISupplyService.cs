@@ -14,5 +14,5 @@ public interface ISupplyService
 	Task<OperationResultDto> UpdateAllSupplyItemsAsync(Guid orderId, List<UpdateSupplyItemRequest> updates);
 	Task<List<SupplyItemHistoryDto>> GetSupplyHistoryAsync(Guid supplyItemId);
 	Task<List<NotificationGroupDto<SupplyDto>>> GetNewSupplyOrdersAsync(Guid userId, Guid? roleId);
-
+	Task<List<SupplyDto>> GetFavoriteSupplyOrdersAsync(Guid userId);
 }

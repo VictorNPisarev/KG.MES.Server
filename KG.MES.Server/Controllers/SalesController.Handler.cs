@@ -113,17 +113,21 @@ public partial class SalesController : BaseController
 
 	public async Task<IActionResult> GetNewSalesOrdersHandler()
 	{
-		Console.WriteLine(":::: GetNewSalesOrdersHandler ::::");
-
 		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
 			return Ok(new List<SalesOrderDto>());
 
-		Console.WriteLine($":::: GetNewSalesOrdersHandler :: CurrentUserId - {CurrentUserId} :: CurrentRoleId - {CurrentRoleId} ::::");
-
 		var result = await _orderService.GetNewSalesOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
 
-		Console.WriteLine($":::: GetNewSalesOrdersHandler :: result.Count - {result.Count} ::::");
+		return Ok(result);
+	}
 
+	public async Task<IActionResult> GetFavoriteSalesOrdersHandler()
+	{
+		if (!CurrentUserId.HasValue)
+			return Ok(new List<SalesOrderDto>());
+
+		var result = await _orderService.GetFavoriteSalesOrdersAsync(CurrentUserId.Value);
+		
 		return Ok(result);
 	}
 }

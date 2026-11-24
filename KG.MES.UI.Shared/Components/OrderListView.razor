@@ -188,7 +188,8 @@
 						</button>
 					}
 					<i class="bi @(IsGroupExpanded(group.EventCode) ? "bi-chevron-up" : "bi-chevron-down") small"
-						style="cursor: pointer;" @onclick="() => ToggleGroup(group.EventCode)"></i>
+						style="cursor: pointer;" @onclick="() => ToggleGroup(group.EventCode)"
+						@onclick:stopPropagation="true"></i>
 				</div>
 			</div>
 
@@ -202,6 +203,54 @@
 							<div class="d-flex flex-row gap-2">
 								<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenOrder(context!)">
 									<i class="bi bi-eye"></i>
+								</button>
+								@if (ShowFavoriteButton)
+								{
+									var isFavNotif = GetIsFavorite(context!);
+									<button class="btn btn-sm @(isFavNotif ? "btn-warning" : "btn-outline-warning")"
+										@onclick="() => ToggleFavorite(context!)"
+										title="@(isFavNotif ? "Убрать из избранного" : "В избранное")">
+										<i class="bi @(isFavNotif ? "bi-star-fill" : "bi-star")"></i>
+									</button>
+								}
+
+							</div>
+						</RowTemplate>
+					</DynamicTable>
+				</div>
+			}
+		</div>
+	}
+
+	<!-- Избранные заказы -->
+	@if (favoriteOrders.Any())
+	{
+		<div class="card mt-3 mb-3 border-warning shadow-sm overflow-hidden">
+			<div class="card-header bg-warning bg-opacity-25 text-warning py-1 d-flex justify-content-between align-items-center"
+				@onclick="ToggleFavoritesExpanded" style="cursor: pointer;">
+				<div>
+					<small class="fw-bold">
+						<i class="bi bi-star-fill me-1"></i>
+						Избранные (@favoriteOrders.Count)
+					</small>
+				</div>
+				<i class="bi @(isFavoritesExpanded ? "bi-chevron-up" : "bi-chevron-down") small"></i>
+			</div>
+
+			@if (isFavoritesExpanded)
+			{
+				<div class="card-body p-0">
+					<DynamicTable TListItem="TListItem" Items="favoriteOrders" ColumnInfos="columnInfos"
+						ColumnSettings="columnSettings" TableKey="@tableKey" ShowActions="true" AllowSorting="false"
+						ShowTotal="false" ShowSettings="false" >
+						<RowTemplate>
+							<div class="d-flex flex-row gap-2">
+								<button class="btn btn-sm btn-outline-primary" @onclick="() => OpenOrder(context!)">
+									<i class="bi bi-eye"></i>
+								</button>
+								<button class="btn btn-sm btn-warning" @onclick="() => ToggleFavorite(context!)"
+									title="Убрать из избранного">
+									<i class="bi bi-star-fill"></i>
 								</button>
 							</div>
 						</RowTemplate>
@@ -246,11 +295,20 @@
 						</button>
 					</RowActions>
 					<RowTemplate>
-						<div class="d-flex flex-row gap-2">
+						@*<div class="d-flex flex-row gap-2">
 							<button class="btn btn-sm btn-outline-primary"
 									@onclick="() => OpenOrder(context!)">
 								<i class="bi bi-eye"></i>
 							</button>
+							@if (ShowFavoriteButton)
+							{
+								var isFav = GetIsFavorite(context!);
+								<button class="btn btn-sm @(isFav ? "btn-warning" : "btn-outline-warning")"
+									@onclick="() => ToggleFavorite(context!)"
+									title="@(isFav ? "Убрать из избранного" : "В избранное")">
+									<i class="bi @(isFav ? "bi-star-fill" : "bi-star")"></i>
+								</button>
+							}
 							@if (Settings.CanEdit)
 							{
 								<button class="btn btn-sm btn-outline-success" @onclick="() => EditOrder(context!)"
@@ -265,7 +323,8 @@
 									<i class="bi bi-trash"></i>
 								</button>
 							}
-						</div>
+						</div>*@
+						<RowActionButtons Actions="BuildRowActions(context!)" />
 					</RowTemplate>
 				</DynamicTable>
 

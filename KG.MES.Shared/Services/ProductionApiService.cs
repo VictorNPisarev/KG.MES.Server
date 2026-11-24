@@ -1159,4 +1159,65 @@ public class ProductionApiService : AuthorizedApiService
 			return [];
 		}
 	}
+
+	// ====== Favorites ======
+
+	/// <summary>
+	/// Избранные заказы текущего пользователя.
+	/// </summary>
+	public async Task<List<T>> GetFavoriteOrdersAsync<T>(string endpoint)
+	{
+		try
+		{
+			EnsureAuthorization();
+			
+			var url = $"{BaseUrl}/{endpoint}/favorites";
+			
+			return await httpClient.GetFromJsonAsync<List<T>>(url, jsonOptions) ?? [];
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error fetching favorite orders");
+			return [];
+		}
+	}
+	/// <summary>
+	/// Добавить заказ в избранное. Idempotent.
+	/// </summary>
+	public async Task<bool> AddFavoriteAsync(Guid orderId)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var response = await httpClient.PostAsync(
+				$"{BaseUrl}/orders/{orderId}/favorite", null);
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error adding favorite for order {OrderId}", orderId);
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Убрать заказ из избранного. Idempotent.
+	/// </summary>
+	public async Task<bool> RemoveFavoriteAsync(Guid orderId)
+	{
+		try
+		{
+			EnsureAuthorization();
+
+			var response = await httpClient.DeleteAsync(
+				$"{BaseUrl}/orders/{orderId}/favorite");
+			return response.IsSuccessStatusCode;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error removing favorite for order {OrderId}", orderId);
+			return false;
+		}
+	}
 }
