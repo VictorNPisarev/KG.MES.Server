@@ -383,7 +383,9 @@ public partial class OrderService
 				ProductionOrderId = po.Id,
 				CurrentWorkplaceId = po.CurrentWorkplaceId,
 				CurrentStatus = w != null ? w.Name : null,
+				CustomerId = oc != null ? oc.CustomerId : null,
 				CustomerName = c != null ? c.Name : oc != null ? oc.CustomerName : null,
+				ManagerId = oc != null ? oc.ManagerId : null,
 				ManagerName = u != null ? u.Name : null,
 				Amount = oc != null ? oc.Amount : null,
 				Currency = oc != null ? oc.Currency : null

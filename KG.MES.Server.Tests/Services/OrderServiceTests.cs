@@ -1171,4 +1171,116 @@ public class OrderServiceTests : IDisposable
 		totals!.BuckCountTotal.Should().Be(5);       // 3 + 2
 		totals.BuckAreaTotal.Should().Be(4.0m);      // 1.5 + 2.5
 	}
+
+	[Fact]
+	public async Task GetFavoriteSalesOrdersAsync_ShouldReturnOnlyUserFavoritesOrderedByCreatedAtDesc()
+	{
+		// Arrange
+		var userId = Guid.NewGuid();
+		var otherUserId = Guid.NewGuid();
+		var workplaceId = Guid.NewGuid();
+		var managerId = Guid.NewGuid();
+
+		var order1Id = Guid.NewGuid();
+		var order2Id = Guid.NewGuid();
+		var order3Id = Guid.NewGuid();  // не в избранном
+
+		_context.Workplaces.Add(new Workplace { Id = workplaceId, Name = "Сборка", IsWorkplace = true });
+		_context.Users.Add(new User
+		{
+			Id = managerId,
+			Email = "manager@test.com",
+			Name = "Менеджер",
+			IsActive = true
+		});
+
+		_context.Orders.AddRange(
+			new Order { Id = order1Id, OrderNumber = "SFAV-101" },
+			new Order { Id = order2Id, OrderNumber = "SFAV-102" },
+			new Order { Id = order3Id, OrderNumber = "SFAV-103" });
+
+		_context.ProductionOrders.AddRange(
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order1Id, CurrentWorkplaceId = workplaceId },
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order2Id, CurrentWorkplaceId = workplaceId },
+			new ProductionOrder { Id = Guid.NewGuid(), OrderId = order3Id, CurrentWorkplaceId = workplaceId });
+
+		_context.OrderCommercials.AddRange(
+			new OrderCommercial
+			{
+				Id = Guid.NewGuid(),
+				OrderId = order1Id,
+				ManagerId = managerId,
+				Amount = 100000m,
+				Currency = "RUB",
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow
+			},
+			new OrderCommercial
+			{
+				Id = Guid.NewGuid(),
+				OrderId = order2Id,
+				ManagerId = managerId,
+				Amount = 200000m,
+				Currency = "RUB",
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow
+			});
+
+		_context.OrderFavorites.AddRange(
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = userId,
+				OrderId = order1Id,
+				CreatedAt = DateTime.UtcNow.AddHours(-2)   // старее
+			},
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = userId,
+				OrderId = order2Id,
+				CreatedAt = DateTime.UtcNow.AddHours(-1)   // свежее
+			},
+			new OrderFavorite
+			{
+				Id = Guid.NewGuid(),
+				UserId = otherUserId,                     // чужое избранное
+				OrderId = order3Id,
+				CreatedAt = DateTime.UtcNow
+			});
+
+		await _context.SaveChangesAsync();
+
+		// Act
+		var result = await _service.GetFavoriteSalesOrdersAsync(userId);
+
+		// Assert
+		result.Should().HaveCount(2);
+		result.Should().Contain(o => o.Id == order1Id);
+		result.Should().Contain(o => o.Id == order2Id);
+		result.Should().NotContain(o => o.Id == order3Id);
+
+		// Свежие закладки сверху
+		result[0].Id.Should().Be(order2Id);
+		result[1].Id.Should().Be(order1Id);
+
+		// IsFavorite = true
+		result.Should().OnlyContain(o => o.IsFavorite);
+
+		// Поля из OrderCommercial (JOIN с Manager)
+		result[0].ManagerId.Should().Be(managerId);
+		result[0].ManagerName.Should().Be("Менеджер");
+		result[0].Amount.Should().Be(200000m);
+	}
+
+	[Fact]
+	public async Task GetFavoriteSalesOrdersAsync_WhenNoFavorites_ShouldReturnEmptyList()
+	{
+		// Act
+		var result = await _service.GetFavoriteSalesOrdersAsync(Guid.NewGuid());
+
+		// Assert
+		result.Should().NotBeNull();
+		result.Should().BeEmpty();
+	}
 }
