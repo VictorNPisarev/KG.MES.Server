@@ -1,0 +1,34 @@
+@using KG.MES.UI.Shared.Models
+
+<div class="d-flex flex-row gap-2 row-action-buttons">
+	@foreach (var action in VisibleActions)
+	{
+		<button class="btn btn-sm @action.CssClass" @onclick="() => action.OnClick()" title="@action.Title">
+			<i class="bi @action.Icon"></i>
+		</button>
+	}
+
+	@if (HasDrawer)
+	{
+		<div class="position-relative row-action-buttons-drawer-wrapper">
+			<button class="btn btn-sm btn-outline-secondary row-action-buttons-toggle" @onclick="ToggleDrawer" title="Ещё">
+				<i class="bi @(isDrawerOpen ? "bi-chevron-right" : "bi-chevron-left")"></i>
+			</button>
+
+			@if (isDrawerOpen)
+			{
+				<div class="row-action-buttons-overlay" @onclick="CloseDrawer"></div>
+
+				<div class="row-action-buttons-drawer open">
+					@foreach (var action in DrawerActions)
+					{
+						<button class="btn btn-sm @action.CssClass" @onclick="() => OnDrawerActionClick(action)"
+							title="@action.Title">
+							<i class="bi @action.Icon"></i>
+						</button>
+					}
+				</div>
+			}
+		</div>
+	}
+</div>

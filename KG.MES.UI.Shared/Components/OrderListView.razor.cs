@@ -6,7 +6,7 @@ using KG.MES.Shared.Models.Dto;
 using KG.MES.Shared.Services;
 using KG.MES.Shared.Helpers;
 using System.Text.Json;
-using KG.MES.Shared.Models;
+using KG.MES.UI.Shared.Models;
 using KG.MES.Shared.Events;
 using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Constants;
@@ -982,6 +982,58 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		return (bool)(prop?.GetValue(item) ?? false);
 	}
 
+	private List<RowAction> BuildRowActions(TListItem item)
+	{
+		var actions = new List<RowAction> ();
+
+		if (ShowFavoriteButton)
+		{
+			var isFav = GetIsFavorite(item);
+			actions.Add(new()
+			{
+				Icon = isFav ? "bi-star-fill" : "bi-star",
+				Title = isFav ? "Убрать из избранного" : "В избранное",
+				CssClass = isFav ? "btn-warning" : "btn-outline-warning",
+				OnClick = () => ToggleFavorite(item),
+				HidePolicy = isFav ? HidePolicy.Never : HidePolicy.Auto
+			});
+		}
+
+		actions.Add(new()
+		{
+			Icon = "bi-eye",
+			Title = "Открыть",
+			CssClass = "btn-outline-primary",
+			OnClick = () => OpenOrder(item),
+			HidePolicy = HidePolicy.Never
+		});
+
+		if (Settings.CanEdit)
+		{
+			actions.Add(new()
+			{
+				Icon = "bi-pencil",
+				Title = "Редактировать",
+				CssClass = "btn-outline-success",
+				OnClick = () => EditOrder(item),
+				HidePolicy = HidePolicy.Auto
+			});
+		}
+
+		if (Settings.CanDelete || IsAdmin)
+		{
+			actions.Add(new()
+			{
+				Icon = "bi-trash",
+				Title = "Удалить",
+				CssClass = "btn-outline-danger",
+				OnClick = () => DeleteOrder(item),
+				HidePolicy = HidePolicy.Always
+			});
+		}
+
+		return actions;
+	}
 	private async Task ToggleFavorite(TListItem item)
 	{
 		var orderId = GetOrderId(item);

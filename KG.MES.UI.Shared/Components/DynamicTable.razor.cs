@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using KG.MES.Shared.Helpers;
-using KG.MES.Shared.Models;
+using KG.MES.UI.Shared.Models;
 using KG.MES.Shared.Models.Dto;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;

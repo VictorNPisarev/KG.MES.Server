@@ -1,4 +1,4 @@
-namespace KG.MES.Shared.Models;
+namespace KG.MES.UI.Shared.Models;
 
 public class SavedFilter
 {

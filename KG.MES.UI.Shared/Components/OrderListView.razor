@@ -295,7 +295,7 @@
 						</button>
 					</RowActions>
 					<RowTemplate>
-						<div class="d-flex flex-row gap-2">
+						@*<div class="d-flex flex-row gap-2">
 							<button class="btn btn-sm btn-outline-primary"
 									@onclick="() => OpenOrder(context!)">
 								<i class="bi bi-eye"></i>
@@ -323,7 +323,8 @@
 									<i class="bi bi-trash"></i>
 								</button>
 							}
-						</div>
+						</div>*@
+						<RowActionButtons Actions="BuildRowActions(context!)" />
 					</RowTemplate>
 				</DynamicTable>
 
