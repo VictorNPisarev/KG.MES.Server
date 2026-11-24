@@ -58,6 +58,10 @@ public class OrderViewModel
 
 	public bool IsNew { get; set; }
 
+	public bool IsFavorite { get; set; }
+
+
+
 	[Column("***", Order = 2, Visible = false, IconConditions = new[] { "IsClaim:Claim",
 																		"IsEconom:Econom",
 																		"IsOnlyPaid:Paid",
