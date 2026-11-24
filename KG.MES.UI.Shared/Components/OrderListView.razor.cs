@@ -29,9 +29,9 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	[Parameter] public RenderFragment? HeaderActions { get; set; }
 	[Parameter] public Func<Guid?, Guid[]?, string?, int, int, string?, string?, List<FilterCondition>, Task<PaginatedResponse<TListItem>>>? LoadItems { get; set; }
 	[Parameter] public Func<Task<List<TListItem>>>? LoadNewItems { get; set; }
-
 	[Parameter] public Func<Guid, Task<TCardItem>>? LoadItem { get; set; }
 	[Parameter] public bool ShowOnlyNewFilter { get; set; } = false;
+	[Parameter] public bool ShowFavoriteButton { get; set; } = true;
 
 
 	[Inject] private ProductionApiService ApiService { get; set; } = null!;
@@ -83,7 +83,8 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 	private ITotalsDto? totals;
 	private bool showConfirmMarkAllRead;
 	private List<NotificationGroupDto<TListItem>> notificationGroups = [];
-
+	private List<TListItem> favoriteOrders = [];
+	private bool isFavoritesExpanded = false;
 	private string debugMessage = string.Empty;
 	private static int _instanceCounter = 0;
 	private int _myInstanceId;
@@ -114,6 +115,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		await LoadOrders();
 		//await LoadNewOrders();
 		await LoadNotifications();
+		await LoadFavorites();
 
 		try
 		{
@@ -177,6 +179,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		await LoadOrders();
 		//await LoadNewOrders();
 		await LoadNotifications();
+		await LoadFavorites();
 		StateHasChanged();
 	}
 
@@ -485,6 +488,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		{
 			// Без перезагрузки списка — просто скрываем панель
 			await LoadNotifications();
+			await LoadFavorites();
 			StateHasChanged();
 		}
 		else
@@ -492,6 +496,7 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 			await LoadOrders();
 			//await LoadNewOrders();
 			await LoadNotifications();
+			await LoadFavorites();
 			StateHasChanged();
 
 			// Восстанавливаем позицию скролла
@@ -952,6 +957,55 @@ public partial class OrderListView<TListItem, TCardItem, TListItemDto, TCardDto>
 		}
 
 		StateHasChanged();
+	}
+
+	// ====== Favorites ======
+
+	private async Task LoadFavorites()
+	{
+		try
+		{
+			var dtos = await ApiService.GetFavoriteOrdersAsync<TListItemDto>(Endpoint);
+			favoriteOrders = dtos.Select(d => d.Adapt<TListItem>()).ToList();
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error loading favorites: {ex.Message}");
+			favoriteOrders = [];
+		}
+		StateHasChanged();
+	}
+
+	private bool GetIsFavorite(TListItem item)
+	{
+		var prop = typeof(TListItem).GetProperty("IsFavorite");
+		return (bool)(prop?.GetValue(item) ?? false);
+	}
+
+	private async Task ToggleFavorite(TListItem item)
+	{
+		var orderId = GetOrderId(item);
+		if (orderId == Guid.Empty) return;
+
+		var isFav = GetIsFavorite(item);
+
+		var success = isFav
+			? await ApiService.RemoveFavoriteAsync(orderId)
+			: await ApiService.AddFavoriteAsync(orderId);
+
+		if (!success) return;
+
+		// Обновляем локально в основном списке
+		var prop = typeof(TListItem).GetProperty("IsFavorite");
+		prop?.SetValue(item, !isFav);
+
+		// Обновляем блок "Избранные"
+		await LoadFavorites();
+	}
+
+	private void ToggleFavoritesExpanded()
+	{
+		isFavoritesExpanded = !isFavoritesExpanded;
 	}
 
 	private bool IsGroupExpanded(string eventCode) => expandedGroups.Contains(eventCode);

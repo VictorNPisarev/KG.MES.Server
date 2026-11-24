@@ -39,6 +39,10 @@ public partial class SupplyController : BaseController
 	[HttpGet("supplies/new")]
 	public Task<IActionResult> GetNewSupplyOrders() => GetNewSupplyOrdersHandler();
 
+	// GET: api/supplies/favorites
+	[HttpGet("supplies/favorites")]
+	public Task<IActionResult> GetFavoriteSupplyOrders() => GetFavoriteSupplyOrdersHandler();
+
 	#endregion GET
 
 	#region POST

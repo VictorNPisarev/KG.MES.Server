@@ -98,14 +98,20 @@ public partial class SupplyController
 
 	public async Task<IActionResult> GetNewSupplyOrdersHandler()
 	{
-		Console.WriteLine("ENDPOINT :: [HttpGet(\"supplies / new\")]");
-
 		if (!CurrentUserId.HasValue || !CurrentRoleId.HasValue)
 			return Ok(new List<SupplyDto>());
 
 		var result = await supplyService.GetNewSupplyOrdersAsync(CurrentUserId.Value, CurrentRoleId.Value);
 
-		Console.WriteLine($"ENDPOINT :: [HttpGet(\"supplies / new\")] :: CurrentUserId - {CurrentUserId} :: CurrentRoleId - {CurrentRoleId} :: result count {result.Count}");
+		return Ok(result);
+	}
+
+	public async Task<IActionResult> GetFavoriteSupplyOrdersHandler()
+	{
+		if (!CurrentUserId.HasValue)
+			return Ok(new List<SupplyDto>());
+
+		var result = await supplyService.GetFavoriteSupplyOrdersAsync(CurrentUserId.Value);
 
 		return Ok(result);
 	}

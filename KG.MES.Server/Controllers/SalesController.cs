@@ -108,4 +108,8 @@ public partial class SalesController : BaseController
 
 	[HttpGet("orders/new")]
 	public Task<IActionResult> GetNewSalesOrders() => GetNewSalesOrdersHandler();
+
+	// GET: api/sales/orders/favorites
+	[HttpGet("orders/favorites")]
+	public Task<IActionResult> GetFavoriteSalesOrders() => GetFavoriteSalesOrdersHandler();
 }

@@ -1165,14 +1165,15 @@ public class ProductionApiService : AuthorizedApiService
 	/// <summary>
 	/// Избранные заказы текущего пользователя.
 	/// </summary>
-	public async Task<List<T>> GetFavoriteOrdersAsync<T>()
+	public async Task<List<T>> GetFavoriteOrdersAsync<T>(string endpoint)
 	{
 		try
 		{
 			EnsureAuthorization();
-
-			return await httpClient.GetFromJsonAsync<List<T>>(
-				$"{BaseUrl}/orders/favorites", jsonOptions) ?? [];
+			
+			var url = $"{BaseUrl}/{endpoint}/favorites";
+			
+			return await httpClient.GetFromJsonAsync<List<T>>(url, jsonOptions) ?? [];
 		}
 		catch (Exception ex)
 		{

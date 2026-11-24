@@ -315,6 +315,40 @@ public partial class OrderService
 	}
 
 	/// <summary>
+	/// Избранные заказы пользователя в формате SalesOrderDto (для /api/sales/orders/favorites).
+	/// Сортировка: свежие закладки сверху.
+	/// </summary>
+	public async Task<List<SalesOrderDto>> GetFavoriteSalesOrdersAsync(Guid userId)
+	{
+		var favoriteOrderIds = await context.OrderFavorites
+			.Where(f => f.UserId == userId)
+			.OrderByDescending(f => f.CreatedAt)
+			.Select(f => f.OrderId)
+			.ToListAsync();
+
+		if (favoriteOrderIds.Count == 0)
+			return [];
+
+		// BuildSalesQuery() — из OrderService.Sales.cs (тот же partial-класс)
+		var orders = await BuildSalesQuery()
+			.Where(o => favoriteOrderIds.Contains(o.Id))
+			.ToListAsync();
+
+		// Восстанавливаем порядок по favoriteOrderIds (SQL IN не сохраняет порядок)
+		var orderDict = orders.ToDictionary(o => o.Id);
+		var result = favoriteOrderIds
+			.Where(id => orderDict.ContainsKey(id))
+			.Select(id => orderDict[id])
+			.ToList();
+
+		// Все — из избранного
+		foreach (var order in result)
+			order.IsFavorite = true;
+
+		return result;
+	}
+
+	/// <summary>
 	/// Базовый запрос для списка продаж (без фильтров и пагинации)
 	/// </summary>
 	public IQueryable<SalesOrderDto> BuildBaseQuerySalesDto() => BuildSalesQuery();

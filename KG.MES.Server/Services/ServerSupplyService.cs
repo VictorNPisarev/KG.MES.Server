@@ -401,4 +401,38 @@ public class ServerSupplyService : ISupplyService
 			})
 			.ToList();
 	}
+
+	/// <summary>
+	/// Избранные заказы пользователя в формате SupplyDto (для /api/supplies/favorites).
+	/// Сортировка: свежие закладки сверху.
+	/// </summary>
+	public async Task<List<SupplyDto>> GetFavoriteSupplyOrdersAsync(Guid userId)
+	{
+		var favoriteOrderIds = await context.OrderFavorites
+			.Where(f => f.UserId == userId)
+			.OrderByDescending(f => f.CreatedAt)
+			.Select(f => f.OrderId)
+			.ToListAsync();
+
+		if (favoriteOrderIds.Count == 0)
+			return [];
+
+		// BuildSupplyQuery() — приватный метод в этом же классе
+		var supplies = await BuildSupplyQuery()
+			.Where(o => favoriteOrderIds.Contains(o.Id))
+			.ToListAsync();
+
+		// Восстанавливаем порядок по favoriteOrderIds (SQL IN не сохраняет порядок)
+		var supplyDict = supplies.ToDictionary(s => s.Id);
+		var result = favoriteOrderIds
+			.Where(id => supplyDict.ContainsKey(id))
+			.Select(id => supplyDict[id])
+			.ToList();
+
+		// Все — из избранного
+		foreach (var supply in result)
+			supply.IsFavorite = true;
+
+		return result;
+	}
 }
