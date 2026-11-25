@@ -102,7 +102,7 @@ public class LumberImportStateService
 	/// <summary>
 	/// Все позиции штапиков и горбыльков по загруженным заказам
 	/// </summary>
-	public List<LumberSummaryItem> GetGlazingBeadRows()
+	public List<LumberSummaryItem> GetGlazingBeadSummary()
 	{
 		var lumberRows = _orders.Values
 			.SelectMany(o => o.Rows)
@@ -152,5 +152,53 @@ public class LumberImportStateService
 		//	.ThenBy(r => r.WoodType)               // ← потом по породе
 		//	.ThenBy(r => r.OrderNumber)            // ← потом по заказу
 		//	.ToList();
+	}
+
+	/// <summary>
+	/// Группирует сводку по сечению (Name).
+	/// Данные уже отсортированы так, что одинаковые Name идут подряд.
+	/// </summary>
+	public List<LumberSummaryGroup> GroupSummaryItemsByName(Func<List<LumberSummaryItem>> dataProvider)
+	{
+		var items = dataProvider();
+		var groups = new List<LumberSummaryGroup>();
+		LumberSummaryGroup? currentGroup = null;
+
+		foreach (var item in items)
+		{
+			if (currentGroup == null || currentGroup.SectionName != item.Name)
+			{
+				currentGroup = new LumberSummaryGroup
+				{
+					SectionName = item.Name,
+					Items = [item]
+				};
+				groups.Add(currentGroup);
+			}
+			else
+			{
+				currentGroup.Items.Add(item);
+			}
+		}
+
+		return groups;
+	}
+
+	/// <summary>
+	/// Сводная группировка по брусу.
+	/// </summary>
+	public List<LumberSummaryGroup> GetLumberSummaryGrouped()
+	{
+		// Передаем ссылку на метод (без скобок!), он вызовется внутри GroupItemsByName
+		return GroupSummaryItemsByName(GetLumberSummary);
+	}
+
+	/// <summary>
+	/// Сводная группировка по штапикам.
+	/// </summary>
+	public List<LumberSummaryGroup> GetGlazingBeadSummaryGrouped()
+	{
+		// Передаем ссылку на метод получения штапиков
+		return GroupSummaryItemsByName(GetGlazingBeadSummary);
 	}
 }

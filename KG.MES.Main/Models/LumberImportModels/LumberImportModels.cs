@@ -66,8 +66,26 @@ public class LumberSummaryItem
 	/// <summary>
 	/// Список всех заказов, вошедших в эту строку сводки
 	/// </summary>
-	public List<string> SourceOrders { get; set; } = new();
+	public List<string> SourceOrders { get; set; } = [];
 
 	public decimal TotalQuantity { get; set; }
 	public string Unit { get; set; } = "м";
+}
+
+public class LumberSummaryGroup
+{
+	/// <summary>
+	/// Название сечения (например, "78 × 82 со штапиком")
+	/// </summary>
+	public string SectionName { get; set; } = string.Empty;
+
+	/// <summary>
+	/// Все позиции в этой группе
+	/// </summary>
+	public List<LumberSummaryItem> Items { get; set; } = [];
+
+	/// <summary>
+	/// Суммарное количество по группе
+	/// </summary>
+	public decimal TotalQuantity => Items.Sum(i => i.TotalQuantity);
 }

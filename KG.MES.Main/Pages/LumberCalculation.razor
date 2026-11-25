@@ -142,72 +142,78 @@
 						<table class="table table-sm table-hover align-middle mb-0">
 							<thead class="table-light">
 								<tr>
-									<th style="width: 50px;">#</th>
-									<th>Сечение</th>
+									<th style="width: 25%;">Сечение</th>
 									@*<th>Толщина (D)</th>
 									<th>Ширина (E)</th>*@
 									@*<th>Исполнение</th>*@
-									<th>Порода древесины</th>
+									<th>Брус</th>
 									<th>Количество</th>
 									<th>Заказы</th>
 								</tr>
 							</thead>
 							<tbody>
-								@{
-									int index = 1;
-								}
-								@foreach (var item in SummaryItems)
+								@foreach (var group in LumberSummaryGroups)
 								{
-									<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
-										<td class="text-muted">@(index++)</td>
-										@*<td class="fw-bold">@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
-										<td>@item.Name</td>
-										@*<td>@item.Thickness.ToString("0.##")</td>
-										<td>@item.Width.ToString("0.##")</td>*@
-										@*<td>
-											@if (item.HasGlazingBead)
-											{
-												<span class="badge bg-info text-dark">Со штапиком</span>
-											}
-											else
-											{
-												<span class="badge bg-secondary">Обычный брус</span>
-											}
-										</td>*@
-										<td>
-											<span
-												class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
-												title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
-												@item.WoodType
-											</span>
-										</td>
-										<td class="fw-bold fs-6">
-											@item.TotalQuantity.ToString("0.##") @item.Unit
-										</td>
-										<td>
-											@if (item.IsSolidLamella)
-											{
-												<span
-													class="badge bg-danger bg-gradient  bg-opacity-50 text-dark">@item.OrderNumber</span>
-											}
-											else
-											{
-												<span class="text-muted">
-													@string.Join(", ", item.SourceOrders.Select(o => $"{o}"))
-												</span>
-											}
+									<tr class="table-secondary">
+										<td colspan="4" class="fw-bold">
+											@group.SectionName
+											@*<span class="text-muted ms-2 small">
+												(итого: @group.TotalQuantity.ToString("0.##") м)
+											</span>*@
 										</td>
 									</tr>
+									@foreach (var item in group.Items)
+									{
+										<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
+											@*<td class="fw-bold">@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
+											<td style="width: 25%;"></td>@*@item.Name</td>
+											@*<td>@item.Thickness.ToString("0.##")</td>
+											<td>@item.Width.ToString("0.##")</td>*@
+											@*<td>
+												@if (item.HasGlazingBead)
+												{
+													<span class="badge bg-info text-dark">Со штапиком</span>
+												}
+												else
+												{
+													<span class="badge bg-secondary">Обычный брус</span>
+												}
+											</td>*@
+											<td>
+												<span
+													class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
+													title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
+													@item.WoodType
+												</span>
+											</td>
+											<td class="fw-bold fs-6">
+												@item.TotalQuantity.ToString("0.##") @item.Unit
+											</td>
+											<td>
+												@if (item.IsSolidLamella)
+												{
+													<span
+														class="badge bg-danger bg-gradient  bg-opacity-50 text-dark">@item.OrderNumber</span>
+												}
+												else
+												{
+													<span class="text-muted">
+														@string.Join(", ", item.SourceOrders.Select(o => $"{o}"))
+													</span>
+												}
+											</td>
+										</tr>
+									}
 								}
 							</tbody>
-							<tfoot class="table-light">
+							@*<tfoot class="table-light">
 								<tr>
-									<td colspan="2" class="text-end fw-bold">Итого бруса к заготовке:</td>
+									<td colspan="3" class="text-end fw-bold">Итого бруса к заготовке:</td>
 									<td class="text-end fw-bold text-primary fs-6">
 										@TotalLumberMeters.ToString("0.##") м
 									</td>
 								</tr>
-							</tfoot>
+							</tfoot>*@
 						</table>
 					</div>
 				</div>
@@ -219,29 +225,40 @@
 						<table class="table table-sm table-hover align-middle mb-0">
 							<thead class="table-light">
 								<tr>
-									<th>Наименование</th>
+									<th style="width: 25%;">Сечение</th>
 									@*<th>Размеры (D × E)</th>*@
-									<th>Порода</th>
+									<th>Брус</th>
 									<th>Количество</th>
 									<th>Заказ</th>
 								</tr>
 							</thead>
 							<tbody>
-								@foreach (var item in BeadRows)
+								@foreach (var group in BeadSummaryGroups)
 								{
-									<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
-										<td>@item.Name</td>
-										@*<td>@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
-										<td>
-											<span
-												class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
-												title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
-												@item.WoodType
-											</span>
+									<tr class="table-secondary">
+										<td colspan="4" class="fw-bold">
+											@group.SectionName
+											@*<span class="text-muted ms-2 small">
+												(итого: @group.TotalQuantity.ToString("0.##") м)
+											</span>*@
 										</td>
-										<td class="fw-bold">@item.TotalQuantity.ToString("0.##") @item.Unit</td>
-										<td><span class="text-muted">@item.OrderNumber</span></td>
 									</tr>
+									@foreach (var item in group.Items)
+									{
+										<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
+											<td style="width: 25%;"></td>@*@item.Name</td>*@
+											@*<td>@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
+											<td>
+												<span
+													class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
+													title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
+													@item.WoodType
+												</span>
+											</td>
+											<td class="fw-bold">@item.TotalQuantity.ToString("0.##") @item.Unit</td>
+											<td><span class="text-muted">@item.OrderNumber</span></td>
+										</tr>
+									}
 								}
 							</tbody>
 						</table>

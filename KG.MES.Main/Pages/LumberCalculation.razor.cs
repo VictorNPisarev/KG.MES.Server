@@ -19,11 +19,13 @@ public partial class LumberCalculation
 	private string activeTab = "summary";
 	private string StatusMessage { get; set; } = string.Empty;
 	private string AlertClass { get; set; } = "alert-info";
-	private List<string> Errors { get; } = new();
+	private List<string> Errors { get; } = [];
+	private List<LumberSummaryGroup> LumberSummaryGroups => StateService.GetLumberSummaryGrouped();
+	private List<LumberSummaryGroup> BeadSummaryGroups => StateService.GetGlazingBeadSummaryGrouped();
 
 	private List<LumberSummaryItem> SummaryItems => StateService.GetLumberSummary();
 	//private List<KlaesLumberRow> BeadRows => StateService.GetGlazingBeadRows();
-	private List<LumberSummaryItem> BeadRows => StateService.GetGlazingBeadRows();
+	private List<LumberSummaryItem> BeadRows => StateService.GetGlazingBeadSummary();
 	private List<KlaesLumberRow> AllRows => StateService.Orders.SelectMany(o => o.Rows).ToList();
 
 	private decimal TotalLumberMeters => StateService.Orders.Sum(o => o.TotalLumberMeters);
