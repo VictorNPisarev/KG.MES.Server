@@ -39,7 +39,7 @@ public class ServerAuthService : IAuthService
 
 	public async Task<LoginResultDto> AuthenticateUserAsync(LoginRequestDto request, string? ipAddress = null)
 	{
-		var sw = System.Diagnostics.Stopwatch.StartNew();
+		//var sw = System.Diagnostics.Stopwatch.StartNew();
 		// ============================================================
 		// 1. ПРОВЕРЯЕМ ПОЛЬЗОВАТЕЛЯ
 		// ============================================================
@@ -192,12 +192,13 @@ public class ServerAuthService : IAuthService
 				RoleId = user.RoleId,
 				RoleName = user.Role?.Name,
 				RoleLevel = user.Role?.Level ?? 10,
+				RoleCode = user.Role?.Code,
 				IsPasswordSet = user.IsPasswordSet
 			}
 		};
 
-		sw.Stop();
-		logger.LogInformation("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
+		//sw.Stop();
+		//logger.LogInformation("AuthenticateUserAsync took {Elapsed} ms", sw.ElapsedMilliseconds);
 
 		return LoginResultDto.CreateSuccess(response);
 	}
@@ -262,6 +263,7 @@ public class ServerAuthService : IAuthService
 				RoleId = user.RoleId,
 				RoleName = user.Role?.Name,
 				RoleLevel = user.Role?.Level ?? 10,
+				RoleCode = user.Role?.Code,
 				IsPasswordSet = user.IsPasswordSet
 			}
 		};
@@ -418,7 +420,8 @@ public class ServerAuthService : IAuthService
 				Name = user.Name,
 				RoleId = user.RoleId,
 				RoleName = role.Name,
-				RoleLevel = role.Level
+				RoleLevel = role.Level,
+				RoleCode = role.Code
 			}
 		};
 

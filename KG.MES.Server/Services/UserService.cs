@@ -51,7 +51,8 @@ public class UserService : IUserService
 			Name = user.Name,
 			RoleId = user.RoleId,
 			RoleName = user.Role?.Name,
-			RoleLevel = user.Role?.Level ?? 10
+			RoleLevel = user.Role?.Level ?? 10,
+			RoleCode = user.Role?.Code
 		};
 	}
 
@@ -72,7 +73,8 @@ public class UserService : IUserService
 			Name = user.Name,
 			RoleId = user.RoleId,
 			RoleName = user.Role?.Name,
-			RoleLevel = user.Role?.Level ?? 10
+			RoleLevel = user.Role?.Level ?? 10,
+			RoleCode = user.Role?.Code
 		};
 	}
 

@@ -1,3 +1,4 @@
+using KG.MES.Shared.Constants;
 using KG.MES.Shared.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -13,12 +14,15 @@ public partial class MainLayout
 	private bool userMenuOpen;
 	private bool showChangePassword;
 
+	private bool isAdmin;
+
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		if (firstRender)
 		{
 			await Session.RestoreAsync();
+			isAdmin = Session.User?.RoleCode == RoleCodes.Admin;
 			StateHasChanged(); // перерисовать UI, если IsAuthenticated изменилось
 		}
 	}

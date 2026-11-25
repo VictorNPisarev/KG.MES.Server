@@ -1,0 +1,298 @@
+@page "/lumber-calculation"
+@using KG.MES.Main.Models
+
+<AuthorizedPage>
+	<PageTitle>Расчёт заготовки бруса</PageTitle>
+
+	<div class="container-fluid py-4">
+		@* Заголовок и панель действий *@
+		<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+			<div>
+				<h2 class="display-6 mb-1">
+					<i class="bi bi-rulers"></i> Расчёт заготовки бруса (Klaes)
+				</h2>
+				<p class="text-muted mb-0">
+					Загрузите один или несколько файлов .xls — заказы с одинаковым номером перезаписываются
+					автоматически
+				</p>
+			</div>
+
+			<div class="d-flex flex-wrap gap-2">
+				<button class="btn btn-primary" @onclick="TriggerFileInput" disabled="@isLoading">
+					@if (isLoading)
+					{
+						<span class="spinner-border spinner-border-sm me-2" role="status"></span>
+					}
+					else
+					{
+						<i class="bi bi-file-earmark-plus me-1"></i>
+					}
+					@(StateService.HasOrders ? "Добавить / обновить .xls" : "Загрузить файлы .xls")
+				</button>
+
+				<InputFile OnChange="HandleFilesSelected" accept=".xls,.xlsx,.csv" multiple style="display: none;"
+					id="klaesXlsInput" />
+
+				@if (StateService.HasOrders)
+				{
+					<button class="btn btn-outline-danger" @onclick="ClearAll" disabled="@isLoading">
+						<i class="bi bi-trash me-1"></i> Очистить расчёт
+					</button>
+				}
+			</div>
+		</div>
+
+		@* Уведомления *@
+		@if (!string.IsNullOrEmpty(StatusMessage))
+		{
+			<div class="alert @AlertClass alert-dismissible fade show" role="alert">
+				@StatusMessage
+				<button type="button" class="btn-close" @onclick="() => StatusMessage = string.Empty"></button>
+			</div>
+		}
+
+		@if (Errors.Any())
+		{
+			<div class="alert alert-danger alert-dismissible fade show" role="alert">
+				<strong>Ошибки при чтении файлов:</strong>
+				<ul class="mb-0 mt-1">
+					@foreach (var err in Errors)
+					{
+						<li>@err</li>
+					}
+				</ul>
+				<button type="button" class="btn-close" @onclick="() => Errors.Clear()"></button>
+			</div>
+		}
+
+		@if (!StateService.HasOrders)
+		{
+			<div class="card shadow-sm">
+				<div class="card-body text-center py-5">
+					<i class="bi bi-file-earmark-spreadsheet display-1 text-muted"></i>
+					<h5 class="text-muted mt-3">Нет загруженных файлов</h5>
+					<p class="text-muted">Выберите выгрузки из Klaes (.xls) для сводного расчёта заготовки бруса</p>
+					<button class="btn btn-outline-primary" @onclick="TriggerFileInput">
+						<i class="bi bi-upload me-1"></i> Выбрать файлы
+					</button>
+				</div>
+			</div>
+		}
+		else
+		{
+			@* Загруженные заказы в памяти *@
+			<div class="card shadow-sm mb-4">
+				<div class="card-header bg-light d-flex justify-content-between align-items-center">
+					<span class="fw-semibold">
+						<i class="bi bi-folder2-open me-1"></i>
+						Загруженные заказы (@StateService.Orders.Count)
+					</span>
+					<div class="small text-muted">
+						Всего бруса: <strong>@TotalLumberMeters.ToString("0.##") м</strong> |
+						Штапиков: <strong>@TotalBeadMeters.ToString("0.##") м</strong>
+					</div>
+				</div>
+				<div class="card-body py-2">
+					<div class="d-flex flex-wrap gap-2">
+						@foreach (var order in StateService.Orders)
+						{
+							<div class="border rounded px-2 py-1 bg-white d-flex align-items-center gap-2 shadow-sm">
+								<span class="badge bg-primary">№ @order.OrderNumber</span>
+								<span class="small text-muted" title="@order.FileName">
+									брус: <strong>@order.TotalLumberMeters.ToString("0.##") м</strong>
+								</span>
+								<button type="button" class="btn-close" style="font-size: 0.65rem;"
+									title="Убрать заказ из расчёта" @onclick="() => RemoveOrder(order.OrderNumber)">
+								</button>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+
+			@* Переключатель вкладок предпросмотра *@
+			<ul class="nav nav-tabs mb-3">
+				<li class="nav-item">
+					<button class="nav-link @(activeTab == "summary" ? "active fw-semibold" : "")"
+						@onclick='() => activeTab = "summary"'>
+						<i class="bi bi-layers me-1"></i>
+						Сводка по брусу (@SummaryItems.Count)
+					</button>
+				</li>
+				<li class="nav-item">
+					<button class="nav-link @(activeTab == "beads" ? "active fw-semibold" : "")"
+						@onclick='() => activeTab = "beads"'>
+						<i class="bi bi-slash-square me-1"></i>
+						Штапики и горбыльки (@BeadRows.Count)
+					</button>
+				</li>
+				<li class="nav-item">
+					<button class="nav-link @(activeTab == "raw" ? "active fw-semibold" : "")"
+						@onclick='() => activeTab = "raw"'>
+						<i class="bi bi-list-columns-reverse me-1"></i>
+						Исходные строки (@AllRows.Count)
+					</button>
+				</li>
+			</ul>
+
+			@if (activeTab == "summary")
+			{
+				<div class="card shadow-sm">
+					<div class="table-responsive">
+						<table class="table table-sm table-hover align-middle mb-0">
+							<thead class="table-light">
+								<tr>
+									<th style="width: 50px;">#</th>
+									<th>Сечение</th>
+									@*<th>Толщина (D)</th>
+									<th>Ширина (E)</th>*@
+									@*<th>Исполнение</th>*@
+									<th>Порода древесины</th>
+									<th>Количество</th>
+									<th>Заказы</th>
+								</tr>
+							</thead>
+							<tbody>
+								@{
+									int index = 1;
+								}
+								@foreach (var item in SummaryItems)
+								{
+									<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
+										<td class="text-muted">@(index++)</td>
+										@*<td class="fw-bold">@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
+										<td>@item.Name</td>
+										@*<td>@item.Thickness.ToString("0.##")</td>
+										<td>@item.Width.ToString("0.##")</td>*@
+										@*<td>
+											@if (item.HasGlazingBead)
+											{
+												<span class="badge bg-info text-dark">Со штапиком</span>
+											}
+											else
+											{
+												<span class="badge bg-secondary">Обычный брус</span>
+											}
+										</td>*@
+										<td>
+											<span
+												class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
+												title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
+												@item.WoodType
+											</span>
+										</td>
+										<td class="fw-bold fs-6">
+											@item.TotalQuantity.ToString("0.##") @item.Unit
+										</td>
+										<td>
+											@if (item.IsSolidLamella)
+											{
+												<span
+													class="badge bg-danger bg-gradient  bg-opacity-50 text-dark">@item.OrderNumber</span>
+											}
+											else
+											{
+												<span class="text-muted">
+													@string.Join(", ", item.SourceOrders.Select(o => $"{o}"))
+												</span>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+							<tfoot class="table-light">
+								<tr>
+									<td colspan="2" class="text-end fw-bold">Итого бруса к заготовке:</td>
+									<td class="text-end fw-bold text-primary fs-6">
+										@TotalLumberMeters.ToString("0.##") м
+									</td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+			}
+			else if (activeTab == "beads")
+			{
+				<div class="card shadow-sm">
+					<div class="table-responsive">
+						<table class="table table-sm table-hover align-middle mb-0">
+							<thead class="table-light">
+								<tr>
+									<th>Наименование</th>
+									@*<th>Размеры (D × E)</th>*@
+									<th>Порода</th>
+									<th>Количество</th>
+									<th>Заказ</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var item in BeadRows)
+								{
+									<tr class="@(item.IsSolidLamella ? "table-warning bg-opacity-25" : "")">
+										<td>@item.Name</td>
+										@*<td>@item.Thickness.ToString("0.##") × @item.Width.ToString("0.##")</td>*@
+										<td>
+											<span
+												class='badge @(item.IsSolidLamella ? "bg-warning" : "bg-success") bg-gradient bg-opacity-50 text-dark ms-1'
+												title='@(item.IsSolidLamella ? "Не объединяется с другими заказами" : "")'>
+												@item.WoodType
+											</span>
+										</td>
+										<td class="fw-bold">@item.TotalQuantity.ToString("0.##") @item.Unit</td>
+										<td><span class="text-muted">@item.OrderNumber</span></td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			}
+			else
+			{
+				<div class="card shadow-sm">
+					<div class="table-responsive">
+						<table class="table table-sm table-hover align-middle mb-0">
+							<thead class="table-light">
+								<tr>
+									<th>Заказ</th>
+									<th>Раздел</th>
+									<th>Наименование</th>
+									<th>Толщина (D)</th>
+									<th>Ширина (E)</th>
+									<th>Порода</th>
+									<th>Цвет</th>
+									<th class="text-end">Кол-во</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var row in AllRows)
+								{
+									<tr>
+										<td><span class="badge bg-secondary">№ @row.OrderNumber</span></td>
+										<td>
+											@if (row.Section == KlaesSectionType.Lumber)
+											{
+												<span class="badge bg-primary">Брус</span>
+											}
+											else
+											{
+												<span class="badge bg-info text-dark">Штапик</span>
+											}
+										</td>
+										<td>@row.Name</td>
+										<td>@row.Thickness.ToString("0.##")</td>
+										<td>@row.Width.ToString("0.##")</td>
+										<td>@row.WoodType</td>
+										<td class="text-muted small">@row.Color</td>
+										<td class="text-end fw-bold">@row.Quantity.ToString("0.##") @row.Unit</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			}
+		}
+	</div>
+</AuthorizedPage>

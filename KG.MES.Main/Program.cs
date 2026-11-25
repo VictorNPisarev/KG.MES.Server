@@ -6,6 +6,8 @@ using KG.MES.Shared.Interfaces;
 using KG.MES.Shared.Config;
 using KG.MES.Shared.Serialization;
 using KG.MES.Shared.Services;
+using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,13 @@ builder.Services.AddScoped<ISocketService, SignalRService>();
 builder.Services.AddScoped<IDocumentItemFactory, DocumentItemFactory>();
 builder.Services.AddScoped<SupplyService>();
 builder.Services.AddScoped<IEventAggregator, EventAggregator>();
+
+///Чтение отчетов .xls из klaes
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+builder.Services.AddScoped<KlaesXlsParserService>();
+builder.Services.AddScoped<LumberImportStateService>();
+///
 
 var app = builder.Build();
 

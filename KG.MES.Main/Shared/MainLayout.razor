@@ -28,10 +28,18 @@
 				<span>Статистика участков</span>
 			</NavLink>
 
-			<NavLink class="nav-item" href="admin">
-				<i class="bi bi-person-gear"></i>
-				<span>Администрирование</span>
-			</NavLink>
+			@if (isAdmin)
+			{
+				<NavLink class="nav-item" href="admin">
+					<i class="bi bi-person-gear"></i>
+					<span>Администрирование</span>
+				</NavLink>
+
+				<NavLink class="nav-item" href="lumber-calculation">
+					<i class="bi bi-rulers"></i>
+					<span>Расчёт бруса</span>
+				</NavLink>
+			}
 		</nav>
 		@* Блок пользователя внизу *@
 		@if (Session.User != null)
